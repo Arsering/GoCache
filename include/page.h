@@ -23,9 +23,19 @@ namespace graphbuffer
 
   public:
     Page() { ResetMemory(); }
-    ~Page(){};
+    ~Page() { free(data_); }
     // get actual data page content
-    inline char *GetData() { return data_; }
+    inline char *GetData() { return (char *)data_; }
+    inline int SetData(const char *src)
+    {
+      strcpy(GetData(), src);
+      is_dirty_ = true;
+      return 0;
+    }
+    inline void SetDirty()
+    {
+      is_dirty_ = true;
+    }
     // get page id
     inline page_id_t GetPageId() { return page_id_; }
     // get page pin count
@@ -41,9 +51,13 @@ namespace graphbuffer
 
   private:
     // method used by buffer pool manager
-    inline void ResetMemory() { memset(data_, 0, PAGE_SIZE); }
+    inline void ResetMemory()
+    {
+      data_ = aligned_alloc(PAGE_SIZE_OS, PAGE_SIZE);
+      memset(data_, 0, PAGE_SIZE);
+    }
     // members
-    char data_[PAGE_SIZE]; // actual data
+    void *data_; // actual data
     page_id_t page_id_ = INVALID_PAGE_ID;
     int pin_count_ = 0;
     bool is_dirty_ = false;

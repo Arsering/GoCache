@@ -47,6 +47,7 @@ namespace graphbuffer
   void DiskManager::WritePage(page_id_t page_id, const char *page_data)
   {
     size_t offset = page_id * PAGE_SIZE;
+    std::cout << db_io_ << std::endl;
     int ret = pwrite(db_io_, page_data, PAGE_SIZE, offset);
 
     // check for I/O error

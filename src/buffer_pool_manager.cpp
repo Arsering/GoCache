@@ -68,13 +68,13 @@ namespace graphbuffer
     // 2
     if (tar->is_dirty_)
     {
-      disk_manager_->WritePage(tar->GetPageId(), tar->data_);
+      disk_manager_->WritePage(tar->GetPageId(), tar->GetData());
     }
     // 3
     page_table_->Remove(tar->GetPageId());
     page_table_->Insert(page_id, tar);
     // 4
-    disk_manager_->ReadPage(page_id, tar->data_);
+    disk_manager_->ReadPage(page_id, tar->GetData());
     tar->pin_count_ = 1;
     tar->is_dirty_ = false;
     tar->page_id_ = page_id;
@@ -183,7 +183,7 @@ namespace graphbuffer
     // 2
     if (tar->is_dirty_)
     {
-      disk_manager_->WritePage(tar->GetPageId(), tar->data_);
+      disk_manager_->WritePage(tar->GetPageId(), tar->GetData());
     }
     // 3
     page_table_->Remove(tar->GetPageId());

@@ -28,6 +28,7 @@ int main()
     auto page_zero = bpm.NewPage(temp_page_id);
 
     strcpy(page_zero->GetData(), "Hello");
+    page_zero->SetDirty();
     bpm.FlushPage(temp_page_id);
     page_zero = bpm.FetchPage(temp_page_id);
     std::cout << page_zero->GetData() << std::endl;
