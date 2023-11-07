@@ -12,6 +12,7 @@
 #include <fstream>
 #include <future>
 #include <string>
+#include <vector>
 
 #include "config.h"
 
@@ -20,18 +21,27 @@ namespace graphbuffer
 
   class DiskManager
   {
+    friend class BufferPoolManager;
+
   public:
     DiskManager(const std::string &db_file);
+    DiskManager();
     ~DiskManager();
 
-    void WritePage(page_id_t page_id, const char *page_data);
-    void ReadPage(page_id_t page_id, char *page_data);
+    inline int RegisterFile(int file_handler)
+    {
+      file_handlers_.push_back(file_handler);
+      return file_handlers_.size() - 1;
+    }
+
+    void WritePage(page_id_infile page_id, const char *page_data, int file_handler = 0);
+    void ReadPage(page_id_infile page_id, char *page_data, int file_handler = 0);
 
     void WriteLog(char *log_data, int size);
     bool ReadLog(char *log_data, int size, int offset);
 
-    page_id_t AllocatePage();
-    void DeallocatePage(page_id_t page_id);
+    page_id_infile AllocatePage();
+    void DeallocatePage(page_id_infile page_id);
 
     int GetNumFlushes() const;
     bool GetFlushState() const;
@@ -39,14 +49,15 @@ namespace graphbuffer
     inline bool HasFlushLogFuture() { return flush_log_f_ != nullptr; }
 
   private:
-    int GetFileSize(const std::string &name);
+    int GetFileSize(int file_handler);
+
     // stream to write log file
     int log_io_;
     std::string log_name_;
+
     // stream to write db file
-    int db_io_;
-    std::string file_name_;
-    std::atomic<page_id_t> next_page_id_;
+    std::vector<int> file_handlers_;
+    std::atomic<page_id_infile> next_page_id_;
     int num_flushes_;
     bool flush_log_;
     std::future<void> *flush_log_f_;

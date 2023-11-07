@@ -10,6 +10,7 @@
 #include <list>
 #include <mutex>
 #include <assert.h>
+#include <vector>
 
 #include "lru_replacer.h"
 #include "disk_manager.h"
@@ -23,18 +24,23 @@ namespace graphbuffer
   {
   public:
     BufferPoolManager(size_t pool_size, DiskManager *disk_manager);
-
+    BufferPoolManager(size_t pool_size);
     ~BufferPoolManager();
 
-    Page *FetchPage(page_id_t page_id);
+    int RegisterFile(int file_handler);
 
-    bool UnpinPage(page_id_t page_id, bool is_dirty);
+    // Page *FetchPage(page_id_t page_id);
+    Page *FetchPage(page_id_infile page_id, int file_handler = 0);
 
-    bool FlushPage(page_id_t page_id);
+    bool UnpinPage(page_id_infile page_id, bool is_dirty, int file_handler = 0);
 
-    Page *NewPage(page_id_t &page_id);
+    bool UnpinPage(Page *tar);
 
-    bool DeletePage(page_id_t page_id);
+    bool FlushPage(page_id_infile page_id, int file_handler = 0);
+
+    Page *NewPage(page_id_infile &page_id, int file_handler = 0);
+
+    bool DeletePage(page_id_infile page_id, int file_handler = 0);
 
   private:
     size_t pool_size_; // number of pages in buffer pool
@@ -42,10 +48,10 @@ namespace graphbuffer
     Page *pages_; // array of pages
     DiskManager *disk_manager_;
 
-    HashTable<page_id_t, Page *> *page_table_; // to keep track of pages
-    Replacer<Page *> *replacer_;               // to find an unpinned page for replacement
-    std::list<Page *> *free_list_;             // to find a free page for replacement
-    std::mutex latch_;                         // to protect shared data structure
+    std::vector<std::shared_ptr<ExtendibleHash<page_id_infile, Page *>>> page_tables_; // to keep track of pages
+    Replacer<Page *> *replacer_;                                                       // to find an unpinned page for replacement
+    std::list<Page *> *free_list_;                                                     // to find a free page for replacement
+    std::mutex latch_;                                                                 // to protect shared data structure
     Page *GetVictimPage();
   };
 } // namespace cmudb

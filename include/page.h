@@ -39,7 +39,8 @@ namespace graphbuffer
       is_dirty_ = true;
     }
     // get page id
-    inline page_id_t GetPageId() { return page_id_; }
+    inline page_id_infile GetPageId() { return page_id_; }
+    inline int GetFileHandler() { return file_handler_; }
     // get page pin count
     inline int GetPinCount() { return pin_count_; }
     // method use to latch/unlatch page content
@@ -58,8 +59,9 @@ namespace graphbuffer
       memset(data_, 0, PAGE_SIZE);
     }
     // members
-    void *data_; // actual data
-    page_id_t page_id_ = INVALID_PAGE_ID;
+    void *data_ = nullptr; // actual data
+    int file_handler_ = -1;
+    page_id_infile page_id_ = INVALID_PAGE_ID;
     int pin_count_ = 0;
     bool is_dirty_ = false;
     RWMutex rwlatch_;

@@ -28,8 +28,9 @@ namespace graphbuffer
 #define BUCKET_SIZE 50                 // size of extendible hash bucket
 #define BUFFER_POOL_SIZE 10            // size of buffer pool
 
-  typedef int32_t page_id_t; // page id type
-  typedef int32_t txn_id_t;  // transaction id type
-  typedef int32_t lsn_t;     // log sequence number type
+  typedef int32_t page_id_infile; // page id type
+  typedef int64_t page_id_inglobalfile;
+  typedef int32_t txn_id_t; // transaction id type
+  typedef int32_t lsn_t;    // log sequence number type
 
 } // namespace cmudb

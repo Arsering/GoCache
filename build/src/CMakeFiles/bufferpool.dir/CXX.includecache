@@ -13,6 +13,8 @@ mutex
 -
 assert.h
 -
+vector
+-
 lru_replacer.h
 ../include/lru_replacer.h
 disk_manager.h
@@ -40,6 +42,8 @@ fstream
 future
 -
 string
+-
+vector
 -
 config.h
 ../include/config.h

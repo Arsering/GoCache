@@ -105,6 +105,7 @@ namespace graphbuffer
     std::shared_ptr<Bucket> cur = buckets_[idx];
     if (cur->kmap.find(key) == cur->kmap.end())
     {
+
       return false;
     }
     cur->kmap.erase(key);
@@ -169,7 +170,7 @@ namespace graphbuffer
     }
   }
 
-  template class ExtendibleHash<page_id_t, Page *>;
+  template class ExtendibleHash<page_id_infile, Page *>;
   template class ExtendibleHash<Page *, std::list<Page *>::iterator>;
   // test purpose
   template class ExtendibleHash<int, std::string>;

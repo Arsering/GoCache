@@ -15,9 +15,14 @@ namespace graphbuffer
     // a consecutive memory space for buffer pool
     buffer_pool_ = aligned_alloc(PAGE_SIZE_OS, PAGE_SIZE * pool_size);
     pages_ = new Page[pool_size_];
-    page_table_ = new ExtendibleHash<page_id_t, Page *>(BUCKET_SIZE);
+    // page_table_ = new std::vector<ExtendibleHash<page_id_infile, Page *>>();
     replacer_ = new LRUReplacer<Page *>;
     free_list_ = new std::list<Page *>;
+
+    for (auto file_handler : disk_manager_->file_handlers_)
+    {
+      page_tables_.push_back(std::make_shared<ExtendibleHash<page_id_infile, Page *>>(BUCKET_SIZE));
+    }
 
     // put all the pages into free list
     for (size_t i = 0; i < pool_size_; ++i)
@@ -28,6 +33,12 @@ namespace graphbuffer
     }
   }
 
+  BufferPoolManager::BufferPoolManager(size_t pool_size)
+  {
+    DiskManager *disk_manager = new graphbuffer::DiskManager("test.db");
+    BufferPoolManager(pool_size, disk_manager);
+  }
+
   /*
    * BufferPoolManager Deconstructor
    * WARNING: Do Not Edit This Function
@@ -35,10 +46,17 @@ namespace graphbuffer
   BufferPoolManager::~BufferPoolManager()
   {
     delete[] pages_;
-    delete page_table_;
+    // delete page_table_;
     delete replacer_;
     delete free_list_;
     free(buffer_pool_);
+  }
+
+  int BufferPoolManager::RegisterFile(int file_handler)
+  {
+    int file_handler_new = disk_manager_->RegisterFile(file_handler);
+    page_tables_.push_back(std::make_shared<ExtendibleHash<page_id_infile, Page *>>(BUCKET_SIZE));
+    return file_handler_new;
   }
 
   /**
@@ -54,11 +72,12 @@ namespace graphbuffer
    *
    * This function must mark the Page as pinned and remove its entry from LRUReplacer before it is returned to the caller.
    */
-  Page *BufferPoolManager::FetchPage(page_id_t page_id)
+  Page *BufferPoolManager::FetchPage(page_id_infile page_id, int file_handler)
   {
     std::lock_guard<std::mutex> lck(latch_);
     Page *tar = nullptr;
-    if (page_table_->Find(page_id, tar))
+
+    if (page_tables_[file_handler]->Find(page_id, tar))
     { // 1.1
       tar->pin_count_++;
       replacer_->Erase(tar);
@@ -67,21 +86,26 @@ namespace graphbuffer
 
     // 1.2
     tar = GetVictimPage();
+
     if (tar == nullptr)
       return tar;
+
     // 2
     if (tar->is_dirty_)
     {
-      disk_manager_->WritePage(tar->GetPageId(), tar->GetData());
+      disk_manager_->WritePage(tar->GetPageId(), tar->GetData(), tar->GetFileHandler());
     }
+
     // 3
-    page_table_->Remove(tar->GetPageId());
-    page_table_->Insert(page_id, tar);
+    page_tables_[file_handler]->Remove(tar->GetPageId());
+    page_tables_[file_handler]->Insert(page_id, tar);
+
     // 4
-    disk_manager_->ReadPage(page_id, tar->GetData());
+    disk_manager_->ReadPage(page_id, tar->GetData(), file_handler);
     tar->pin_count_ = 1;
     tar->is_dirty_ = false;
     tar->page_id_ = page_id;
+    tar->file_handler_ = file_handler;
     // tar->buffer_pool_manager_ = std::make_shared<BufferPoolManager>(this);
 
     return tar;
@@ -94,11 +118,11 @@ namespace graphbuffer
    * replacer if pin_count<=0 before this call, return false. is_dirty: set the
    * dirty flag of this page
    */
-  bool BufferPoolManager::UnpinPage(page_id_t page_id, bool is_dirty)
+  bool BufferPoolManager::UnpinPage(page_id_infile page_id, bool is_dirty, int file_handler)
   {
     std::lock_guard<std::mutex> lck(latch_);
     Page *tar = nullptr;
-    page_table_->Find(page_id, tar);
+    page_tables_[file_handler]->Find(page_id, tar);
     if (tar == nullptr)
     {
       return false;
@@ -116,23 +140,44 @@ namespace graphbuffer
   }
 
   /*
+   * Implementation of unpin page
+   * if pin_count>0, decrement it and if it becomes zero, put it back to
+   * replacer if pin_count<=0 before this call, return false. is_dirty: set the
+   * dirty flag of this page
+   */
+  bool BufferPoolManager::UnpinPage(Page *tar)
+  {
+    std::lock_guard<std::mutex> lck(latch_);
+
+    if (tar->GetPinCount() <= 0)
+    {
+      return false;
+    };
+    if (--tar->pin_count_ == 0)
+    {
+      replacer_->Insert(tar);
+    }
+    return true;
+  }
+
+  /*
    * Used to flush a particular page of the buffer pool to disk. Should call the
    * write_page method of the disk manager
    * if page is not found in page table, return false
    * NOTE: make sure page_id != INVALID_PAGE_ID
    */
-  bool BufferPoolManager::FlushPage(page_id_t page_id)
+  bool BufferPoolManager::FlushPage(page_id_infile page_id, int file_handler)
   {
     std::lock_guard<std::mutex> lck(latch_);
     Page *tar = nullptr;
-    page_table_->Find(page_id, tar);
+    page_tables_[file_handler]->Find(page_id, tar);
     if (tar == nullptr || tar->page_id_ == INVALID_PAGE_ID)
     {
       return false;
     }
     if (tar->is_dirty_)
     {
-      disk_manager_->WritePage(page_id, tar->GetData());
+      disk_manager_->WritePage(page_id, tar->GetData(), tar->GetFileHandler());
       tar->is_dirty_ = false;
     }
 
@@ -147,11 +192,11 @@ namespace graphbuffer
    * call disk manager's DeallocatePage() method to delete from disk file. If
    * the page is found within page table, but pin_count != 0, return false
    */
-  bool BufferPoolManager::DeletePage(page_id_t page_id)
+  bool BufferPoolManager::DeletePage(page_id_infile page_id, int file_handler)
   {
     std::lock_guard<std::mutex> lck(latch_);
     Page *tar = nullptr;
-    page_table_->Find(page_id, tar);
+    page_tables_[file_handler]->Find(page_id, tar);
     if (tar != nullptr)
     {
       if (tar->GetPinCount() > 0)
@@ -159,7 +204,7 @@ namespace graphbuffer
         return false;
       }
       replacer_->Erase(tar);
-      page_table_->Remove(page_id);
+      page_tables_[file_handler]->Remove(page_id);
       tar->is_dirty_ = false;
       tar->ResetMemory();
       free_list_->push_back(tar);
@@ -176,7 +221,7 @@ namespace graphbuffer
    * update new page's metadata, zero out memory and add corresponding entry
    * into page table. return nullptr if all the pages in pool are pinned
    */
-  Page *BufferPoolManager::NewPage(page_id_t &page_id)
+  Page *BufferPoolManager::NewPage(page_id_infile &page_id, int file_handler)
   {
     std::lock_guard<std::mutex> lck(latch_);
     Page *tar = nullptr;
@@ -185,20 +230,23 @@ namespace graphbuffer
       return tar;
 
     page_id = disk_manager_->AllocatePage();
+
     // 2
     if (tar->is_dirty_)
     {
-      disk_manager_->WritePage(tar->GetPageId(), tar->GetData());
+      disk_manager_->WritePage(tar->GetPageId(), tar->GetData(), tar->GetFileHandler());
     }
+
     // 3
-    page_table_->Remove(tar->GetPageId());
-    page_table_->Insert(page_id, tar);
+    page_tables_[file_handler]->Remove(tar->GetPageId());
+    page_tables_[file_handler]->Insert(page_id, tar);
 
     // 4
     tar->page_id_ = page_id;
     tar->ResetMemory();
     tar->is_dirty_ = false;
     tar->pin_count_ = 1;
+    tar->file_handler_ = file_handler;
 
     return tar;
   }
