@@ -44,8 +44,8 @@ namespace graphbuffer
     size_t Size();
 
   private:
-    std::shared_ptr<Node> head;
-    std::shared_ptr<Node> tail;
+    std::shared_ptr<Node> head_;
+    std::shared_ptr<Node> tail_;
     std::unordered_map<T, std::shared_ptr<Node>> map;
     mutable std::mutex latch;
     // add your member variables here

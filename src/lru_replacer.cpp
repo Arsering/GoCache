@@ -10,10 +10,10 @@ namespace graphbuffer
   template <typename T>
   LRUReplacer<T>::LRUReplacer()
   {
-    head = std::make_shared<Node>();
-    tail = std::make_shared<Node>();
-    head->next = tail;
-    tail->prev = head;
+    head_ = std::make_shared<Node>();
+    tail_ = std::make_shared<Node>();
+    head_->next = tail_;
+    tail_->prev = head_;
   }
 
   template <typename T>
@@ -39,11 +39,11 @@ namespace graphbuffer
     {
       cur = std::make_shared<Node>(value);
     }
-    std::shared_ptr<Node> fir = head->next;
+    std::shared_ptr<Node> fir = head_->next;
     cur->next = fir;
     fir->prev = cur;
-    cur->prev = head;
-    head->next = cur;
+    cur->prev = head_;
+    head_->next = cur;
     map[value] = cur;
     return;
   }
@@ -59,9 +59,9 @@ namespace graphbuffer
     {
       return false;
     }
-    std::shared_ptr<Node> last = tail->prev;
-    tail->prev = last->prev;
-    last->prev->next = tail;
+    std::shared_ptr<Node> last = tail_->prev;
+    tail_->prev = last->prev;
+    last->prev->next = tail_;
     value = last->val;
     map.erase(last->val);
     return true;

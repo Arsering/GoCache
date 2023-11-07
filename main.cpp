@@ -21,9 +21,10 @@ int main()
     // ret = pread(data_file_, in_buf, io_size_, 0);
     // // pwrite(data_file_, out_buf, io_size_, curr_io_fileoffset);
     graphbuffer::page_id_t temp_page_id;
+    size_t pool_size = 1024LU * 1024LU;
 
     graphbuffer::DiskManager *disk_manager = new graphbuffer::DiskManager("test.db");
-    graphbuffer::BufferPoolManager bpm(10, disk_manager);
+    graphbuffer::BufferPoolManager bpm(pool_size, disk_manager);
     temp_page_id = 0;
     auto page_zero = bpm.NewPage(temp_page_id);
 
@@ -32,5 +33,11 @@ int main()
     bpm.FlushPage(temp_page_id);
     page_zero = bpm.FetchPage(temp_page_id);
     std::cout << page_zero->GetData() << std::endl;
+    int a = -1;
+    std::cin >> a;
+    if (a == 1)
+    {
+        return 0;
+    }
     return 0;
 }

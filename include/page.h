@@ -22,8 +22,9 @@ namespace graphbuffer
     friend class BufferPoolManager;
 
   public:
-    Page() { ResetMemory(); }
-    ~Page() { free(data_); }
+    Page() {}
+    ~Page() {}
+
     // get actual data page content
     inline char *GetData() { return (char *)data_; }
     inline int SetData(const char *src)
@@ -32,6 +33,7 @@ namespace graphbuffer
       is_dirty_ = true;
       return 0;
     }
+    // set state of page dirty
     inline void SetDirty()
     {
       is_dirty_ = true;
@@ -53,7 +55,6 @@ namespace graphbuffer
     // method used by buffer pool manager
     inline void ResetMemory()
     {
-      data_ = aligned_alloc(PAGE_SIZE_OS, PAGE_SIZE);
       memset(data_, 0, PAGE_SIZE);
     }
     // members

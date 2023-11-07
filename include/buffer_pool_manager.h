@@ -38,7 +38,8 @@ namespace graphbuffer
 
   private:
     size_t pool_size_; // number of pages in buffer pool
-    Page *pages_;      // array of pages
+    void *buffer_pool_;
+    Page *pages_; // array of pages
     DiskManager *disk_manager_;
 
     HashTable<page_id_t, Page *> *page_table_; // to keep track of pages

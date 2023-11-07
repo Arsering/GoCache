@@ -13,6 +13,7 @@ namespace graphbuffer
       : pool_size_(pool_size), disk_manager_(disk_manager)
   {
     // a consecutive memory space for buffer pool
+    buffer_pool_ = aligned_alloc(PAGE_SIZE_OS, PAGE_SIZE * pool_size);
     pages_ = new Page[pool_size_];
     page_table_ = new ExtendibleHash<page_id_t, Page *>(BUCKET_SIZE);
     replacer_ = new LRUReplacer<Page *>;
@@ -21,6 +22,8 @@ namespace graphbuffer
     // put all the pages into free list
     for (size_t i = 0; i < pool_size_; ++i)
     {
+      pages_[i].data_ = buffer_pool_ + (i * PAGE_SIZE);
+      pages_[i].ResetMemory();
       free_list_->push_back(&pages_[i]);
     }
   }
@@ -35,6 +38,7 @@ namespace graphbuffer
     delete page_table_;
     delete replacer_;
     delete free_list_;
+    free(buffer_pool_);
   }
 
   /**
@@ -78,6 +82,7 @@ namespace graphbuffer
     tar->pin_count_ = 1;
     tar->is_dirty_ = false;
     tar->page_id_ = page_id;
+    // tar->buffer_pool_manager_ = std::make_shared<BufferPoolManager>(this);
 
     return tar;
   }

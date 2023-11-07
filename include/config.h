@@ -21,7 +21,7 @@ namespace graphbuffer
 #define INVALID_TXN_ID -1  // representing an invalid txn id
 #define INVALID_LSN -1     // representing an invalid lsn
 #define HEADER_PAGE_ID 0   // the header page id
-#define PAGE_SIZE 512      // size of a data page in byte
+#define PAGE_SIZE 4096     // size of a data page in byte
 #define PAGE_SIZE_OS 4096  // size of a memory page in byte
 #define LOG_BUFFER_SIZE \
   ((BUFFER_POOL_SIZE + 1) * PAGE_SIZE) // size of a log buffer in byte
