@@ -1,0 +1,3 @@
+/data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-subbuild/CMakeFiles/rebuild_cache.dir
+/data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-subbuild/CMakeFiles/edit_cache.dir
+/data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-subbuild/CMakeFiles/googletest-populate.dir
