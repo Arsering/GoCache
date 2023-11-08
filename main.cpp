@@ -20,7 +20,7 @@ int test1()
     e.seed(time(0));
 
     graphbuffer::page_id_infile temp_page_id;
-    size_t pool_size = 1024LU * 1024LU;
+    size_t pool_size = 10;
     {
         graphbuffer::DiskManager *disk_manager = new graphbuffer::DiskManager("test.db");
         graphbuffer::BufferPoolManager bpm(pool_size, disk_manager);
@@ -46,7 +46,7 @@ int test1()
         // std::cout << page_num << std::endl;
         auto page = bpm.FetchPage(page_num);
         // std::cout << page->GetData()[0] << std::endl;
-        bpm.UnpinPage(page);
+        bpm.ReleasePage(page);
     }
     return 0;
 }
@@ -77,7 +77,7 @@ int test2()
                 std::cout << "failed" << std::endl;
                 return -1;
             }
-            bpm.UnpinPage(page);
+            bpm.ReleasePage(page);
 
             page = bpm.NewPage(page_num, file_handler);
             strcpy(page->GetData(), "Hello");
@@ -87,7 +87,7 @@ int test2()
                 std::cout << "failed 1" << std::endl;
                 return -1;
             }
-            bpm.UnpinPage(page);
+            bpm.ReleasePage(page);
         }
     }
     std::cout << "Write test achieves success!!!" << std::endl;
@@ -101,7 +101,7 @@ int test2()
         // std::cout << page_num << std::endl;
         auto page = bpm.FetchPage(page_num);
         // std::cout << page->GetData()[0] << std::endl;
-        bpm.UnpinPage(page);
+        bpm.ReleasePage(page);
     }
     std::cout << "Read test achieves success!!!" << std::endl;
     return 0;

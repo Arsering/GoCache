@@ -33,3 +33,14 @@ src/CMakeFiles/bufferpool.dir/lru_replacer.cpp.o: ../include/replacer.h
 src/CMakeFiles/bufferpool.dir/lru_replacer.cpp.o: ../include/rwmutex.h
 src/CMakeFiles/bufferpool.dir/lru_replacer.cpp.o: ../src/lru_replacer.cpp
 
+src/CMakeFiles/bufferpool.dir/page.cpp.o: ../include/buffer_pool_manager.h
+src/CMakeFiles/bufferpool.dir/page.cpp.o: ../include/config.h
+src/CMakeFiles/bufferpool.dir/page.cpp.o: ../include/disk_manager.h
+src/CMakeFiles/bufferpool.dir/page.cpp.o: ../include/extendible_hash.h
+src/CMakeFiles/bufferpool.dir/page.cpp.o: ../include/hash_table.h
+src/CMakeFiles/bufferpool.dir/page.cpp.o: ../include/lru_replacer.h
+src/CMakeFiles/bufferpool.dir/page.cpp.o: ../include/page.h
+src/CMakeFiles/bufferpool.dir/page.cpp.o: ../include/replacer.h
+src/CMakeFiles/bufferpool.dir/page.cpp.o: ../include/rwmutex.h
+src/CMakeFiles/bufferpool.dir/page.cpp.o: ../src/page.cpp
+

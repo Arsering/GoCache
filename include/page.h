@@ -16,6 +16,7 @@
 
 namespace graphbuffer
 {
+  class BufferPoolManager;
 
   class Page
   {
@@ -43,6 +44,7 @@ namespace graphbuffer
     inline int GetFileHandler() { return file_handler_; }
     // get page pin count
     inline int GetPinCount() { return pin_count_; }
+    bool Unpin();
     // method use to latch/unlatch page content
     inline void WUnlatch() { rwlatch_.WUnlock(); }
     inline void WLatch() { rwlatch_.WLock(); }
@@ -58,6 +60,7 @@ namespace graphbuffer
     {
       memset(data_, 0, PAGE_SIZE);
     }
+
     // members
     void *data_ = nullptr; // actual data
     int file_handler_ = -1;
@@ -65,6 +68,21 @@ namespace graphbuffer
     int pin_count_ = 0;
     bool is_dirty_ = false;
     RWMutex rwlatch_;
+    BufferPoolManager *buffer_pool_manager_;
   };
+  // class PageOutPool
+  // {
+  // public:
+  //   PageOutPool(std::shared_ptr<Page> inner)
+  //   {
+  //     inner_ = inner;
+  //   }
+  //   ~PageOutPool()
+  //   {
+  //     inner_->Unpin();
+  //   }
 
+  // private:
+  //   std::shared_ptr<Page> inner_;
+  // }
 } // namespace cmudb

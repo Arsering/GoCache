@@ -122,13 +122,27 @@ src/CMakeFiles/bufferpool.dir/lru_replacer.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/bufferpool.dir/lru_replacer.cpp.s"
 	cd /data/zhengyang/data/GraphScope_bufferpool/build/src && /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /data/zhengyang/data/GraphScope_bufferpool/src/lru_replacer.cpp -o CMakeFiles/bufferpool.dir/lru_replacer.cpp.s
 
+src/CMakeFiles/bufferpool.dir/page.cpp.o: src/CMakeFiles/bufferpool.dir/flags.make
+src/CMakeFiles/bufferpool.dir/page.cpp.o: ../src/page.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object src/CMakeFiles/bufferpool.dir/page.cpp.o"
+	cd /data/zhengyang/data/GraphScope_bufferpool/build/src && /usr/bin/g++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/bufferpool.dir/page.cpp.o -c /data/zhengyang/data/GraphScope_bufferpool/src/page.cpp
+
+src/CMakeFiles/bufferpool.dir/page.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/bufferpool.dir/page.cpp.i"
+	cd /data/zhengyang/data/GraphScope_bufferpool/build/src && /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /data/zhengyang/data/GraphScope_bufferpool/src/page.cpp > CMakeFiles/bufferpool.dir/page.cpp.i
+
+src/CMakeFiles/bufferpool.dir/page.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/bufferpool.dir/page.cpp.s"
+	cd /data/zhengyang/data/GraphScope_bufferpool/build/src && /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /data/zhengyang/data/GraphScope_bufferpool/src/page.cpp -o CMakeFiles/bufferpool.dir/page.cpp.s
+
 # Object files for target bufferpool
 bufferpool_OBJECTS = \
 "CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o" \
 "CMakeFiles/bufferpool.dir/config.cpp.o" \
 "CMakeFiles/bufferpool.dir/disk_manager.cpp.o" \
 "CMakeFiles/bufferpool.dir/extendible_hash.cpp.o" \
-"CMakeFiles/bufferpool.dir/lru_replacer.cpp.o"
+"CMakeFiles/bufferpool.dir/lru_replacer.cpp.o" \
+"CMakeFiles/bufferpool.dir/page.cpp.o"
 
 # External object files for target bufferpool
 bufferpool_EXTERNAL_OBJECTS =
@@ -138,9 +152,10 @@ bufferpool_EXTERNAL_OBJECTS =
 ../lib/libbufferpool.a: src/CMakeFiles/bufferpool.dir/disk_manager.cpp.o
 ../lib/libbufferpool.a: src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.o
 ../lib/libbufferpool.a: src/CMakeFiles/bufferpool.dir/lru_replacer.cpp.o
+../lib/libbufferpool.a: src/CMakeFiles/bufferpool.dir/page.cpp.o
 ../lib/libbufferpool.a: src/CMakeFiles/bufferpool.dir/build.make
 ../lib/libbufferpool.a: src/CMakeFiles/bufferpool.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Linking CXX static library ../../lib/libbufferpool.a"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Linking CXX static library ../../lib/libbufferpool.a"
 	cd /data/zhengyang/data/GraphScope_bufferpool/build/src && $(CMAKE_COMMAND) -P CMakeFiles/bufferpool.dir/cmake_clean_target.cmake
 	cd /data/zhengyang/data/GraphScope_bufferpool/build/src && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/bufferpool.dir/link.txt --verbose=$(VERBOSE)
 

@@ -34,7 +34,7 @@ namespace graphbuffer
 
     bool UnpinPage(page_id_infile page_id, bool is_dirty, int file_handler = 0);
 
-    bool UnpinPage(Page *tar);
+    bool ReleasePage(Page *tar);
 
     bool FlushPage(page_id_infile page_id, int file_handler = 0);
 

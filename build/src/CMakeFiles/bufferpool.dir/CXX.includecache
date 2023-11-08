@@ -138,3 +138,9 @@ lru_replacer.h
 page.h
 /data/zhengyang/data/GraphScope_bufferpool/src/page.h
 
+/data/zhengyang/data/GraphScope_bufferpool/src/page.cpp
+page.h
+/data/zhengyang/data/GraphScope_bufferpool/src/page.h
+buffer_pool_manager.h
+/data/zhengyang/data/GraphScope_bufferpool/src/buffer_pool_manager.h
+

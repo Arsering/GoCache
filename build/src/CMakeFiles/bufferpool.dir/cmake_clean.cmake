@@ -6,6 +6,7 @@ file(REMOVE_RECURSE
   "CMakeFiles/bufferpool.dir/disk_manager.cpp.o"
   "CMakeFiles/bufferpool.dir/extendible_hash.cpp.o"
   "CMakeFiles/bufferpool.dir/lru_replacer.cpp.o"
+  "CMakeFiles/bufferpool.dir/page.cpp.o"
 )
 
 # Per-language clean rules from dependency scanning.

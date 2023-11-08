@@ -306,6 +306,33 @@ lru_replacer.cpp.s:
 	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/lru_replacer.cpp.s
 .PHONY : lru_replacer.cpp.s
 
+page.o: page.cpp.o
+
+.PHONY : page.o
+
+# target to build an object file
+page.cpp.o:
+	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page.cpp.o
+.PHONY : page.cpp.o
+
+page.i: page.cpp.i
+
+.PHONY : page.i
+
+# target to preprocess a source file
+page.cpp.i:
+	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page.cpp.i
+.PHONY : page.cpp.i
+
+page.s: page.cpp.s
+
+.PHONY : page.s
+
+# target to generate assembly for a file
+page.cpp.s:
+	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page.cpp.s
+.PHONY : page.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -334,6 +361,9 @@ help:
 	@echo "... lru_replacer.o"
 	@echo "... lru_replacer.i"
 	@echo "... lru_replacer.s"
+	@echo "... page.o"
+	@echo "... page.i"
+	@echo "... page.s"
 .PHONY : help
 
 

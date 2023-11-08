@@ -106,7 +106,7 @@ namespace graphbuffer
     tar->is_dirty_ = false;
     tar->page_id_ = page_id;
     tar->file_handler_ = file_handler;
-    // tar->buffer_pool_manager_ = std::make_shared<BufferPoolManager>(this);
+    tar->buffer_pool_manager_ = this;
 
     return tar;
   }
@@ -145,7 +145,7 @@ namespace graphbuffer
    * replacer if pin_count<=0 before this call, return false. is_dirty: set the
    * dirty flag of this page
    */
-  bool BufferPoolManager::UnpinPage(Page *tar)
+  bool BufferPoolManager::ReleasePage(Page *tar)
   {
     std::lock_guard<std::mutex> lck(latch_);
 
