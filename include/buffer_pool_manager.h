@@ -31,6 +31,7 @@ namespace graphbuffer
 
     // Page *FetchPage(page_id_t page_id);
     Page *FetchPage(page_id_infile page_id, int file_handler = 0);
+    PageDescriptor FetchPageDescriptor(page_id_infile page_id, int file_handler = 0);
 
     bool UnpinPage(page_id_infile page_id, bool is_dirty, int file_handler = 0);
 

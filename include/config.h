@@ -33,4 +33,13 @@ namespace graphbuffer
   typedef int32_t txn_id_t; // transaction id type
   typedef int32_t lsn_t;    // log sequence number type
 
-} // namespace cmudb
+  class NonCopyable
+  {
+  protected:
+    // NonCopyable(const NonCopyable &) = delete;
+    NonCopyable &operator=(const NonCopyable &) = delete;
+
+    NonCopyable() = default;
+    ~NonCopyable() = default;
+  };
+} // namespace graphbuffer

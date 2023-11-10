@@ -1,5 +1,8 @@
 #include "buffer_pool_manager.h"
 
+#include <sys/mman.h>
+#include <utility>
+
 namespace graphbuffer
 {
 
@@ -14,6 +17,7 @@ namespace graphbuffer
   {
     // a consecutive memory space for buffer pool
     buffer_pool_ = aligned_alloc(PAGE_SIZE_OS, PAGE_SIZE * pool_size);
+    madvise(buffer_pool_, pool_size * PAGE_SIZE, MADV_RANDOM);
     pages_ = new Page[pool_size_];
     // page_table_ = new std::vector<ExtendibleHash<page_id_infile, Page *>>();
     replacer_ = new LRUReplacer<Page *>;
@@ -110,8 +114,14 @@ namespace graphbuffer
 
     return tar;
   }
-  // Page *BufferPoolManager::find
 
+  // Page *BufferPoolManager::find
+  PageDescriptor BufferPoolManager::FetchPageDescriptor(page_id_infile page_id, int file_handler)
+  {
+    auto tar = FetchPage(page_id, file_handler);
+
+    return PageDescriptor(tar);
+  }
   /*
    * Implementation of unpin page
    * if pin_count>0, decrement it and if it becomes zero, put it back to

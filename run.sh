@@ -13,6 +13,8 @@ else
     echo -e "\033[41;36m Compile succeed \033[0m"
 fi
 
+echo 1 > /proc/sys/vm/drop_caches
+
 cd ..
 ./bin/graphscope_bufferpool
 

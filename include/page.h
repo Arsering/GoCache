@@ -70,19 +70,20 @@ namespace graphbuffer
     RWMutex rwlatch_;
     BufferPoolManager *buffer_pool_manager_;
   };
-  // class PageOutPool
-  // {
-  // public:
-  //   PageOutPool(std::shared_ptr<Page> inner)
-  //   {
-  //     inner_ = inner;
-  //   }
-  //   ~PageOutPool()
-  //   {
-  //     inner_->Unpin();
-  //   }
 
-  // private:
-  //   std::shared_ptr<Page> inner_;
-  // }
-} // namespace cmudb
+  class PageDescriptor : public NonCopyable
+  {
+  public:
+    PageDescriptor(Page *inner)
+    {
+      inner_ = inner;
+    }
+    ~PageDescriptor()
+    {
+      inner_->Unpin();
+    }
+
+  private:
+    Page *inner_;
+  };
+} // namespace graphbuffer

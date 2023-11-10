@@ -38,7 +38,7 @@ int test1()
         }
     }
     graphbuffer::DiskManager *disk_manager = new graphbuffer::DiskManager("test.db");
-    graphbuffer::BufferPoolManager bpm(10, disk_manager);
+    graphbuffer::BufferPoolManager bpm(pool_size, disk_manager);
 
     for (int i = 0; i < 100; i++)
     {
