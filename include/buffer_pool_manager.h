@@ -23,9 +23,10 @@ namespace graphbuffer
   class BufferPoolManager
   {
   public:
-    BufferPoolManager(size_t pool_size, DiskManager *disk_manager);
-    BufferPoolManager(size_t pool_size);
+    BufferPoolManager() = default;
     ~BufferPoolManager();
+    void init(size_t pool_size, DiskManager *disk_manager);
+    void init(size_t pool_size);
 
     int RegisterFile(int file_handler);
 
@@ -42,6 +43,17 @@ namespace graphbuffer
     Page *NewPage(page_id_infile &page_id, int file_handler = 0);
 
     bool DeletePage(page_id_infile page_id, int file_handler = 0);
+
+    static BufferPoolManager &GetGlobalIntance()
+    {
+      static BufferPoolManager bpm;
+      return bpm;
+    }
+
+    int GetFileDescriptor(int fd_inner)
+    {
+      return disk_manager_->GetFileDescriptor(fd_inner);
+    }
 
   private:
     size_t pool_size_; // number of pages in buffer pool

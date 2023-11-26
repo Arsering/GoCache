@@ -53,6 +53,19 @@ namespace graphbuffer
 
     inline lsn_t GetLSN() { return *reinterpret_cast<lsn_t *>(GetData() + 4); }
     inline void SetLSN(lsn_t lsn) { memcpy(GetData() + 4, &lsn, 4); }
+    size_t SetObject(void *buf, size_t page_offset, size_t object_size)
+    {
+      object_size = object_size + page_offset > PAGE_SIZE_BUFFER_POOL ? PAGE_SIZE_BUFFER_POOL - page_offset : object_size;
+      memcpy(data_ + page_offset, buf, object_size);
+      return object_size;
+    }
+
+    size_t GetObject(void *buf, size_t page_offset, size_t object_size)
+    {
+      object_size = object_size + page_offset > PAGE_SIZE_BUFFER_POOL ? PAGE_SIZE_BUFFER_POOL - page_offset : object_size;
+      memcpy(buf, data_ + page_offset, object_size);
+      return object_size;
+    }
 
   private:
     // method used by buffer pool manager

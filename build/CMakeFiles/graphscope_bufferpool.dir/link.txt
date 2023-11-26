@@ -1,1 +1,1 @@
-/usr/bin/g++   -std=c++11 -Wall -Wextra -lpthread -O0 -g   CMakeFiles/graphscope_bufferpool.dir/main.cpp.o  -o ../bin/graphscope_bufferpool   -L/data/zhengyang/data/GraphScope_bufferpool/lib  -Wl,-rpath,/data/zhengyang/data/GraphScope_bufferpool/lib ../lib/libbufferpool.a 
+/usr/bin/g++   -std=c++17 -Wall -Wextra -lpthread -O0 -g   CMakeFiles/graphscope_bufferpool.dir/main.cpp.o  -o ../bin/graphscope_bufferpool   -L/data/zhengyang/data/GraphScope_bufferpool/lib  -Wl,-rpath,/data/zhengyang/data/GraphScope_bufferpool/lib ../lib/libbufferpool.a 

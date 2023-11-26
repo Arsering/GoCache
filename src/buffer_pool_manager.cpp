@@ -11,10 +11,12 @@ namespace graphbuffer
    * When log_manager is nullptr, logging is disabled (for test purpose)
    * WARNING: Do Not Edit This Function
    */
-  BufferPoolManager::BufferPoolManager(size_t pool_size,
-                                       DiskManager *disk_manager)
-      : pool_size_(pool_size), disk_manager_(disk_manager)
+  void BufferPoolManager::init(size_t pool_size,
+                               DiskManager *disk_manager)
   {
+    pool_size_ = pool_size;
+    disk_manager_ = disk_manager;
+
     // a consecutive memory space for buffer pool
     buffer_pool_ = aligned_alloc(PAGE_SIZE_OS, PAGE_SIZE * pool_size);
     madvise(buffer_pool_, pool_size * PAGE_SIZE, MADV_RANDOM);
@@ -37,10 +39,10 @@ namespace graphbuffer
     }
   }
 
-  BufferPoolManager::BufferPoolManager(size_t pool_size)
+  void BufferPoolManager::init(size_t pool_size)
   {
     DiskManager *disk_manager = new graphbuffer::DiskManager("test.db");
-    BufferPoolManager(pool_size, disk_manager);
+    init(pool_size, disk_manager);
   }
 
   /*

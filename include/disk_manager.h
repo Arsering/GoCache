@@ -13,6 +13,7 @@
 #include <future>
 #include <string>
 #include <vector>
+#include <iostream>
 
 #include "config.h"
 
@@ -28,10 +29,15 @@ namespace graphbuffer
     DiskManager();
     ~DiskManager();
 
-    inline int RegisterFile(int file_handler)
+    inline int RegisterFile(int file_os)
     {
-      file_handlers_.push_back(file_handler);
+      file_handlers_.push_back(file_os);
       return file_handlers_.size() - 1;
+    }
+
+    inline int GetFileDescriptor(int fd_inner)
+    {
+      return file_handlers_[fd_inner];
     }
 
     void WritePage(page_id_infile page_id, const char *page_data, int file_handler = 0);
