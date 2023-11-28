@@ -14,7 +14,7 @@
 #include <mutex>
 #include "replacer.h"
 
-namespace graphbuffer
+namespace gbp
 {
 
   template <typename T>

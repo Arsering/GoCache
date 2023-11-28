@@ -1,10 +1,9 @@
-#include "page.h"
-#include "buffer_pool_manager.h"
+#include "../include/page.h"
+#include "../include/buffer_pool_manager.h"
 
-namespace graphbuffer
-{
-    bool Page::Unpin()
-    {
-        buffer_pool_manager_->ReleasePage(this);
-    }
+namespace gbp {
+bool Page::Unpin() {
+  buffer_pool_manager_->ReleasePage(this);
+  return true;
 }
+}  // namespace gbp

@@ -7,7 +7,7 @@
 
 #include <cstdlib>
 
-namespace graphbuffer {
+namespace gbp {
 
 template <typename T> class Replacer {
 public:

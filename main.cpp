@@ -29,14 +29,14 @@ int test1()
     std::uniform_int_distribution<int> u(0, 100); // 左闭右闭区间
     e.seed(time(0));
 
-    graphbuffer::page_id_infile temp_page_id;
+    gbp::page_id_infile temp_page_id;
     size_t pool_size = 10;
-    graphbuffer::DiskManager *disk_manager = new graphbuffer::DiskManager("test.db");
-    graphbuffer::BufferPoolManager *bpm = &graphbuffer::BufferPoolManager::GetGlobalIntance();
+    gbp::DiskManager *disk_manager = new gbp::DiskManager("test.db");
+    gbp::BufferPoolManager *bpm = &gbp::BufferPoolManager::GetGlobalIntance();
     bpm->init(pool_size, disk_manager);
 
     {
-        for (graphbuffer::page_id_infile page_num = 0; page_num < 100; page_num++)
+        for (gbp::page_id_infile page_num = 0; page_num < 100; page_num++)
         {
             auto page = bpm->NewPage(page_num);
             strcpy(page->GetData(), "Hello");
@@ -51,7 +51,7 @@ int test1()
 
     for (int i = 0; i < 100; i++)
     {
-        graphbuffer::page_id_infile page_num = i;
+        gbp::page_id_infile page_num = i;
         // std::cout << page_num << std::endl;
         auto page = bpm->FetchPage(page_num);
         // std::cout << page->GetData()[0] << std::endl;
@@ -68,16 +68,16 @@ int test2()
 
     std::string another_file_name = "test1.db";
 
-    graphbuffer::page_id_infile temp_page_id;
+    gbp::page_id_infile temp_page_id;
     size_t pool_size = 10;
-    graphbuffer::DiskManager *disk_manager = new graphbuffer::DiskManager("test.db");
-    graphbuffer::BufferPoolManager *bpm = &graphbuffer::BufferPoolManager::GetGlobalIntance();
+    gbp::DiskManager *disk_manager = new gbp::DiskManager("test.db");
+    gbp::BufferPoolManager *bpm = &gbp::BufferPoolManager::GetGlobalIntance();
     bpm->init(pool_size, disk_manager);
     int file_handler = open(another_file_name.c_str(), O_RDWR | O_DIRECT | O_CREAT);
     file_handler = bpm->RegisterFile(file_handler);
     {
 
-        for (graphbuffer::page_id_infile page_num = 0; page_num < 100; page_num++)
+        for (gbp::page_id_infile page_num = 0; page_num < 100; page_num++)
         {
             auto page = bpm->NewPage(page_num);
             strcpy(page->GetData(), "Hello");
@@ -105,7 +105,7 @@ int test2()
 
     for (int i = 0; i < 100; i++)
     {
-        graphbuffer::page_id_infile page_num = i;
+        gbp::page_id_infile page_num = i;
         // std::cout << page_num << std::endl;
         auto page = bpm->FetchPage(page_num);
         // std::cout << page->GetData()[0] << std::endl;
@@ -363,7 +363,7 @@ int main()
 {
     // graphbuffer::DiskManager *disk_manager = new graphbuffer::DiskManager("test.db");
     size_t pool_size = 1000;
-    graphbuffer::BufferPoolManager *bpm = &graphbuffer::BufferPoolManager::GetGlobalIntance();
+    gbp::BufferPoolManager *bpm = &gbp::BufferPoolManager::GetGlobalIntance();
     bpm->init(pool_size);
     // test2();
 

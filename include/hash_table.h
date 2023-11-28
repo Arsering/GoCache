@@ -6,7 +6,7 @@
 
 #pragma once
 
-namespace graphbuffer
+namespace gbp
 {
 
   template <typename K, typename V>

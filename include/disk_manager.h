@@ -17,7 +17,7 @@
 
 #include "config.h"
 
-namespace graphbuffer
+namespace gbp
 {
 
   class DiskManager

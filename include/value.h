@@ -19,7 +19,7 @@
 #include <vector>
 #include <iostream>
 
-namespace graphbuffer
+namespace gbp
 {
 #define LBMalloc(size) malloc(size)
 #define LBFree(p) free(p)

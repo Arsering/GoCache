@@ -1,8 +1,6 @@
-#include "config.h"
+#include "../include/config.h"
 
-namespace graphbuffer
-{
-  std::atomic<bool> ENABLE_LOGGING(false); // for virtual table
-  std::chrono::duration<long long int> LOG_TIMEOUT =
-      std::chrono::seconds(1);
-}
+namespace gbp {
+std::atomic<bool> ENABLE_LOGGING(false);  // for virtual table
+std::chrono::duration<long long int> LOG_TIMEOUT = std::chrono::seconds(1);
+}  // namespace gbp

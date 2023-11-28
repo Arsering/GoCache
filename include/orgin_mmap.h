@@ -48,7 +48,7 @@ namespace gs
   {
   public:
     mmap_array()
-        : filename_(""), fd_(-1), size_(0), read_only_(true) { buffer_pool_manager_ = &graphbuffer::BufferPoolManager::GetGlobalIntance(); }
+        : filename_(""), fd_(-1), size_(0), read_only_(true) { buffer_pool_manager_ = &gbp::BufferPoolManager::GetGlobalIntance(); }
     mmap_array(mmap_array &&rhs) : mmap_array() { swap(rhs); }
     ~mmap_array() {}
 
@@ -204,7 +204,7 @@ namespace gs
       }
     }
 
-    std::shared_ptr<graphbuffer::Value> get(size_t idx, size_t num = 1) const
+    std::shared_ptr<gbp::Value> get(size_t idx, size_t num = 1) const
     {
       if (idx >= size_)
       {
@@ -212,7 +212,7 @@ namespace gs
         exit(-1);
       }
       size_t object_size = sizeof(T) * num;
-      std::shared_ptr<graphbuffer::Value> tar_value = std::make_shared<graphbuffer::Value>(object_size);
+      std::shared_ptr<gbp::Value> tar_value = std::make_shared<gbp::Value>(object_size);
       size_t value_size = 0;
 
       size_t file_offset = idx * sizeof(T);
@@ -249,7 +249,7 @@ namespace gs
     std::string filename_;
     int fd_;
     size_t size_;
-    graphbuffer::BufferPoolManager *buffer_pool_manager_ = nullptr;
+    gbp::BufferPoolManager *buffer_pool_manager_ = nullptr;
 
     bool read_only_;
   };
@@ -306,7 +306,7 @@ namespace gs
       data_.set(idx, val.data(), val.size());
     }
 
-    std::shared_ptr<graphbuffer::Value> get(size_t idx) const
+    std::shared_ptr<gbp::Value> get(size_t idx) const
     {
       auto item = items_.get(idx);
       auto item_str = reinterpret_cast<string_item *>(item->Data());

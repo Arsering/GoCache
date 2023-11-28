@@ -18,7 +18,7 @@
 
 #include "hash_table.h"
 
-namespace graphbuffer
+namespace gbp
 {
 
   template <typename K, typename V>
