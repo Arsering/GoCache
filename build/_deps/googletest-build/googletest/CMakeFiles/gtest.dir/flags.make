@@ -6,5 +6,5 @@ CXX_FLAGS =  -std=c++17 -Wall -Wextra -lpthread -O0 -g   -Wall -Wshadow -Wno-err
 
 CXX_DEFINES = 
 
-CXX_INCLUDES = -I/data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-src/googletest/include -I/data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-src/googletest 
+CXX_INCLUDES = -I/data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googletest/include -I/data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googletest 
 

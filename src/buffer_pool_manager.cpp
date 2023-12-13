@@ -1,6 +1,13 @@
-#include "../include/buffer_pool_manager.h"
+#include "../include/buffer_pool_manager.h"\
+#include "page.h"
 
+#include <cassert>
+#include <cstdint>
+#include <iostream>
+#include <iterator>
+#include <ostream>
 #include <sys/mman.h>
+#include <sys/types.h>
 #include <utility>
 
 namespace gbp {
@@ -24,7 +31,9 @@ void BufferPoolManager::init(size_t pool_size, DiskManager* disk_manager) {
 
   for (auto file_handler : disk_manager_->file_handlers_) {
     page_tables_.push_back(
-        std::make_shared<ExtendibleHash<page_id_infile, Page*>>(BUCKET_SIZE));
+        std::make_shared<WrappedVector>());
+    // page_tables_.push_back(
+    //     std::make_shared<ExtendibleHash<page_id_infile, Page*>>(50));
   }
 
   // put all the pages into free list
@@ -55,7 +64,9 @@ BufferPoolManager::~BufferPoolManager() {
 int BufferPoolManager::RegisterFile(int file_handler) {
   int file_handler_new = disk_manager_->RegisterFile(file_handler);
   page_tables_.push_back(
-      std::make_shared<ExtendibleHash<page_id_infile, Page*>>(BUCKET_SIZE));
+      std::make_shared<WrappedVector>());
+  // page_tables_.push_back(
+  //       std::make_shared<ExtendibleHash<page_id_infile, Page*>>(50));
   return file_handler_new;
 }
 
@@ -76,8 +87,12 @@ int BufferPoolManager::RegisterFile(int file_handler) {
 Page* BufferPoolManager::FetchPage(page_id_infile page_id, int file_handler) {
   std::lock_guard<std::mutex> lck(latch_);
   Page* tar = nullptr;
-
-  if (page_tables_[file_handler]->Find(page_id, tar)) {  // 1.1
+  u_int16_t mem_page_id;
+  if (page_tables_[file_handler]->Find(page_id, mem_page_id)) {  // 1.1
+    tar=mem_page_id+(Page*)pages_;
+    //std::cout<<"begin assert! and mem_page_id is "<<mem_page_id<<std::endl;
+    //assert(tar->GetPageId()==page_id);
+    //std::cout<<"pass assert!"<<std::endl;
     tar->pin_count_++;
     replacer_->Erase(tar);
     return tar;
@@ -96,8 +111,18 @@ Page* BufferPoolManager::FetchPage(page_id_infile page_id, int file_handler) {
   }
 
   // 3
-  page_tables_[file_handler]->Remove(tar->GetPageId());
-  page_tables_[file_handler]->Insert(page_id, tar);
+  int in_file_id = tar->GetPageId();
+  page_tables_[file_handler]->Remove(in_file_id);
+  mem_page_id=(tar-(Page*)pages_);
+  //std::cout<<(Page*)pages_<<" "<<pages_<<std::endl;
+  //std::cout<<"Insetr Page and mem page id is "<<mem_page_id<<std::endl;
+  //Page* tmtar=mem_page_id+(Page*)pages_;
+  //std::cout<<tar<<" "<<tmtar<<" "<<(tar-tmtar)/sizeof(Page)<<std::endl;
+  //std::cout<<tmtar->GetPageId()<<" "<<page_id<<std::endl;
+  //assert(tmtar==tar);
+  //assert(tmtar->GetPageId()==tar->GetPageId());
+  //std::cout<<"pass tmtar!"<<std::endl;
+  page_tables_[file_handler]->Insert(page_id, mem_page_id);
 
   // 4
   disk_manager_->ReadPage(page_id, tar->GetData(), file_handler);
@@ -127,8 +152,10 @@ bool BufferPoolManager::UnpinPage(page_id_infile page_id, bool is_dirty,
                                   int file_handler) {
   std::lock_guard<std::mutex> lck(latch_);
   Page* tar = nullptr;
-  page_tables_[file_handler]->Find(page_id, tar);
-  if (tar == nullptr) {
+  u_int16_t mem_page_id;
+  bool ret = page_tables_[file_handler]->Find(page_id, mem_page_id);
+  tar=mem_page_id+(Page*)pages_;
+  if (ret == false || tar == nullptr) {
     return false;
   }
   tar->is_dirty_ = is_dirty;
@@ -168,8 +195,11 @@ bool BufferPoolManager::ReleasePage(Page* tar) {
 bool BufferPoolManager::FlushPage(page_id_infile page_id, int file_handler) {
   std::lock_guard<std::mutex> lck(latch_);
   Page* tar = nullptr;
-  page_tables_[file_handler]->Find(page_id, tar);
-  if (tar == nullptr || tar->page_id_ == INVALID_PAGE_ID) {
+  //page_tables_[file_handler]->Find(page_id, tar);
+  uint16_t mem_page_id;
+  bool ret = page_tables_[file_handler]->Find(page_id,mem_page_id);
+  tar=mem_page_id+(Page*)pages_;
+  if (ret == false || tar == nullptr || tar->page_id_ == INVALID_PAGE_ID) {
     return false;
   }
   if (tar->is_dirty_) {
@@ -191,8 +221,10 @@ bool BufferPoolManager::FlushPage(page_id_infile page_id, int file_handler) {
 bool BufferPoolManager::DeletePage(page_id_infile page_id, int file_handler) {
   std::lock_guard<std::mutex> lck(latch_);
   Page* tar = nullptr;
-  page_tables_[file_handler]->Find(page_id, tar);
-  if (tar != nullptr) {
+  uint16_t mem_page_id;
+  bool ret = page_tables_[file_handler]->Find(page_id, mem_page_id);
+  tar=mem_page_id+(Page*)pages_;
+  if (!ret) {
     if (tar->GetPinCount() > 0) {
       return false;
     }
@@ -230,8 +262,11 @@ Page* BufferPoolManager::NewPage(page_id_infile& page_id, int file_handler) {
   }
 
   // 3
-  page_tables_[file_handler]->Remove(tar->GetPageId());
-  page_tables_[file_handler]->Insert(page_id, tar);
+  auto in_file_id=tar->GetPageId();
+  page_tables_[file_handler]->Remove(in_file_id);
+  uint16_t mem_page_id=(tar-(Page*)pages_);
+  std::cout<<"Insert Page and mem page id is "<<mem_page_id<<std::endl;
+  page_tables_[file_handler]->Insert(page_id, mem_page_id);
 
   // 4
   tar->page_id_ = page_id;

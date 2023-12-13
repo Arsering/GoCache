@@ -3,7 +3,7 @@ set -x
 cd build
 
 rm -rf ./*
-cmake ..
+cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=1 ..
 make
 
 if [ $? -ne 0 ]; then

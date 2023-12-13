@@ -1,6 +1,6 @@
 # CMake generated Testfile for 
-# Source directory: /data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-src/googlemock
-# Build directory: /data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-build/googlemock
+# Source directory: /data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googlemock
+# Build directory: /data/zyc/graphscope_bufferpool/build/_deps/googletest-build/googlemock
 # 
 # This file includes the relevant testing commands required for 
 # testing this directory and lists subdirectories to be tested as well.

@@ -17,6 +17,7 @@
 #include "extendible_hash.h"
 #include "lru_replacer.h"
 #include "page.h"
+#include "vector_map.h"
 
 namespace gbp {
 class BufferPoolManager {
@@ -42,6 +43,7 @@ class BufferPoolManager {
   Page* NewPage(page_id_infile& page_id, int file_handler = 0);
 
   bool DeletePage(page_id_infile page_id, int file_handler = 0);
+  //以上是buffer pool的页面管理操作
 
   static BufferPoolManager& GetGlobalInstance() {
     static BufferPoolManager bpm;
@@ -58,8 +60,11 @@ class BufferPoolManager {
   Page* pages_;  // array of pages
   DiskManager* disk_manager_;
 
-  std::vector<std::shared_ptr<ExtendibleHash<page_id_infile, Page*>>>
-      page_tables_;              // to keep track of pages
+  // std::vector<std::shared_ptr<ExtendibleHash<page_id_infile, Page*>>>
+  //     page_tables_;              // to keep track of pages
+  // std::vector<std::shared_ptr<WrappedPHM<page_id_infile, Page*>>>
+  //     page_tables_;   
+  std::vector<std::shared_ptr<WrappedVector>> page_tables_;
   Replacer<Page*>* replacer_;    // to find an unpinned page for replacement
   std::list<Page*>* free_list_;  // to find a free page for replacement
   std::mutex latch_;             // to protect shared data structure

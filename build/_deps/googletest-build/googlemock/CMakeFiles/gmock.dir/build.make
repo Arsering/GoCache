@@ -43,10 +43,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /data/zhengyang/data/GraphScope_bufferpool
+CMAKE_SOURCE_DIR = /data/zyc/graphscope_bufferpool
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /data/zhengyang/data/GraphScope_bufferpool/build
+CMAKE_BINARY_DIR = /data/zyc/graphscope_bufferpool/build
 
 # Include any dependencies generated for this target.
 include _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/depend.make
@@ -59,16 +59,16 @@ include _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/flags.make
 
 _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/src/gmock-all.cc.o: _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/flags.make
 _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/src/gmock-all.cc.o: _deps/googletest-src/googlemock/src/gmock-all.cc
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/src/gmock-all.cc.o"
-	cd /data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-build/googlemock && /usr/bin/g++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/gmock.dir/src/gmock-all.cc.o -c /data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-src/googlemock/src/gmock-all.cc
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/data/zyc/graphscope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/src/gmock-all.cc.o"
+	cd /data/zyc/graphscope_bufferpool/build/_deps/googletest-build/googlemock && /usr/bin/g++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/gmock.dir/src/gmock-all.cc.o -c /data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googlemock/src/gmock-all.cc
 
 _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/src/gmock-all.cc.i: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/gmock.dir/src/gmock-all.cc.i"
-	cd /data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-build/googlemock && /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-src/googlemock/src/gmock-all.cc > CMakeFiles/gmock.dir/src/gmock-all.cc.i
+	cd /data/zyc/graphscope_bufferpool/build/_deps/googletest-build/googlemock && /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googlemock/src/gmock-all.cc > CMakeFiles/gmock.dir/src/gmock-all.cc.i
 
 _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/src/gmock-all.cc.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/gmock.dir/src/gmock-all.cc.s"
-	cd /data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-build/googlemock && /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-src/googlemock/src/gmock-all.cc -o CMakeFiles/gmock.dir/src/gmock-all.cc.s
+	cd /data/zyc/graphscope_bufferpool/build/_deps/googletest-build/googlemock && /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googlemock/src/gmock-all.cc -o CMakeFiles/gmock.dir/src/gmock-all.cc.s
 
 # Object files for target gmock
 gmock_OBJECTS = \
@@ -80,9 +80,9 @@ gmock_EXTERNAL_OBJECTS =
 lib/libgmock.a: _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/src/gmock-all.cc.o
 lib/libgmock.a: _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/build.make
 lib/libgmock.a: _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX static library ../../../lib/libgmock.a"
-	cd /data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-build/googlemock && $(CMAKE_COMMAND) -P CMakeFiles/gmock.dir/cmake_clean_target.cmake
-	cd /data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-build/googlemock && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/gmock.dir/link.txt --verbose=$(VERBOSE)
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/data/zyc/graphscope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX static library ../../../lib/libgmock.a"
+	cd /data/zyc/graphscope_bufferpool/build/_deps/googletest-build/googlemock && $(CMAKE_COMMAND) -P CMakeFiles/gmock.dir/cmake_clean_target.cmake
+	cd /data/zyc/graphscope_bufferpool/build/_deps/googletest-build/googlemock && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/gmock.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
 _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/build: lib/libgmock.a
@@ -90,10 +90,10 @@ _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/build: lib/libgmock.a
 .PHONY : _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/build
 
 _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/clean:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-build/googlemock && $(CMAKE_COMMAND) -P CMakeFiles/gmock.dir/cmake_clean.cmake
+	cd /data/zyc/graphscope_bufferpool/build/_deps/googletest-build/googlemock && $(CMAKE_COMMAND) -P CMakeFiles/gmock.dir/cmake_clean.cmake
 .PHONY : _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/clean
 
 _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/depend:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /data/zhengyang/data/GraphScope_bufferpool /data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-src/googlemock /data/zhengyang/data/GraphScope_bufferpool/build /data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-build/googlemock /data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-build/googlemock/CMakeFiles/gmock.dir/DependInfo.cmake --color=$(COLOR)
+	cd /data/zyc/graphscope_bufferpool/build && $(CMAKE_COMMAND) -E cmake_depends "Unix Makefiles" /data/zyc/graphscope_bufferpool /data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googlemock /data/zyc/graphscope_bufferpool/build /data/zyc/graphscope_bufferpool/build/_deps/googletest-build/googlemock /data/zyc/graphscope_bufferpool/build/_deps/googletest-build/googlemock/CMakeFiles/gmock.dir/DependInfo.cmake --color=$(COLOR)
 .PHONY : _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/depend
 

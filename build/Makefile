@@ -48,10 +48,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /data/zhengyang/data/GraphScope_bufferpool
+CMAKE_SOURCE_DIR = /data/zyc/graphscope_bufferpool
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /data/zhengyang/data/GraphScope_bufferpool/build
+CMAKE_BINARY_DIR = /data/zyc/graphscope_bufferpool/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -126,9 +126,9 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /data/zyc/graphscope_bufferpool/build/CMakeFiles /data/zyc/graphscope_bufferpool/build/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /data/zyc/graphscope_bufferpool/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target

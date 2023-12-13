@@ -6,11 +6,11 @@
 
 #IncludeRegexTransform: 
 
-/data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-src/googletest/src/gtest_main.cc
+/data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googletest/src/gtest_main.cc
 cstdio
 -
 gtest/gtest.h
-/data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-src/googletest/src/gtest/gtest.h
+/data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googletest/src/gtest/gtest.h
 
 _deps/googletest-src/googletest/include/gtest/gtest-assertion-result.h
 memory

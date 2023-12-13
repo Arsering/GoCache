@@ -32,7 +32,7 @@ int test1()
     gbp::page_id_infile temp_page_id;
     size_t pool_size = 10;
     gbp::DiskManager *disk_manager = new gbp::DiskManager("test.db");
-    gbp::BufferPoolManager *bpm = &gbp::BufferPoolManager::GetGlobalIntance();
+    gbp::BufferPoolManager *bpm = &gbp::BufferPoolManager::GetGlobalInstance();
     bpm->init(pool_size, disk_manager);
 
     {
@@ -71,7 +71,7 @@ int test2()
     gbp::page_id_infile temp_page_id;
     size_t pool_size = 10;
     gbp::DiskManager *disk_manager = new gbp::DiskManager("test.db");
-    gbp::BufferPoolManager *bpm = &gbp::BufferPoolManager::GetGlobalIntance();
+    gbp::BufferPoolManager *bpm = &gbp::BufferPoolManager::GetGlobalInstance();
     bpm->init(pool_size, disk_manager);
     int file_handler = open(another_file_name.c_str(), O_RDWR | O_DIRECT | O_CREAT);
     file_handler = bpm->RegisterFile(file_handler);
@@ -363,7 +363,7 @@ int main()
 {
     // graphbuffer::DiskManager *disk_manager = new graphbuffer::DiskManager("test.db");
     size_t pool_size = 1000;
-    gbp::BufferPoolManager *bpm = &gbp::BufferPoolManager::GetGlobalIntance();
+    gbp::BufferPoolManager *bpm = &gbp::BufferPoolManager::GetGlobalInstance();
     bpm->init(pool_size);
     // test2();
 

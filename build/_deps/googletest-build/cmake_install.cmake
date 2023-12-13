@@ -1,4 +1,4 @@
-# Install script for directory: /data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-src
+# Install script for directory: /data/zyc/graphscope_bufferpool/build/_deps/googletest-src
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -39,7 +39,7 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("/data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-build/googlemock/cmake_install.cmake")
+  include("/data/zyc/graphscope_bufferpool/build/_deps/googletest-build/googlemock/cmake_install.cmake")
 
 endif()
 

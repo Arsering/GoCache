@@ -44,10 +44,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /data/zhengyang/data/GraphScope_bufferpool
+CMAKE_SOURCE_DIR = /data/zyc/graphscope_bufferpool
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /data/zhengyang/data/GraphScope_bufferpool/build
+CMAKE_BINARY_DIR = /data/zyc/graphscope_bufferpool/build
 
 #=============================================================================
 # Directory level rules for the build root directory
@@ -157,14 +157,14 @@ src/clean: src/CMakeFiles/bufferpool.dir/clean
 CMakeFiles/graphscope_bufferpool.dir/all: src/CMakeFiles/bufferpool.dir/all
 	$(MAKE) -f CMakeFiles/graphscope_bufferpool.dir/build.make CMakeFiles/graphscope_bufferpool.dir/depend
 	$(MAKE) -f CMakeFiles/graphscope_bufferpool.dir/build.make CMakeFiles/graphscope_bufferpool.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles --progress-num=12,13 "Built target graphscope_bufferpool"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/data/zyc/graphscope_bufferpool/build/CMakeFiles --progress-num=12,13 "Built target graphscope_bufferpool"
 .PHONY : CMakeFiles/graphscope_bufferpool.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/graphscope_bufferpool.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles 9
+	$(CMAKE_COMMAND) -E cmake_progress_start /data/zyc/graphscope_bufferpool/build/CMakeFiles 9
 	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/graphscope_bufferpool.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /data/zyc/graphscope_bufferpool/build/CMakeFiles 0
 .PHONY : CMakeFiles/graphscope_bufferpool.dir/rule
 
 # Convenience name for target.
@@ -185,14 +185,14 @@ _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/all: _deps/googletes
 _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/all: _deps/googletest-build/googletest/CMakeFiles/gtest.dir/all
 	$(MAKE) -f _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/build.make _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/depend
 	$(MAKE) -f _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/build.make _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles --progress-num=10,11 "Built target gmock_main"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/data/zyc/graphscope_bufferpool/build/CMakeFiles --progress-num=10,11 "Built target gmock_main"
 .PHONY : _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/all
 
 # Build rule for subdir invocation for target.
 _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles 6
+	$(CMAKE_COMMAND) -E cmake_progress_start /data/zyc/graphscope_bufferpool/build/CMakeFiles 6
 	$(MAKE) -f CMakeFiles/Makefile2 _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /data/zyc/graphscope_bufferpool/build/CMakeFiles 0
 .PHONY : _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/rule
 
 # Convenience name for target.
@@ -212,14 +212,14 @@ _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/clean:
 _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/all: _deps/googletest-build/googletest/CMakeFiles/gtest.dir/all
 	$(MAKE) -f _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/build.make _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/depend
 	$(MAKE) -f _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/build.make _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles --progress-num=8,9 "Built target gmock"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/data/zyc/graphscope_bufferpool/build/CMakeFiles --progress-num=8,9 "Built target gmock"
 .PHONY : _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/all
 
 # Build rule for subdir invocation for target.
 _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles 4
+	$(CMAKE_COMMAND) -E cmake_progress_start /data/zyc/graphscope_bufferpool/build/CMakeFiles 4
 	$(MAKE) -f CMakeFiles/Makefile2 _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /data/zyc/graphscope_bufferpool/build/CMakeFiles 0
 .PHONY : _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/rule
 
 # Convenience name for target.
@@ -239,14 +239,14 @@ _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/clean:
 _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/all: _deps/googletest-build/googletest/CMakeFiles/gtest.dir/all
 	$(MAKE) -f _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/build.make _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/depend
 	$(MAKE) -f _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/build.make _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles --progress-num=16,17 "Built target gtest_main"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/data/zyc/graphscope_bufferpool/build/CMakeFiles --progress-num=16,17 "Built target gtest_main"
 .PHONY : _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/all
 
 # Build rule for subdir invocation for target.
 _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles 4
+	$(CMAKE_COMMAND) -E cmake_progress_start /data/zyc/graphscope_bufferpool/build/CMakeFiles 4
 	$(MAKE) -f CMakeFiles/Makefile2 _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /data/zyc/graphscope_bufferpool/build/CMakeFiles 0
 .PHONY : _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/rule
 
 # Convenience name for target.
@@ -266,14 +266,14 @@ _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/clean:
 _deps/googletest-build/googletest/CMakeFiles/gtest.dir/all:
 	$(MAKE) -f _deps/googletest-build/googletest/CMakeFiles/gtest.dir/build.make _deps/googletest-build/googletest/CMakeFiles/gtest.dir/depend
 	$(MAKE) -f _deps/googletest-build/googletest/CMakeFiles/gtest.dir/build.make _deps/googletest-build/googletest/CMakeFiles/gtest.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles --progress-num=14,15 "Built target gtest"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/data/zyc/graphscope_bufferpool/build/CMakeFiles --progress-num=14,15 "Built target gtest"
 .PHONY : _deps/googletest-build/googletest/CMakeFiles/gtest.dir/all
 
 # Build rule for subdir invocation for target.
 _deps/googletest-build/googletest/CMakeFiles/gtest.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles 2
+	$(CMAKE_COMMAND) -E cmake_progress_start /data/zyc/graphscope_bufferpool/build/CMakeFiles 2
 	$(MAKE) -f CMakeFiles/Makefile2 _deps/googletest-build/googletest/CMakeFiles/gtest.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /data/zyc/graphscope_bufferpool/build/CMakeFiles 0
 .PHONY : _deps/googletest-build/googletest/CMakeFiles/gtest.dir/rule
 
 # Convenience name for target.
@@ -293,14 +293,14 @@ _deps/googletest-build/googletest/CMakeFiles/gtest.dir/clean:
 src/CMakeFiles/bufferpool.dir/all:
 	$(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/depend
 	$(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles --progress-num=1,2,3,4,5,6,7 "Built target bufferpool"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/data/zyc/graphscope_bufferpool/build/CMakeFiles --progress-num=1,2,3,4,5,6,7 "Built target bufferpool"
 .PHONY : src/CMakeFiles/bufferpool.dir/all
 
 # Build rule for subdir invocation for target.
 src/CMakeFiles/bufferpool.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles 7
+	$(CMAKE_COMMAND) -E cmake_progress_start /data/zyc/graphscope_bufferpool/build/CMakeFiles 7
 	$(MAKE) -f CMakeFiles/Makefile2 src/CMakeFiles/bufferpool.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /data/zyc/graphscope_bufferpool/build/CMakeFiles 0
 .PHONY : src/CMakeFiles/bufferpool.dir/rule
 
 # Convenience name for target.

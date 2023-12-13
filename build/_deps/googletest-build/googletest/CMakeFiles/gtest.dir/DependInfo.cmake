@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-src/googletest/src/gtest-all.cc" "/data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-build/googletest/CMakeFiles/gtest.dir/src/gtest-all.cc.o"
+  "/data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googletest/src/gtest-all.cc" "/data/zyc/graphscope_bufferpool/build/_deps/googletest-build/googletest/CMakeFiles/gtest.dir/src/gtest-all.cc.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 

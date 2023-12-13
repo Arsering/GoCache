@@ -12,5 +12,6 @@ CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/page.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/replacer.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/rwmutex.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/value.h
+CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/vector_map.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../main.cpp
 

@@ -12,8 +12,8 @@ project(googletest-populate NONE)
 include(ExternalProject)
 ExternalProject_Add(googletest-populate
                      "UPDATE_DISCONNECTED" "False" "URL" "https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip"
-                    SOURCE_DIR          "/data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-src"
-                    BINARY_DIR          "/data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-build"
+                    SOURCE_DIR          "/data/zyc/graphscope_bufferpool/build/_deps/googletest-src"
+                    BINARY_DIR          "/data/zyc/graphscope_bufferpool/build/_deps/googletest-build"
                     CONFIGURE_COMMAND   ""
                     BUILD_COMMAND       ""
                     INSTALL_COMMAND     ""

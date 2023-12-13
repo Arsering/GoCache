@@ -48,10 +48,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /data/zhengyang/data/GraphScope_bufferpool
+CMAKE_SOURCE_DIR = /data/zyc/graphscope_bufferpool
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /data/zhengyang/data/GraphScope_bufferpool/build
+CMAKE_BINARY_DIR = /data/zyc/graphscope_bufferpool/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -126,14 +126,14 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles /data/zhengyang/data/GraphScope_bufferpool/build/_deps/googletest-build/CMakeFiles/progress.marks
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f CMakeFiles/Makefile2 _deps/googletest-build/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles 0
+	cd /data/zyc/graphscope_bufferpool/build && $(CMAKE_COMMAND) -E cmake_progress_start /data/zyc/graphscope_bufferpool/build/CMakeFiles /data/zyc/graphscope_bufferpool/build/_deps/googletest-build/CMakeFiles/progress.marks
+	cd /data/zyc/graphscope_bufferpool/build && $(MAKE) -f CMakeFiles/Makefile2 _deps/googletest-build/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /data/zyc/graphscope_bufferpool/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
 clean:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f CMakeFiles/Makefile2 _deps/googletest-build/clean
+	cd /data/zyc/graphscope_bufferpool/build && $(MAKE) -f CMakeFiles/Makefile2 _deps/googletest-build/clean
 .PHONY : clean
 
 # The main clean target
@@ -143,17 +143,17 @@ clean/fast: clean
 
 # Prepare targets for installation.
 preinstall: all
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f CMakeFiles/Makefile2 _deps/googletest-build/preinstall
+	cd /data/zyc/graphscope_bufferpool/build && $(MAKE) -f CMakeFiles/Makefile2 _deps/googletest-build/preinstall
 .PHONY : preinstall
 
 # Prepare targets for installation.
 preinstall/fast:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f CMakeFiles/Makefile2 _deps/googletest-build/preinstall
+	cd /data/zyc/graphscope_bufferpool/build && $(MAKE) -f CMakeFiles/Makefile2 _deps/googletest-build/preinstall
 .PHONY : preinstall/fast
 
 # clear depends
 depend:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
+	cd /data/zyc/graphscope_bufferpool/build && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
 
 # Help Target
@@ -179,6 +179,6 @@ help:
 # No rule that depends on this can have commands that come from listfiles
 # because they might be regenerated.
 cmake_check_build_system:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
+	cd /data/zyc/graphscope_bufferpool/build && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
 .PHONY : cmake_check_build_system
 
