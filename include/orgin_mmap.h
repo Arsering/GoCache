@@ -48,7 +48,7 @@ namespace gs
   {
   public:
     mmap_array()
-        : filename_(""), fd_(-1), size_(0), read_only_(true) { buffer_pool_manager_ = &gbp::BufferPoolManager::GetGlobalIntance(); }
+        : filename_(""), fd_(-1), size_(0), read_only_(true) { buffer_pool_manager_ = &gbp::BufferPoolManager::GetGlobalInstance(); }
     mmap_array(mmap_array &&rhs) : mmap_array() { swap(rhs); }
     ~mmap_array() {}
 

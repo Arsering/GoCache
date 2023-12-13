@@ -1,0 +1,62 @@
+[
+{
+  "directory": "/data/zyc/graphscope_bufferpool/build",
+  "command": "/usr/bin/g++   -I/data/zyc/graphscope_bufferpool/include   -std=c++17 -Wall -Wextra -lpthread -O0 -g   -o CMakeFiles/graphscope_bufferpool.dir/main.cpp.o -c /data/zyc/graphscope_bufferpool/main.cpp",
+  "file": "/data/zyc/graphscope_bufferpool/main.cpp"
+},
+{
+  "directory": "/data/zyc/graphscope_bufferpool/build",
+  "command": "/usr/bin/g++   -I/data/zyc/graphscope_bufferpool/include   -std=c++17 -Wall -Wextra -lpthread -O0 -g   -o CMakeFiles/graphscope_bufferpool.dir/test.cc.o -c /data/zyc/graphscope_bufferpool/test.cc",
+  "file": "/data/zyc/graphscope_bufferpool/test.cc"
+},
+{
+  "directory": "/data/zyc/graphscope_bufferpool/build/_deps/googletest-build/googlemock",
+  "command": "/usr/bin/g++   -isystem /data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googlemock/include -isystem /data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googlemock -isystem /data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googletest/include -isystem /data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googletest   -std=c++17 -Wall -Wextra -lpthread -O0 -g   -Wall -Wshadow -Wno-error=dangling-else -DGTEST_HAS_PTHREAD=1 -fexceptions -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -o CMakeFiles/gmock_main.dir/src/gmock_main.cc.o -c /data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googlemock/src/gmock_main.cc",
+  "file": "/data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googlemock/src/gmock_main.cc"
+},
+{
+  "directory": "/data/zyc/graphscope_bufferpool/build/_deps/googletest-build/googlemock",
+  "command": "/usr/bin/g++   -I/data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googlemock/include -I/data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googlemock -isystem /data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googletest/include -isystem /data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googletest   -std=c++17 -Wall -Wextra -lpthread -O0 -g   -Wall -Wshadow -Wno-error=dangling-else -DGTEST_HAS_PTHREAD=1 -fexceptions -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -o CMakeFiles/gmock.dir/src/gmock-all.cc.o -c /data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googlemock/src/gmock-all.cc",
+  "file": "/data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googlemock/src/gmock-all.cc"
+},
+{
+  "directory": "/data/zyc/graphscope_bufferpool/build/_deps/googletest-build/googletest",
+  "command": "/usr/bin/g++   -isystem /data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googletest/include -isystem /data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googletest   -std=c++17 -Wall -Wextra -lpthread -O0 -g   -Wall -Wshadow -Wno-error=dangling-else -DGTEST_HAS_PTHREAD=1 -fexceptions -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -o CMakeFiles/gtest_main.dir/src/gtest_main.cc.o -c /data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googletest/src/gtest_main.cc",
+  "file": "/data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googletest/src/gtest_main.cc"
+},
+{
+  "directory": "/data/zyc/graphscope_bufferpool/build/_deps/googletest-build/googletest",
+  "command": "/usr/bin/g++   -I/data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googletest/include -I/data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googletest   -std=c++17 -Wall -Wextra -lpthread -O0 -g   -Wall -Wshadow -Wno-error=dangling-else -DGTEST_HAS_PTHREAD=1 -fexceptions -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -o CMakeFiles/gtest.dir/src/gtest-all.cc.o -c /data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googletest/src/gtest-all.cc",
+  "file": "/data/zyc/graphscope_bufferpool/build/_deps/googletest-src/googletest/src/gtest-all.cc"
+},
+{
+  "directory": "/data/zyc/graphscope_bufferpool/build/src",
+  "command": "/usr/bin/g++  -Dbufferpool_EXPORTS -I/data/zyc/graphscope_bufferpool/include   -std=c++17 -Wall -Wextra -lpthread -O0 -g -fPIC   -o CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o -c /data/zyc/graphscope_bufferpool/src/buffer_pool_manager.cpp",
+  "file": "/data/zyc/graphscope_bufferpool/src/buffer_pool_manager.cpp"
+},
+{
+  "directory": "/data/zyc/graphscope_bufferpool/build/src",
+  "command": "/usr/bin/g++  -Dbufferpool_EXPORTS -I/data/zyc/graphscope_bufferpool/include   -std=c++17 -Wall -Wextra -lpthread -O0 -g -fPIC   -o CMakeFiles/bufferpool.dir/config.cpp.o -c /data/zyc/graphscope_bufferpool/src/config.cpp",
+  "file": "/data/zyc/graphscope_bufferpool/src/config.cpp"
+},
+{
+  "directory": "/data/zyc/graphscope_bufferpool/build/src",
+  "command": "/usr/bin/g++  -Dbufferpool_EXPORTS -I/data/zyc/graphscope_bufferpool/include   -std=c++17 -Wall -Wextra -lpthread -O0 -g -fPIC   -o CMakeFiles/bufferpool.dir/disk_manager.cpp.o -c /data/zyc/graphscope_bufferpool/src/disk_manager.cpp",
+  "file": "/data/zyc/graphscope_bufferpool/src/disk_manager.cpp"
+},
+{
+  "directory": "/data/zyc/graphscope_bufferpool/build/src",
+  "command": "/usr/bin/g++  -Dbufferpool_EXPORTS -I/data/zyc/graphscope_bufferpool/include   -std=c++17 -Wall -Wextra -lpthread -O0 -g -fPIC   -o CMakeFiles/bufferpool.dir/extendible_hash.cpp.o -c /data/zyc/graphscope_bufferpool/src/extendible_hash.cpp",
+  "file": "/data/zyc/graphscope_bufferpool/src/extendible_hash.cpp"
+},
+{
+  "directory": "/data/zyc/graphscope_bufferpool/build/src",
+  "command": "/usr/bin/g++  -Dbufferpool_EXPORTS -I/data/zyc/graphscope_bufferpool/include   -std=c++17 -Wall -Wextra -lpthread -O0 -g -fPIC   -o CMakeFiles/bufferpool.dir/lru_replacer.cpp.o -c /data/zyc/graphscope_bufferpool/src/lru_replacer.cpp",
+  "file": "/data/zyc/graphscope_bufferpool/src/lru_replacer.cpp"
+},
+{
+  "directory": "/data/zyc/graphscope_bufferpool/build/src",
+  "command": "/usr/bin/g++  -Dbufferpool_EXPORTS -I/data/zyc/graphscope_bufferpool/include   -std=c++17 -Wall -Wextra -lpthread -O0 -g -fPIC   -o CMakeFiles/bufferpool.dir/page.cpp.o -c /data/zyc/graphscope_bufferpool/src/page.cpp",
+  "file": "/data/zyc/graphscope_bufferpool/src/page.cpp"
+}
+]

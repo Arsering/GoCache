@@ -1,4 +1,5 @@
 #include "../include/buffer_pool_manager.h"
+#include "extendible_hash.h"
 
 #include <sys/mman.h>
 #include <utility>
@@ -24,7 +25,9 @@ void BufferPoolManager::init(size_t pool_size, DiskManager* disk_manager) {
 
   for (auto file_handler : disk_manager_->file_handlers_) {
     page_tables_.push_back(
-        std::make_shared<ExtendibleHash<page_id_infile, Page*>>(BUCKET_SIZE));
+        std::make_shared<WrappedPHM<page_id_infile, Page*>>());
+    // page_tables_.push_back(
+    //     std::make_shared<ExtendibleHash<page_id_infile, Page*>>(50));
   }
 
   // put all the pages into free list
@@ -55,7 +58,9 @@ BufferPoolManager::~BufferPoolManager() {
 int BufferPoolManager::RegisterFile(int file_handler) {
   int file_handler_new = disk_manager_->RegisterFile(file_handler);
   page_tables_.push_back(
-      std::make_shared<ExtendibleHash<page_id_infile, Page*>>(BUCKET_SIZE));
+      std::make_shared<WrappedPHM<page_id_infile, Page*>>());
+  // page_tables_.push_back(
+  //       std::make_shared<ExtendibleHash<page_id_infile, Page*>>(50));
   return file_handler_new;
 }
 
