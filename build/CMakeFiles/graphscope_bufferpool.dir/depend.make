@@ -6,11 +6,14 @@ CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/config.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/disk_manager.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/extendible_hash.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/hash_table.h
+CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/logger.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/lru_replacer.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/orgin_mmap.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/page.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/replacer.h
+CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/rw_lock.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/rwmutex.h
+CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/type_traits.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/value.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../main.cpp
 

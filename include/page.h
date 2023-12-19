@@ -13,6 +13,7 @@
 
 #include "config.h"
 #include "rwmutex.h"
+#include "type_traits.h"
 
 namespace gbp {
 class BufferPoolManager;
@@ -47,19 +48,22 @@ class Page {
 
   inline lsn_t GetLSN() { return *reinterpret_cast<lsn_t*>(GetData() + 4); }
   inline void SetLSN(lsn_t lsn) { memcpy(GetData() + 4, &lsn, 4); }
-  size_t SetObject(const void* buf, size_t page_offset, size_t object_size) {
+
+  inline size_t SetObject(const char* buf, size_t page_offset,
+                          size_t object_size) {
     object_size = object_size + page_offset > PAGE_SIZE_BUFFER_POOL
                       ? PAGE_SIZE_BUFFER_POOL - page_offset
                       : object_size;
-    memcpy((char*) data_ + page_offset, buf, object_size);
+    ::memcpy((char*) data_ + page_offset, buf, object_size);
+    is_dirty_ = true;
     return object_size;
   }
 
-  size_t GetObject(void* buf, size_t page_offset, size_t object_size) const {
+  size_t GetObject(char* buf, size_t page_offset, size_t object_size) {
     object_size = object_size + page_offset > PAGE_SIZE_BUFFER_POOL
                       ? PAGE_SIZE_BUFFER_POOL - page_offset
                       : object_size;
-    memcpy(buf, (char*) data_ + page_offset, object_size);
+    ::memcpy(buf, (char*) data_ + page_offset, object_size);
     return object_size;
   }
 
@@ -81,8 +85,11 @@ class PageDescriptor : public NonCopyable {
  public:
   PageDescriptor(Page* inner) { inner_ = inner; }
   ~PageDescriptor() { inner_->Unpin(); }
+  Page* GetPage() { return inner_; }
 
  private:
+  DISABLE_COPY(PageDescriptor);
+
   Page* inner_;
 };
 }  // namespace gbp

@@ -23,7 +23,7 @@ DiskManager::DiskManager()
       flush_log_f_(nullptr) {}
 
 DiskManager::DiskManager(const std::string& db_file) : DiskManager() {
-  int file_handler = open(db_file.c_str(), O_RDWR | O_DIRECT | O_CREAT);
+  int file_handler = open(db_file.c_str(), O_RDWR | O_DIRECT | O_CREAT, 0777);
 
   // Open file failed
   if (file_handler == -1) {
