@@ -48,10 +48,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /data/zhengyang/data/GraphScope_bufferpool
+CMAKE_SOURCE_DIR = /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /data/zhengyang/data/GraphScope_bufferpool/build
+CMAKE_BINARY_DIR = /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -126,14 +126,14 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles /data/zhengyang/data/GraphScope_bufferpool/build/src/CMakeFiles/progress.marks
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f CMakeFiles/Makefile2 src/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles 0
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src/CMakeFiles/progress.marks
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f CMakeFiles/Makefile2 src/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
 clean:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f CMakeFiles/Makefile2 src/clean
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f CMakeFiles/Makefile2 src/clean
 .PHONY : clean
 
 # The main clean target
@@ -143,22 +143,22 @@ clean/fast: clean
 
 # Prepare targets for installation.
 preinstall: all
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f CMakeFiles/Makefile2 src/preinstall
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f CMakeFiles/Makefile2 src/preinstall
 .PHONY : preinstall
 
 # Prepare targets for installation.
 preinstall/fast:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f CMakeFiles/Makefile2 src/preinstall
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f CMakeFiles/Makefile2 src/preinstall
 .PHONY : preinstall/fast
 
 # clear depends
 depend:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 1
 .PHONY : depend
 
 # Convenience name for target.
 src/CMakeFiles/bufferpool.dir/rule:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f CMakeFiles/Makefile2 src/CMakeFiles/bufferpool.dir/rule
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f CMakeFiles/Makefile2 src/CMakeFiles/bufferpool.dir/rule
 .PHONY : src/CMakeFiles/bufferpool.dir/rule
 
 # Convenience name for target.
@@ -168,7 +168,7 @@ bufferpool: src/CMakeFiles/bufferpool.dir/rule
 
 # fast build rule for target.
 bufferpool/fast:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/build
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/build
 .PHONY : bufferpool/fast
 
 buffer_pool_manager.o: buffer_pool_manager.cpp.o
@@ -177,7 +177,7 @@ buffer_pool_manager.o: buffer_pool_manager.cpp.o
 
 # target to build an object file
 buffer_pool_manager.cpp.o:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o
 .PHONY : buffer_pool_manager.cpp.o
 
 buffer_pool_manager.i: buffer_pool_manager.cpp.i
@@ -186,7 +186,7 @@ buffer_pool_manager.i: buffer_pool_manager.cpp.i
 
 # target to preprocess a source file
 buffer_pool_manager.cpp.i:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.i
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.i
 .PHONY : buffer_pool_manager.cpp.i
 
 buffer_pool_manager.s: buffer_pool_manager.cpp.s
@@ -195,7 +195,7 @@ buffer_pool_manager.s: buffer_pool_manager.cpp.s
 
 # target to generate assembly for a file
 buffer_pool_manager.cpp.s:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.s
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.s
 .PHONY : buffer_pool_manager.cpp.s
 
 config.o: config.cpp.o
@@ -204,7 +204,7 @@ config.o: config.cpp.o
 
 # target to build an object file
 config.cpp.o:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/config.cpp.o
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/config.cpp.o
 .PHONY : config.cpp.o
 
 config.i: config.cpp.i
@@ -213,7 +213,7 @@ config.i: config.cpp.i
 
 # target to preprocess a source file
 config.cpp.i:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/config.cpp.i
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/config.cpp.i
 .PHONY : config.cpp.i
 
 config.s: config.cpp.s
@@ -222,7 +222,7 @@ config.s: config.cpp.s
 
 # target to generate assembly for a file
 config.cpp.s:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/config.cpp.s
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/config.cpp.s
 .PHONY : config.cpp.s
 
 disk_manager.o: disk_manager.cpp.o
@@ -231,7 +231,7 @@ disk_manager.o: disk_manager.cpp.o
 
 # target to build an object file
 disk_manager.cpp.o:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/disk_manager.cpp.o
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/disk_manager.cpp.o
 .PHONY : disk_manager.cpp.o
 
 disk_manager.i: disk_manager.cpp.i
@@ -240,7 +240,7 @@ disk_manager.i: disk_manager.cpp.i
 
 # target to preprocess a source file
 disk_manager.cpp.i:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/disk_manager.cpp.i
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/disk_manager.cpp.i
 .PHONY : disk_manager.cpp.i
 
 disk_manager.s: disk_manager.cpp.s
@@ -249,7 +249,7 @@ disk_manager.s: disk_manager.cpp.s
 
 # target to generate assembly for a file
 disk_manager.cpp.s:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/disk_manager.cpp.s
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/disk_manager.cpp.s
 .PHONY : disk_manager.cpp.s
 
 extendible_hash.o: extendible_hash.cpp.o
@@ -258,7 +258,7 @@ extendible_hash.o: extendible_hash.cpp.o
 
 # target to build an object file
 extendible_hash.cpp.o:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.o
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.o
 .PHONY : extendible_hash.cpp.o
 
 extendible_hash.i: extendible_hash.cpp.i
@@ -267,7 +267,7 @@ extendible_hash.i: extendible_hash.cpp.i
 
 # target to preprocess a source file
 extendible_hash.cpp.i:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.i
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.i
 .PHONY : extendible_hash.cpp.i
 
 extendible_hash.s: extendible_hash.cpp.s
@@ -276,8 +276,35 @@ extendible_hash.s: extendible_hash.cpp.s
 
 # target to generate assembly for a file
 extendible_hash.cpp.s:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.s
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.s
 .PHONY : extendible_hash.cpp.s
+
+logger.o: logger.cc.o
+
+.PHONY : logger.o
+
+# target to build an object file
+logger.cc.o:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/logger.cc.o
+.PHONY : logger.cc.o
+
+logger.i: logger.cc.i
+
+.PHONY : logger.i
+
+# target to preprocess a source file
+logger.cc.i:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/logger.cc.i
+.PHONY : logger.cc.i
+
+logger.s: logger.cc.s
+
+.PHONY : logger.s
+
+# target to generate assembly for a file
+logger.cc.s:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/logger.cc.s
+.PHONY : logger.cc.s
 
 lru_replacer.o: lru_replacer.cpp.o
 
@@ -285,7 +312,7 @@ lru_replacer.o: lru_replacer.cpp.o
 
 # target to build an object file
 lru_replacer.cpp.o:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/lru_replacer.cpp.o
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/lru_replacer.cpp.o
 .PHONY : lru_replacer.cpp.o
 
 lru_replacer.i: lru_replacer.cpp.i
@@ -294,7 +321,7 @@ lru_replacer.i: lru_replacer.cpp.i
 
 # target to preprocess a source file
 lru_replacer.cpp.i:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/lru_replacer.cpp.i
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/lru_replacer.cpp.i
 .PHONY : lru_replacer.cpp.i
 
 lru_replacer.s: lru_replacer.cpp.s
@@ -303,7 +330,7 @@ lru_replacer.s: lru_replacer.cpp.s
 
 # target to generate assembly for a file
 lru_replacer.cpp.s:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/lru_replacer.cpp.s
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/lru_replacer.cpp.s
 .PHONY : lru_replacer.cpp.s
 
 page.o: page.cpp.o
@@ -312,7 +339,7 @@ page.o: page.cpp.o
 
 # target to build an object file
 page.cpp.o:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page.cpp.o
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page.cpp.o
 .PHONY : page.cpp.o
 
 page.i: page.cpp.i
@@ -321,7 +348,7 @@ page.i: page.cpp.i
 
 # target to preprocess a source file
 page.cpp.i:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page.cpp.i
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page.cpp.i
 .PHONY : page.cpp.i
 
 page.s: page.cpp.s
@@ -330,7 +357,7 @@ page.s: page.cpp.s
 
 # target to generate assembly for a file
 page.cpp.s:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page.cpp.s
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page.cpp.s
 .PHONY : page.cpp.s
 
 # Help Target
@@ -358,6 +385,9 @@ help:
 	@echo "... extendible_hash.o"
 	@echo "... extendible_hash.i"
 	@echo "... extendible_hash.s"
+	@echo "... logger.o"
+	@echo "... logger.i"
+	@echo "... logger.s"
 	@echo "... lru_replacer.o"
 	@echo "... lru_replacer.i"
 	@echo "... lru_replacer.s"
@@ -375,6 +405,6 @@ help:
 # No rule that depends on this can have commands that come from listfiles
 # because they might be regenerated.
 cmake_check_build_system:
-	cd /data/zhengyang/data/GraphScope_bufferpool/build && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles/Makefile.cmake 0
 .PHONY : cmake_check_build_system
 

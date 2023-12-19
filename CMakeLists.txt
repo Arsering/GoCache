@@ -7,20 +7,23 @@ set(CMAKE_C_FLAGS "-g")
 
 set(CMAKE_BUILD_TYPE "Debug")
 # set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wextra -lpthread -O0")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wextra -lpthread -O3")
 set(CUDA_TOOLKIT_ROOT_DIR /usr/local/cuda)
  
 project(graphscope_bufferpool)
  
+# # find glog---------------------------------------------------------------------
+# include("cmake/FindGlog.cmake")
+# if (NOT GLOG_FOUND)
+#     message(FATAL_ERROR "glog not found, please install the glog library")
+# else ()
+#     include_directories(SYSTEM ${GLOG_INCLUDE_DIRS})
+# endif ()
+
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
-include(FetchContent)
-FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/03597a01ee50ed33e9dfd640b249b4be3799d395.zip
-)
-FetchContent_MakeAvailable(googletest)
+
 
 aux_source_directory(${PROJECT_SOURCE_DIR} ALL_SRCS) # 添加当前目录下所有的源文件
 include_directories(${PROJECT_SOURCE_DIR}/include)

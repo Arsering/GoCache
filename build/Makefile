@@ -48,10 +48,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /data/zhengyang/data/GraphScope_bufferpool
+CMAKE_SOURCE_DIR = /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /data/zhengyang/data/GraphScope_bufferpool/build
+CMAKE_BINARY_DIR = /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -126,9 +126,9 @@ edit_cache/fast: edit_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles/progress.marks
 	$(MAKE) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/GraphScope_bufferpool/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -168,58 +168,6 @@ graphscope_bufferpool: cmake_check_build_system
 graphscope_bufferpool/fast:
 	$(MAKE) -f CMakeFiles/graphscope_bufferpool.dir/build.make CMakeFiles/graphscope_bufferpool.dir/build
 .PHONY : graphscope_bufferpool/fast
-
-#=============================================================================
-# Target rules for targets named gmock_main
-
-# Build rule for target.
-gmock_main: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 gmock_main
-.PHONY : gmock_main
-
-# fast build rule for target.
-gmock_main/fast:
-	$(MAKE) -f _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/build.make _deps/googletest-build/googlemock/CMakeFiles/gmock_main.dir/build
-.PHONY : gmock_main/fast
-
-#=============================================================================
-# Target rules for targets named gmock
-
-# Build rule for target.
-gmock: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 gmock
-.PHONY : gmock
-
-# fast build rule for target.
-gmock/fast:
-	$(MAKE) -f _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/build.make _deps/googletest-build/googlemock/CMakeFiles/gmock.dir/build
-.PHONY : gmock/fast
-
-#=============================================================================
-# Target rules for targets named gtest_main
-
-# Build rule for target.
-gtest_main: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 gtest_main
-.PHONY : gtest_main
-
-# fast build rule for target.
-gtest_main/fast:
-	$(MAKE) -f _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/build.make _deps/googletest-build/googletest/CMakeFiles/gtest_main.dir/build
-.PHONY : gtest_main/fast
-
-#=============================================================================
-# Target rules for targets named gtest
-
-# Build rule for target.
-gtest: cmake_check_build_system
-	$(MAKE) -f CMakeFiles/Makefile2 gtest
-.PHONY : gtest
-
-# fast build rule for target.
-gtest/fast:
-	$(MAKE) -f _deps/googletest-build/googletest/CMakeFiles/gtest.dir/build.make _deps/googletest-build/googletest/CMakeFiles/gtest.dir/build
-.PHONY : gtest/fast
 
 #=============================================================================
 # Target rules for targets named bufferpool
@@ -274,10 +222,6 @@ help:
 	@echo "... rebuild_cache"
 	@echo "... edit_cache"
 	@echo "... graphscope_bufferpool"
-	@echo "... gmock_main"
-	@echo "... gmock"
-	@echo "... gtest_main"
-	@echo "... gtest"
 	@echo "... bufferpool"
 	@echo "... main.o"
 	@echo "... main.i"
