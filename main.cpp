@@ -29,7 +29,7 @@ int test1() {
 
   gbp::page_id_infile temp_page_id;
   size_t pool_size = 10;
-  gbp::DiskManager* disk_manager = new gbp::DiskManager("test.db");
+  gbp::DiskManager* disk_manager = new gbp::DiskManager("test_dir/test.db");
   gbp::BufferPoolManager* bpm = &gbp::BufferPoolManager::GetGlobalInstance();
   bpm->init(pool_size, disk_manager);
   ::ftruncate(bpm->GetFileDescriptor(0), file_size * 4096);
