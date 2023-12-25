@@ -16,13 +16,13 @@
 
 namespace gbp {
 
-__always_inline size_t GetSystemTime() {
-  size_t hi, lo;
-  __asm__ __volatile__("" : : : "memory");
-  __asm__ __volatile__("rdtscp" : "=a"(lo), "=d"(hi));
-  __asm__ __volatile__("" : : : "memory");
-  return ((size_t) lo) | (((size_t) hi) << 32);
-}
+// __always_inline size_t GetSystemTime() {
+//   size_t hi, lo;
+//   __asm__ __volatile__("" : : : "memory");
+//   __asm__ __volatile__("rdtscp" : "=a"(lo), "=d"(hi));
+//   __asm__ __volatile__("" : : : "memory");
+//   return ((size_t) lo) | (((size_t) hi) << 32);
+// }
 
 signed long int& get_time_duration_g(unsigned int index);
 
