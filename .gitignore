@@ -2,3 +2,5 @@ build/*
 bin/*
 lib/*
 testdir/*
+.vscode/*
+.cache/*
