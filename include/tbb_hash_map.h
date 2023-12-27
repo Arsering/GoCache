@@ -18,7 +18,7 @@ namespace gbp {
     public:
         WrappedTbbHM<K,V>(){}
         bool Find(const K &key, V &value){
-            printf("begin find\n");
+            //printf("begin find\n");
             HashMapConstAccessor accessor;
             bool ret=index.find(accessor,key);
             if(ret==false){
@@ -36,7 +36,7 @@ namespace gbp {
             index.insert(accessor,hashMapValue);
         }
         bool Remove(const K &key){
-            printf("begin remove\n");
+            //printf("begin remove\n");
             HashMapAccessor hashAccessor;
             if (!index.find(hashAccessor,key)) {
                 // Presumably unreachable
