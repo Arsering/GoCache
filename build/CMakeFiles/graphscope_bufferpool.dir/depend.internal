@@ -6,6 +6,7 @@ CMakeFiles/graphscope_bufferpool.dir/main.cpp.o
  /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/config.h
  /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/disk_manager.h
  /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/extendible_hash.h
+ /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/gtl_parallel_hash.h
  /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/hash_table.h
  /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/logger.h
  /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/lru_replacer.h
@@ -23,5 +24,4 @@ CMakeFiles/graphscope_bufferpool.dir/main.cpp.o
  /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/tbb_hash_map.h
  /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/type_traits.h
  /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/value.h
- /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/wrapped_parallel_hash.h
  /data4/zyc/data/buffer_pool/graphscope_bufferpool/main.cpp

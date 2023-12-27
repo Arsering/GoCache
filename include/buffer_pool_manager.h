@@ -16,7 +16,7 @@
 #include "disk_manager.h"
 #include "extendible_hash.h"
 #include "tbb_hash_map.h"
-#include "wrapped_parallel_hash.h"
+#include "gtl_parallel_hash.h"
 #include "logger.h"
 #include "lru_replacer.h"
 #include "page.h"

@@ -23,8 +23,8 @@ extendible_hash.h
 /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/extendible_hash.h
 tbb_hash_map.h
 /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/tbb_hash_map.h
-wrapped_parallel_hash.h
-/data4/zyc/data/buffer_pool/graphscope_bufferpool/include/wrapped_parallel_hash.h
+gtl_parallel_hash.h
+/data4/zyc/data/buffer_pool/graphscope_bufferpool/include/gtl_parallel_hash.h
 logger.h
 /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/logger.h
 lru_replacer.h
@@ -72,6 +72,16 @@ mutex
 string
 -
 vector
+-
+hash_table.h
+/data4/zyc/data/buffer_pool/graphscope_bufferpool/include/hash_table.h
+
+/data4/zyc/data/buffer_pool/graphscope_bufferpool/include/gtl_parallel_hash.h
+./parallel_hashmap/phmap.h
+/data4/zyc/data/buffer_pool/graphscope_bufferpool/include/parallel_hashmap/phmap.h
+shared_mutex
+-
+iostream
 -
 hash_table.h
 /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/hash_table.h
@@ -325,16 +335,6 @@ vector
 -
 iostream
 -
-
-/data4/zyc/data/buffer_pool/graphscope_bufferpool/include/wrapped_parallel_hash.h
-./parallel_hashmap/phmap.h
-/data4/zyc/data/buffer_pool/graphscope_bufferpool/include/parallel_hashmap/phmap.h
-shared_mutex
--
-iostream
--
-hash_table.h
-/data4/zyc/data/buffer_pool/graphscope_bufferpool/include/hash_table.h
 
 /data4/zyc/data/buffer_pool/graphscope_bufferpool/main.cpp
 fcntl.h

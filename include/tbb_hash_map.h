@@ -22,15 +22,15 @@ namespace gbp {
             HashMapConstAccessor accessor;
             bool ret=index.find(accessor,key);
             if(ret==false){
-                printf("ret is false\n");
+                //printf("ret is false\n");
             }else{
-                printf("end find\n");
+                //printf("end find\n");
                 value=accessor->second;
             }
                 return ret;
         }
         void Insert(const K &key, const V &value ){
-            printf("begin insert\n");
+            //printf("begin insert\n");
             HashMapValuePair hashMapValue(key,value);
             HashMapAccessor accessor;
             index.insert(accessor,hashMapValue);
@@ -40,7 +40,7 @@ namespace gbp {
             HashMapAccessor hashAccessor;
             if (!index.find(hashAccessor,key)) {
                 // Presumably unreachable
-                printf("m_key: %ld Presumably unreachable\n", key);
+                //printf("m_key: %ld Presumably unreachable\n", key);
                 return false;
             }
             index.erase(hashAccessor);
