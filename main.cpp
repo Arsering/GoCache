@@ -7,14 +7,14 @@
 #include <time.h>
 #include <unistd.h>
 #include <iostream>
-#include "buffer_pool_manager.h"
+#include "include/buffer_pool_manager.h"
 
 #include <assert.h>
 #include <ctime>
 #include <random>
 #include <string_view>
 
-#include "orgin_mmap.h"
+#include "include/orgin_mmap.h"
 
 template <typename T>
 T* Decoder(void* data) {
@@ -29,7 +29,7 @@ int test1() {
 
   gbp::page_id_infile temp_page_id;
   size_t pool_size = 10;
-  gbp::DiskManager* disk_manager = new gbp::DiskManager("test_dir/test.db");
+  gbp::DiskManager* disk_manager = new gbp::DiskManager("test.db");
   gbp::BufferPoolManager* bpm = &gbp::BufferPoolManager::GetGlobalInstance();
   bpm->init(pool_size, disk_manager);
   ::ftruncate(bpm->GetFileDescriptor(0), file_size * 4096);
@@ -315,10 +315,10 @@ int main() {
   // bpm->init(pool_size);
   test1();
 
-  // generate_files();
+  generate_files();
   // test_mmap_array();
-  //   generate_string();
-  //   test_string();
+    generate_string();
+    test_string();
 
   std::cout << "Read test achieves success!!!" << std::endl;
   return 0;

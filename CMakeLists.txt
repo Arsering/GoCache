@@ -39,6 +39,7 @@ add_executable(${PROJECT_NAME} ${ALL_SRCS})	# 指定生成目标，注意这里�
 #target_link_libraries(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/lib/liblmdb.a)	# 添加链接库，power是在math子目录的CMakeLists中定义的
 # target_link_libraries(${PROJECT_NAME} pthread)
 # target_link_libraries(${PROJECT_NAME} boost_filesystem)
+target_link_libraries(graphscope_bufferpool tbb)
 
 
 # enable_testing()

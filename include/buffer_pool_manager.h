@@ -15,6 +15,7 @@
 #include "config.h"
 #include "disk_manager.h"
 #include "extendible_hash.h"
+#include "tbb_hash_map.h"
 #include "wrapped_parallel_hash.h"
 #include "logger.h"
 #include "lru_replacer.h"
@@ -145,9 +146,11 @@ class BufferPoolManager {
   // std::vector<std::shared_ptr<ExtendibleHash<page_id_infile, Page*>>>
   //     page_tables_;              // to keep track of pages
   // std::vector<std::shared_ptr<WrappedPHM<page_id_infile, Page*>>>
-  //     page_tables_;                  
-  std::vector<std::shared_ptr<ExtendibleHash<page_id_infile, Page*>>>
-      page_tables_;  // to keep track of pages, this vector is append-only
+  //     page_tables_;
+  std::vector<std::shared_ptr<WrappedTbbHM<page_id_infile, Page*>>>
+      page_tables_;                   
+  // std::vector<std::shared_ptr<ExtendibleHash<page_id_infile, Page*>>>
+  //     page_tables_;  // to keep track of pages, this vector is append-only
   Replacer<Page*>* replacer_;  // to find an unpinned page for replacement
   std::unique_ptr<VectorSync>
       free_list_;     // to find a free page for replacement

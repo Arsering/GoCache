@@ -44,10 +44,10 @@ RM = /usr/bin/cmake -E remove -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool
+CMAKE_SOURCE_DIR = /data4/zyc/data/buffer_pool/graphscope_bufferpool
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build
+CMAKE_BINARY_DIR = /data4/zyc/data/buffer_pool/graphscope_bufferpool/build
 
 #=============================================================================
 # Directory level rules for the build root directory
@@ -94,14 +94,14 @@ src/clean: src/CMakeFiles/bufferpool.dir/clean
 CMakeFiles/graphscope_bufferpool.dir/all: src/CMakeFiles/bufferpool.dir/all
 	$(MAKE) -f CMakeFiles/graphscope_bufferpool.dir/build.make CMakeFiles/graphscope_bufferpool.dir/depend
 	$(MAKE) -f CMakeFiles/graphscope_bufferpool.dir/build.make CMakeFiles/graphscope_bufferpool.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles --progress-num=9,10 "Built target graphscope_bufferpool"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/data4/zyc/data/buffer_pool/graphscope_bufferpool/build/CMakeFiles --progress-num=9,10 "Built target graphscope_bufferpool"
 .PHONY : CMakeFiles/graphscope_bufferpool.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/graphscope_bufferpool.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles 10
+	$(CMAKE_COMMAND) -E cmake_progress_start /data4/zyc/data/buffer_pool/graphscope_bufferpool/build/CMakeFiles 10
 	$(MAKE) -f CMakeFiles/Makefile2 CMakeFiles/graphscope_bufferpool.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /data4/zyc/data/buffer_pool/graphscope_bufferpool/build/CMakeFiles 0
 .PHONY : CMakeFiles/graphscope_bufferpool.dir/rule
 
 # Convenience name for target.
@@ -121,14 +121,14 @@ CMakeFiles/graphscope_bufferpool.dir/clean:
 src/CMakeFiles/bufferpool.dir/all:
 	$(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/depend
 	$(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8 "Built target bufferpool"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/data4/zyc/data/buffer_pool/graphscope_bufferpool/build/CMakeFiles --progress-num=1,2,3,4,5,6,7,8 "Built target bufferpool"
 .PHONY : src/CMakeFiles/bufferpool.dir/all
 
 # Build rule for subdir invocation for target.
 src/CMakeFiles/bufferpool.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles 8
+	$(CMAKE_COMMAND) -E cmake_progress_start /data4/zyc/data/buffer_pool/graphscope_bufferpool/build/CMakeFiles 8
 	$(MAKE) -f CMakeFiles/Makefile2 src/CMakeFiles/bufferpool.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /data4/zyc/data/buffer_pool/graphscope_bufferpool/build/CMakeFiles 0
 .PHONY : src/CMakeFiles/bufferpool.dir/rule
 
 # Convenience name for target.

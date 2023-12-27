@@ -6,5 +6,5 @@ CXX_FLAGS =  -std=c++17 -Wall -Wextra -lpthread -O3 -g -fPIC
 
 CXX_DEFINES = -Dbufferpool_EXPORTS
 
-CXX_INCLUDES = -I/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include 
+CXX_INCLUDES = -I/data4/zyc/data/buffer_pool/graphscope_bufferpool/include 
 
