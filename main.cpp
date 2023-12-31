@@ -6,8 +6,10 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <unistd.h>
+#include <bitset>
 #include <iostream>
 #include "buffer_pool_manager.h"
+#include "glog/logging.h"
 
 #include <assert.h>
 #include <ctime>
@@ -21,40 +23,81 @@ T* Decoder(void* data) {
   return reinterpret_cast<T*>(data);
 }
 
+int test_read(gbp::BufferPoolManager& bpm, size_t file_size) {
+  std::vector<char> str;
+  str.resize(5);
+  size_t start_ts, end_ts, sum = 0;
+
+  for (int j = 0; j < 1; j++) {
+    for (int i = 0; i < file_size; i++) {
+      // std::cout << i << std::endl;
+      start_ts = gbp::GetSystemTime();
+      bpm.GetObject(str.data(), i * PAGE_SIZE_BUFFER_POOL, 5);
+      end_ts = gbp::GetSystemTime();
+      sum += end_ts - start_ts;
+      std::cout << str.data();
+    }
+  }
+  std::cout << std::endl << "sum = " << sum;
+
+  std::cout << std::endl
+            << "counter_fetch_unique = "
+            << gbp::debug::get_counter_fetch_unique()
+            << " | counter_fetch = " << gbp::debug::get_counter_fetch()
+            << std::endl;
+}
+
 int test1() {
-  size_t file_size = 100;
+  sleep(1);
+
+  size_t file_size = 1024LU * 10;
   std::default_random_engine e;
   std::uniform_int_distribution<int> u(0, file_size);  // 左闭右闭区间
   e.seed(time(0));
 
-  gbp::page_id_infile temp_page_id;
-  size_t pool_size = 10;
+  size_t pool_size = 1024LU * 1024LU;
   gbp::DiskManager* disk_manager = new gbp::DiskManager("test_dir/test.db");
-  gbp::BufferPoolManager* bpm = &gbp::BufferPoolManager::GetGlobalInstance();
-  bpm->init(pool_size, disk_manager);
-  ::ftruncate(bpm->GetFileDescriptor(0), file_size * 4096);
+  auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
+  bpm.init(pool_size, disk_manager);
+#if DEBUG
+  bpm.ReinitBitMap();
+  bpm.WarmUp();
+  std::cout << "warmup finished" << std::endl;
+#endif
+  // bpm.Resize(0, file_size * 4096);
 
-  {
-    std::string str;
-    for (gbp::page_id_infile page_num = 0; page_num < 100; page_num++) {
-      str = std::to_string(page_num);
-      std::cout << "page_num = " << str << std::endl;
-      bpm->SetObject(str.data(), page_num * PAGE_SIZE_BUFFER_POOL, str.size());
-      if (!bpm->FlushPage(page_num)) {
-        std::cout << "failed" << std::endl;
-        return -1;
-      }
+  // {
+  //   std::string str;
+  //   for (gbp::page_id page_num = 0; page_num < file_size; page_num++) {
+  //     str = std::to_string(page_num);
+  //     if (page_num % 10000 == 0)
+  //       std::cout << "page_num = " << str << std::endl;
+  //     bpm.SetObject(str.data(), page_num * PAGE_SIZE_BUFFER_POOL,
+  //     str.size()); if (!bpm.FlushPage(page_num)) {
+  //       std::cout << "failed" << std::endl;
+  //       return -1;
+  //     }
+  //   }
+  // }
+  std::vector<char> str;
+  str.resize(5);
+  size_t start_ts, end_ts, sum = 0;
+  for (int j = 0; j < 1; j++) {
+    for (int i = 0; i < file_size; i++) {
+      // std::cout << i << std::endl;
+      start_ts = gbp::GetSystemTime();
+      bpm.GetObject(str.data(), i * PAGE_SIZE_BUFFER_POOL, 5);
+      end_ts = gbp::GetSystemTime();
+      sum += end_ts - start_ts;
+      std::cout << str.data();
     }
   }
 
-  for (int i = 0; i < 100; i++) {
-    gbp::page_id_infile page_num = i;
-    // std::cout << page_num << std::endl;
-    std::vector<char> str;
-    str.resize(5);
-    bpm->GetObject(str.data(), page_num * PAGE_SIZE_BUFFER_POOL, 5);
-    std::cout << str.data() << std::endl;
-  }
+  // sleep(2);
+
+  test_read(bpm, file_size);
+  std::cout << "sum = " << sum << std::endl;
+
   return 0;
 }
 
@@ -65,16 +108,12 @@ int test2() {
 
   std::string another_file_name = "test1.db";
 
-  gbp::page_id_infile temp_page_id;
   size_t pool_size = 10;
   gbp::DiskManager* disk_manager = new gbp::DiskManager("test.db");
   gbp::BufferPoolManager* bpm = &gbp::BufferPoolManager::GetGlobalInstance();
   bpm->init(pool_size, disk_manager);
-  int file_handler =
-      open(another_file_name.c_str(), O_RDWR | O_DIRECT | O_CREAT, 0777);
-  file_handler = bpm->RegisterFile(file_handler);
   {
-    for (gbp::page_id_infile page_num = 0; page_num < 100; page_num++) {
+    for (gbp::page_id page_num = 0; page_num < 100; page_num++) {
       auto page = bpm->NewPage(page_num);
       strcpy(page->GetData(), "Hello");
       page->SetDirty();
@@ -85,10 +124,10 @@ int test2() {
       }
       bpm->ReleasePage(page);
 
-      page = bpm->NewPage(page_num, file_handler);
+      page = bpm->NewPage(page_num, 1);
       strcpy(page->GetData(), "Hello");
       page->SetDirty();
-      if (!bpm->FlushPage(page_num, file_handler)) {
+      if (!bpm->FlushPage(page_num, 1)) {
         std::cout << "failed 1" << std::endl;
         return -1;
       }
@@ -98,7 +137,7 @@ int test2() {
   std::cout << "Write test achieves success!!!" << std::endl;
 
   for (int i = 0; i < 100; i++) {
-    gbp::page_id_infile page_num = i;
+    gbp::page_id page_num = i;
     // std::cout << page_num << std::endl;
     // auto page = bpm->FetchPage(page_num);
     // std::cout << page->GetData()[0] << std::endl;
@@ -307,13 +346,19 @@ int test_shared() {
   std::cout << buf << std::endl;
   return 0;
 }
-int main() {
+int main(int argc, char** argv) {
+  // google::InitGoogleLogging(argv[0]);
+  // FLAGS_logtostderr = true;
+
   // graphbuffer::DiskManager *disk_manager = new
   // graphbuffer::DiskManager("test.db");
   // size_t pool_size = 1000;
   // gbp::BufferPoolManager* bpm = &gbp::BufferPoolManager::GetGlobalInstance();
   // bpm->init(pool_size);
   test1();
+  char* a = (char*) malloc(10);
+  char* b = a;
+  free(b);
 
   // generate_files();
   // test_mmap_array();

@@ -27,4 +27,8 @@ namespace gbp {
 #define _F_LIKELY(condition) __builtin_expect(static_cast<bool>(condition), 1)
 #define _F_UNLIKELY(condition) __builtin_expect(static_cast<bool>(condition), 0)
 
+// struct FifoTrait {
+//   using EvictionST =
+// }
+
 }  // namespace gbp

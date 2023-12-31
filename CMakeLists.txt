@@ -7,18 +7,18 @@ set(CMAKE_C_FLAGS "-g")
 
 set(CMAKE_BUILD_TYPE "Debug")
 # set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wextra -lpthread -O3")
-set(CUDA_TOOLKIT_ROOT_DIR /usr/local/cuda)
- 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wextra -lpthread -O0")
+
 project(graphscope_bufferpool)
- 
-# # find glog---------------------------------------------------------------------
-# include("cmake/FindGlog.cmake")
-# if (NOT GLOG_FOUND)
-#     message(FATAL_ERROR "glog not found, please install the glog library")
-# else ()
-#     include_directories(SYSTEM ${GLOG_INCLUDE_DIRS})
-# endif ()
+set(CMAKE_BUILD_TYPE "Debug")
+
+# find glog---------------------------------------------------------------------
+include("cmake/FindGlog.cmake")
+if (NOT GLOG_FOUND)
+    message(FATAL_ERROR "glog not found, please install the glog library")
+else ()
+    include_directories(SYSTEM ${GLOG_INCLUDE_DIRS})
+endif ()
 
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
@@ -36,21 +36,3 @@ link_directories(${LIBRARY_OUTPUT_PATH})
 link_libraries(bufferpool)
 
 add_executable(${PROJECT_NAME} ${ALL_SRCS})	# 指定生成目标，注意这里要用${ALL_SRCS}!!!
-#target_link_libraries(${PROJECT_NAME} ${PROJECT_SOURCE_DIR}/lib/liblmdb.a)	# 添加链接库，power是在math子目录的CMakeLists中定义的
-# target_link_libraries(${PROJECT_NAME} pthread)
-# target_link_libraries(${PROJECT_NAME} boost_filesystem)
-
-
-# enable_testing()
-
-# add_executable(
-#   mtest
-#   test.cpp
-# )
-# target_link_libraries(
-#   mtest
-#   GTest::gtest_main
-# )
-
-# include(GoogleTest)
-# gtest_discover_tests(mtest)

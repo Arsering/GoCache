@@ -12,13 +12,16 @@
 #include <mutex>
 #include <vector>
 
+#include <math.h>
 #include "config.h"
+#include "debug.h"
 #include "disk_manager.h"
 #include "extendible_hash.h"
+#include "fifo_replacer.h"
 #include "logger.h"
-#include "lru_replacer.h"
 #include "page.h"
 #include "rw_lock.h"
+#include "wrappedvector.h"
 
 namespace gbp {
 
@@ -100,6 +103,7 @@ struct VectorSync {
   }
   std::vector<Page*>& GetData() { return data_; }
   bool Empty() { return size_ == 0; }
+  size_t GetSize() { return size_; }
 };
 
 class BufferPoolManager {
@@ -109,17 +113,15 @@ class BufferPoolManager {
   void init(size_t pool_size, DiskManager* disk_manager);
   void init(size_t pool_size);
 
-  int RegisterFile(int file_handler);
-
-  bool UnpinPage(page_id_infile page_id, bool is_dirty, int file_handler = 0);
+  bool UnpinPage(page_id page_id, bool is_dirty, uint32_t fd_gbp = 0);
 
   bool ReleasePage(Page* tar);
 
-  bool FlushPage(page_id_infile page_id, int file_handler = 0);
+  bool FlushPage(page_id page_id, uint32_t fd_gbp = 0);
 
-  Page* NewPage(page_id_infile& page_id, int file_handler = 0);
+  Page* NewPage(page_id& page_id, int file_handler = 0);
 
-  bool DeletePage(page_id_infile page_id, int file_handler = 0);
+  bool DeletePage(page_id page_id, uint32_t fd_gbp = 0);
 
   static BufferPoolManager& GetGlobalInstance() {
     static BufferPoolManager bpm;
@@ -130,9 +132,50 @@ class BufferPoolManager {
   }
 
   int GetObject(char* buf, size_t file_offset, size_t object_size,
-                int file_handler = 0);
+                int fd_gbp = 0);
   int SetObject(const char* buf, size_t file_offset, size_t object_size,
-                int file_handler = 0);
+                int fd_gbp = 0);
+
+  int Resize(uint16_t fd_gbp, size_t new_size) {
+    std::lock_guard lock(latch_);
+    assert(fd_gbp < page_tables_.size());
+
+    disk_manager_->Resize(fd_gbp, new_size);
+    page_tables_[fd_gbp]->Resize(cell(new_size, PAGE_SIZE_BUFFER_POOL));
+    return 0;
+  }
+  size_t GetFreePageNum() { return free_list_->GetSize(); }
+#ifdef DEBUG
+  void ReinitBitMap() { disk_manager_->ReinitBitMap(); }
+#endif
+
+  void WarmUp() {
+    for (int fd_gbp = 0; fd_gbp < disk_manager_->file_sizes_.size(); fd_gbp++) {
+      if (!disk_manager_->fd_oss_[fd_gbp].second)
+        continue;
+      size_t page_f_num =
+          cell(disk_manager_->file_sizes_[fd_gbp], PAGE_SIZE_BUFFER_POOL);
+      // LOG(INFO) << "page_f_num of " << disk_manager_->file_names_[fd_gbp]
+      //           << "= "
+      //           << cell(disk_manager_->GetFileSize(
+      //                       disk_manager_->GetFileDescriptor(fd_gbp)),
+      //                   PAGE_SIZE_BUFFER_POOL);
+      for (size_t page_idx_f = 0; page_idx_f < page_f_num; page_idx_f++) {
+        FetchPage(page_idx_f, fd_gbp);
+        if (free_list_->GetSize() == 0) {
+          LOG(INFO) << "pool is full";
+          return;
+        }
+      }
+    }
+  }
+
+  int OpenFile(const std::string& file_name, int o_flag) {
+    auto fd_gbp = disk_manager_->OpenFile(file_name, o_flag);
+    RegisterFile(fd_gbp);
+    return fd_gbp;
+  }
+  void CloseFile(int fd_gbp) { disk_manager_->CloseFile(fd_gbp); }
 
  private:
   size_t pool_size_;  // number of pages in buffer pool
@@ -140,14 +183,19 @@ class BufferPoolManager {
   Page* pages_;  // array of pages
   DiskManager* disk_manager_;
 
-  std::vector<std::shared_ptr<ExtendibleHash<page_id_infile, Page*>>>
-      page_tables_;  // to keep track of pages, this vector is append-only
-  Replacer<Page*>* replacer_;  // to find an unpinned page for replacement
+  // std::vector<std::shared_ptr<ExtendibleHash<page_id_infile, Page*>>>
+  //     page_tables_;  // to keep track of pages, this vector is append-only
+  std::vector<std::unique_ptr<WrappedVector>> page_tables_;
+  Replacer<uint32_t>* replacer_;  // to find an unpinned page for replacement
   std::unique_ptr<VectorSync>
       free_list_;     // to find a free page for replacement
   std::mutex latch_;  // to protect shared data structure
 
   Page* GetVictimPage();
-  PageDescriptor FetchPage(page_id_infile page_id, int file_handler = 0);
+  void RegisterFile(int file_handler);
+
+  PageDescriptor FetchPage(page_id page_id, int file_handler = 0);
+  inline Page* Pid2Ptr(uint32_t page_id) { return pages_ + page_id; }
+  inline uint32_t Ptr2Pid(Page* page) { return ((Page*) page - pages_); }
 };
 }  // namespace gbp
