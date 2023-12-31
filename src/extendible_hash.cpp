@@ -147,7 +147,7 @@ void ExtendibleHash<K, V>::Insert(const K& key, const V& value) {
   }
 }
 
-template class ExtendibleHash<page_id_infile, Page*>;
+template class ExtendibleHash<page_id, Page*>;
 template class ExtendibleHash<Page*, std::list<Page*>::iterator>;
 // test purpose
 template class ExtendibleHash<int, std::string>;

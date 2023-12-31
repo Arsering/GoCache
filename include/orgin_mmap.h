@@ -71,16 +71,17 @@ class mmap_array {
         size_ = 0;
         std::cout << "failed to find file " << filename << std::endl;
       } else {
-        fd_ = ::open(filename.c_str(), O_RDONLY);
+        // fd_ = ::open(filename.c_str(), O_RDONLY);
+        fd_ = buffer_pool_manager_->OpenFile(filename, O_RDONLY);
+
         size_t file_size = std::filesystem::file_size(filename);
         size_ = file_size / sizeof(T);
-        fd_ = buffer_pool_manager_->RegisterFile(fd_);
       }
     } else {
-      fd_ = ::open(filename.c_str(), O_RDWR | O_CREAT);
+      // fd_ = ::open(filename.c_str(), O_RDWR | O_CREAT);
+      fd_ = buffer_pool_manager_->OpenFile(filename, O_RDWR | O_CREAT);
       size_t file_size = std::filesystem::file_size(filename);
       size_ = file_size / sizeof(T);
-      fd_ = buffer_pool_manager_->RegisterFile(fd_);
     }
   }
 

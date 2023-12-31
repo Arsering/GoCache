@@ -2,6 +2,7 @@
 
 #include <sys/mman.h>
 #include <utility>
+#include "glog/logging.h"
 
 namespace gbp {
 
@@ -15,21 +16,22 @@ void BufferPoolManager::init(size_t pool_size, DiskManager* disk_manager) {
   disk_manager_ = disk_manager;
 
   // a consecutive memory space for buffer pool
-  buffer_pool_ = aligned_alloc(PAGE_SIZE_OS, PAGE_SIZE * pool_size);
-  madvise(buffer_pool_, pool_size * PAGE_SIZE, MADV_RANDOM);
+  buffer_pool_ = aligned_alloc(PAGE_SIZE_OS, PAGE_SIZE_BUFFER_POOL * pool_size);
+  madvise(buffer_pool_, pool_size * PAGE_SIZE_BUFFER_POOL, MADV_RANDOM);
   pages_ = new Page[pool_size_];
   // page_table_ = new std::vector<ExtendibleHash<page_id_infile, Page *>>();
-  replacer_ = new LRUReplacer<Page*>;
+  replacer_ = new FIFOReplacer<uint32_t>;
   free_list_.reset(new VectorSync(pool_size_));
 
-  for (auto file_handler : disk_manager_->file_handlers_) {
-    page_tables_.push_back(
-        std::make_shared<ExtendibleHash<page_id_infile, Page*>>(BUCKET_SIZE));
+  for (auto fd_os : disk_manager_->fd_oss_) {
+    uint32_t file_size_in_page =
+        cell(disk_manager_->GetFileSize(fd_os.first), PAGE_SIZE_BUFFER_POOL);
+    page_tables_.push_back(std::make_unique<WrappedVector>(file_size_in_page));
   }
 
   // put all the pages into free list
   for (size_t i = 0; i < pool_size_; ++i) {
-    pages_[i].data_ = (char*) buffer_pool_ + (i * PAGE_SIZE);
+    pages_[i].data_ = (char*) buffer_pool_ + (i * PAGE_SIZE_BUFFER_POOL);
     pages_[i].ResetMemory();
     free_list_->GetData()[i] = &(pages_[i]);
   }
@@ -52,11 +54,11 @@ BufferPoolManager::~BufferPoolManager() {
   free(buffer_pool_);
 }
 
-int BufferPoolManager::RegisterFile(int file_handler) {
-  int file_handler_new = disk_manager_->RegisterFile(file_handler);
-  page_tables_.push_back(
-      std::make_shared<ExtendibleHash<page_id_infile, Page*>>(BUCKET_SIZE));
-  return file_handler_new;
+void BufferPoolManager::RegisterFile(int fd_gbp) {
+  uint32_t file_size_in_page =
+      cell(disk_manager_->GetFileSize(disk_manager_->fd_oss_[fd_gbp].first),
+           PAGE_SIZE_BUFFER_POOL);
+  page_tables_.push_back(std::make_unique<WrappedVector>(file_size_in_page));
 }
 
 /**
@@ -73,13 +75,23 @@ int BufferPoolManager::RegisterFile(int file_handler) {
  * This function must mark the Page as pinned and remove its entry from
  * LRUReplacer before it is returned to the caller.
  */
-PageDescriptor BufferPoolManager::FetchPage(page_id_infile page_id,
-                                            int file_handler) {
+PageDescriptor BufferPoolManager::FetchPage(page_id page_id_f, int fd_gbp) {
   // std::lock_guard<std::mutex> lck(latch_);
+#ifdef DEBUG
+  debug::get_counter_fetch().fetch_add(1);
+  if (!debug::get_bitset(fd_gbp).test(page_id_f))
+    debug::get_counter_fetch_unique().fetch_add(1);
+  debug::get_bitset(fd_gbp).set(page_id_f);
+#endif
+
+  page_id page_id_m;
   Page* tar = nullptr;
-  if (page_tables_[file_handler]->Find(page_id, tar)) {  // 1.1
+
+  assert(fd_gbp < page_tables_.size());
+  assert(fd_gbp >= 0);
+  if (page_tables_[fd_gbp]->Find(page_id_f, page_id_m)) {  // 1.1
+    tar = (Page*) pages_ + page_id_m;
     tar->pin_count_++;
-    replacer_->Erase(tar);
     return tar;
   }
 
@@ -95,16 +107,20 @@ PageDescriptor BufferPoolManager::FetchPage(page_id_infile page_id,
   }
 
   // 3
-  page_tables_[file_handler]->Remove(tar->GetPageId());
-  page_tables_[file_handler]->Insert(page_id, tar);
+  if (tar->GetFileHandler() != -1)
+    page_tables_[tar->GetFileHandler()]->Remove(tar->GetPageId());
+  page_tables_[fd_gbp]->Insert(page_id_f, Ptr2Pid(tar));
 
   // 4
-  disk_manager_->ReadPage(page_id, tar->GetData(), file_handler);
-  tar->pin_count_ = 1;
+  disk_manager_->ReadPage(page_id_f, tar->GetData(), fd_gbp);
+  tar->pin_count_.store(1);
   tar->is_dirty_ = false;
-  tar->page_id_ = page_id;
-  tar->file_handler_ = file_handler;
+  tar->page_id_ = page_id_f;
+  tar->fd_gbp_ = fd_gbp;
   tar->buffer_pool_manager_ = this;
+  // 1. 换为32int
+  // 2. 屏蔽map
+  replacer_->Insert(Ptr2Pid(tar));
 
   return PageDescriptor(tar);
 }
@@ -115,19 +131,21 @@ PageDescriptor BufferPoolManager::FetchPage(page_id_infile page_id,
  * replacer if pin_count<=0 before this call, return false. is_dirty: set the
  * dirty flag of this page
  */
-bool BufferPoolManager::UnpinPage(page_id_infile page_id, bool is_dirty,
-                                  int file_handler) {
+bool BufferPoolManager::UnpinPage(page_id page_id_f, bool is_dirty,
+                                  uint32_t fd_gbp) {
+  page_id page_id_m;
   Page* tar = nullptr;
-  page_tables_[file_handler]->Find(page_id, tar);
-  if (tar == nullptr) {
+  if (!page_tables_[fd_gbp]->Find(page_id_f, page_id_m)) {
     return false;
   }
+  tar = (Page*) pages_ + page_id_m;
+
   tar->is_dirty_ = is_dirty;
   if (tar->GetPinCount() <= 0) {
     return false;
   };
   if (--tar->pin_count_ == 0) {
-    replacer_->Insert(tar);
+    replacer_->Insert(Ptr2Pid(tar));
   }
   return true;
 }
@@ -143,9 +161,8 @@ bool BufferPoolManager::ReleasePage(Page* tar) {
   if (tar->GetPinCount() <= 0) {
     return false;
   };
-  if (--tar->pin_count_ == 0) {
-    replacer_->Insert(tar);
-  }
+
+  tar->pin_count_--;
   return true;
 }
 
@@ -155,15 +172,20 @@ bool BufferPoolManager::ReleasePage(Page* tar) {
  * if page is not found in page table, return false
  * NOTE: make sure page_id != INVALID_PAGE_ID
  */
-bool BufferPoolManager::FlushPage(page_id_infile page_id, int file_handler) {
+bool BufferPoolManager::FlushPage(page_id page_id_f, uint32_t fd_gbp) {
   // std::lock_guard<std::mutex> lck(latch_);
   Page* tar = nullptr;
-  page_tables_[file_handler]->Find(page_id, tar);
-  if (tar == nullptr || tar->page_id_ == INVALID_PAGE_ID) {
+  page_id page_id_m;
+
+  if (!page_tables_[fd_gbp]->Find(page_id_f, page_id_m))
+    return false;
+  tar = (Page*) pages_ + page_id_m;
+  if (tar->page_id_ == INVALID_PAGE_ID) {
     return false;
   }
+
   if (tar->is_dirty_) {
-    disk_manager_->WritePage(page_id, tar->GetData(), tar->GetFileHandler());
+    disk_manager_->WritePage(page_id_f, tar->GetData(), tar->GetFileHandler());
     tar->is_dirty_ = false;
   }
 
@@ -178,21 +200,23 @@ bool BufferPoolManager::FlushPage(page_id_infile page_id, int file_handler) {
  * call disk manager's DeallocatePage() method to delete from disk file. If
  * the page is found within page table, but pin_count != 0, return false
  */
-bool BufferPoolManager::DeletePage(page_id_infile page_id, int file_handler) {
+bool BufferPoolManager::DeletePage(page_id page_id_f, uint32_t fd_gbp) {
   // std::lock_guard<std::mutex> lck(latch_);
   Page* tar = nullptr;
-  page_tables_[file_handler]->Find(page_id, tar);
-  if (tar != nullptr) {
+  page_id page_id_m;
+
+  if (page_tables_[fd_gbp]->Find(page_id_f, page_id_m)) {
+    tar = (Page*) pages_ + page_id_m;
     if (tar->GetPinCount() > 0) {
       return false;
     }
-    replacer_->Erase(tar);
-    page_tables_[file_handler]->Remove(page_id);
+    replacer_->Erase(Ptr2Pid(tar));
+    page_tables_[fd_gbp]->Remove(page_id_f);
     tar->is_dirty_ = false;
     tar->ResetMemory();
     free_list_->InsertItem(tar);
   }
-  disk_manager_->DeallocatePage(page_id);
+  disk_manager_->DeallocatePage(page_id_f);
   return true;
 }
 
@@ -204,9 +228,11 @@ bool BufferPoolManager::DeletePage(page_id_infile page_id, int file_handler) {
  * update new page's metadata, zero out memory and add corresponding entry
  * into page table. return nullptr if all the pages in pool are pinned
  */
-Page* BufferPoolManager::NewPage(page_id_infile& page_id, int file_handler) {
+Page* BufferPoolManager::NewPage(page_id& page_id, int fd_gbp) {
   // std::lock_guard<std::mutex> lck(latch_);
   Page* tar = nullptr;
+  uint32_t page_idx_m;
+
   tar = GetVictimPage();
   if (tar == nullptr)
     return tar;
@@ -220,60 +246,70 @@ Page* BufferPoolManager::NewPage(page_id_infile& page_id, int file_handler) {
   }
 
   // 3
-  page_tables_[file_handler]->Remove(tar->GetPageId());
-  page_tables_[file_handler]->Insert(page_id, tar);
+  page_tables_[tar->GetFileHandler()]->Remove(tar->GetPageId());
+  page_tables_[fd_gbp]->Insert(page_id, (tar - (Page*) pages_));
 
   // 4
   tar->page_id_ = page_id;
   tar->ResetMemory();
   tar->is_dirty_ = false;
-  tar->pin_count_ = 1;
-  tar->file_handler_ = file_handler;
+  tar->pin_count_.store(1);
+  tar->fd_gbp_ = fd_gbp;
 
   return tar;
 }
 
 Page* BufferPoolManager::GetVictimPage() {
   Page* tar = nullptr;
+  uint32_t page_idx_m;
   tar = free_list_->GetItem();
   if (tar == nullptr) {
     if (replacer_->Size() == 0) {
       return nullptr;
     }
-    replacer_->Victim(tar);
+    replacer_->Victim(page_idx_m);
+    tar = Pid2Ptr(page_idx_m);
   }
   assert(tar->GetPinCount() == 0);
   return tar;
 }
 
 int BufferPoolManager::GetObject(char* buf, size_t file_offset,
-                                 size_t object_size, int file_handler) {
-  std::lock_guard<std::mutex> lck(latch_);
-
+                                 size_t object_size, int fd_gbp) {
+  // std::lock_guard<std::mutex> lck(latch_);
   size_t page_id = file_offset / PAGE_SIZE_BUFFER_POOL;
   size_t page_offset = file_offset % PAGE_SIZE_BUFFER_POOL;
   size_t object_size_t = 0;
+  size_t st, latency;
   while (object_size > 0) {
-    auto pd = FetchPage(page_id, file_handler);
+    st = GetSystemTime();
+    auto pd = FetchPage(page_id, fd_gbp);
+    latency = GetSystemTime() - st;
+    get_counter_bpm().fetch_add(latency);
+    st = GetSystemTime();
     object_size_t = pd.GetPage()->GetObject(buf, page_offset, object_size);
+    latency = GetSystemTime() - st;
+    get_counter_copy().fetch_add(latency);
 
     object_size -= object_size_t;
     buf += object_size_t;
     page_id++;
     page_offset = 0;
   }
+
   return 0;
 }
 
 int BufferPoolManager::SetObject(const char* buf, size_t file_offset,
-                                 size_t object_size, int file_handler) {
-  std::lock_guard<std::mutex> lck(latch_);
+                                 size_t object_size, int fd_gbp) {
+  // std::lock_guard<std::mutex> lck(latch_);
 
   size_t page_id = file_offset / PAGE_SIZE_BUFFER_POOL;
   size_t page_offset = file_offset % PAGE_SIZE_BUFFER_POOL;
   size_t object_size_t = 0;
+
   while (object_size > 0) {
-    auto pd = FetchPage(page_id, file_handler);
+    auto pd = FetchPage(page_id, fd_gbp);
     object_size_t = pd.GetPage()->SetObject(buf, page_offset, object_size);
 
     object_size -= object_size_t;
@@ -283,4 +319,5 @@ int BufferPoolManager::SetObject(const char* buf, size_t file_offset,
   }
   return 0;
 }
+
 }  // namespace gbp

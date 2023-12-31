@@ -22,7 +22,7 @@ class Page {
   friend class BufferPoolManager;
 
  public:
-  Page() {}
+  Page() : fd_gbp_(-1) {}
   ~Page() {}
 
   // get actual data page content
@@ -35,8 +35,8 @@ class Page {
   // set state of page dirty
   inline void SetDirty() { is_dirty_ = true; }
   // get page id
-  inline page_id_infile GetPageId() { return page_id_; }
-  inline int GetFileHandler() { return file_handler_; }
+  inline page_id GetPageId() { return page_id_; }
+  inline int32_t GetFileHandler() { return fd_gbp_; }
   // get page pin count
   inline int GetPinCount() { return pin_count_; }
   bool Unpin();
@@ -69,13 +69,14 @@ class Page {
 
  private:
   // method used by buffer pool manager
-  inline void ResetMemory() { memset(data_, 0, PAGE_SIZE); }
+  inline void ResetMemory() { memset(data_, 0, PAGE_SIZE_BUFFER_POOL); }
 
   // members
   void* data_ = nullptr;  // actual data
-  int file_handler_ = -1;
-  page_id_infile page_id_ = INVALID_PAGE_ID;
-  int pin_count_ = 0;
+  // int file_handler_ = -1;
+  int32_t fd_gbp_ = -1;
+  page_id page_id_ = INVALID_PAGE_ID;
+  std::atomic<uint32_t> pin_count_ = 0;
   bool is_dirty_ = false;
   RWMutex rwlatch_;
   BufferPoolManager* buffer_pool_manager_;

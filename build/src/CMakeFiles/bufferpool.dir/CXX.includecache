@@ -15,22 +15,30 @@ mutex
 -
 vector
 -
+math.h
+-
 config.h
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/config.h
+debug.h
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/debug.h
 disk_manager.h
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/disk_manager.h
 extendible_hash.h
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/extendible_hash.h
+fifo_replacer.h
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/fifo_replacer.h
 logger.h
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/logger.h
-lru_replacer.h
-/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/lru_replacer.h
 page.h
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/page.h
 rw_lock.h
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/rw_lock.h
+wrappedvector.h
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/wrappedvector.h
 
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/config.h
+glog/logging.h
+-
 sys/mman.h
 -
 atomic
@@ -40,21 +48,41 @@ chrono
 cstdint
 -
 
-/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/disk_manager.h
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/debug.h
+assert.h
+-
 atomic
 -
-fstream
+bitset
 -
-future
--
-string
--
-vector
+cstddef
 -
 iostream
 -
 config.h
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/config.h
+
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/disk_manager.h
+atomic
+-
+filesystem
+-
+fstream
+-
+future
+-
+iostream
+-
+string
+-
+vector
+-
+config.h
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/config.h
+debug.h
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/debug.h
+logger.h
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/logger.h
 
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/extendible_hash.h
 cstdlib
@@ -72,6 +100,20 @@ vector
 hash_table.h
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/hash_table.h
 
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/fifo_replacer.h
+iostream
+-
+map
+-
+memory
+-
+mutex
+-
+unordered_map
+-
+replacer.h
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/replacer.h
+
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/hash_table.h
 
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/logger.h
@@ -80,6 +122,8 @@ fcntl.h
 sys/mman.h
 -
 unistd.h
+-
+atomic
 -
 fstream
 -
@@ -97,16 +141,10 @@ string
 -
 thread
 -
-
-/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/lru_replacer.h
-memory
--
 unordered_map
 -
-mutex
--
-replacer.h
-/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/replacer.h
+glog/logging.h
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/glog/logging.h
 
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/page.h
 cstring
@@ -146,6 +184,22 @@ mutex
 
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/type_traits.h
 
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/wrappedvector.h
+atomic
+-
+cstdint
+-
+iostream
+-
+limits
+-
+memory
+-
+vector
+-
+config.h
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/config.h
+
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool_manager.cpp
 ../include/buffer_pool_manager.h
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool_manager.h
@@ -153,10 +207,24 @@ sys/mman.h
 -
 utility
 -
+glog/logging.h
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/glog/logging.h
 
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/config.cpp
 ../include/config.h
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/config.h
+
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/debug.cpp
+../include/debug.h
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/debug.h
+bitset
+-
+iostream
+-
+memory
+-
+vector
+-
 
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/disk_manager.cpp
 assert.h
@@ -184,15 +252,15 @@ list
 ../include/page.h
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/page.h
 
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/fifo_replacer.cpp
+../include/fifo_replacer.h
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/fifo_replacer.h
+../include/page.h
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/page.h
+
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/logger.cc
 ../include/logger.h
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/logger.h
-
-/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/lru_replacer.cpp
-../include/lru_replacer.h
-/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/lru_replacer.h
-../include/page.h
-/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/page.h
 
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/page.cpp
 ../include/page.h

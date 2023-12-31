@@ -9,64 +9,93 @@
 
 #pragma once
 #include <atomic>
+#include <filesystem>
 #include <fstream>
 #include <future>
+#include <iostream>
 #include <string>
 #include <vector>
-#include <iostream>
 
 #include "config.h"
+#include "debug.h"
+#include "logger.h"
 
-namespace gbp
-{
+namespace gbp {
 
-  class DiskManager
-  {
-    friend class BufferPoolManager;
+class DiskManager {
+  friend class BufferPoolManager;
 
-  public:
-    DiskManager(const std::string &db_file);
-    DiskManager();
-    ~DiskManager();
+ public:
+  DiskManager(const std::string& db_file);
+  DiskManager();
+  ~DiskManager();
 
-    inline int RegisterFile(int file_os)
-    {
-      file_handlers_.push_back(file_os);
-      return file_handlers_.size() - 1;
+  inline int GetFileDescriptor(int fd_gbp) {
+    assert(fd_gbp < fd_oss_.size());
+    return fd_oss_[fd_gbp].first;
+  }
+
+  void WritePage(page_id page_id, const char* page_data, int file_handler = 0);
+  void ReadPage(page_id page_id, char* page_data, int file_handler = 0) const;
+
+  page_id AllocatePage();
+  void DeallocatePage(page_id page_id);
+
+  int GetNumFlushes() const;
+  bool GetFlushState() const;
+  inline void SetFlushLogFuture(std::future<void>* f) { flush_log_f_ = f; }
+  inline bool HasFlushLogFuture() { return flush_log_f_ != nullptr; }
+  size_t GetFileSize(int fd_os) const;
+  int Resize(uint16_t fd_gbp, size_t new_size);
+
+#ifdef DEBUG
+  void ReinitBitMap() {
+    auto& bit_maps = debug::get_bitmaps();
+    for (auto& bit_map : bit_maps) {
+      bit_map.reset_all();
     }
-
-    inline int GetFileDescriptor(int fd_inner)
-    {
-      return file_handlers_[fd_inner];
+    if (bit_maps.size() < file_sizes_.size()) {
+      for (int file_idx = bit_maps.size(); file_idx < file_sizes_.size();
+           file_idx++) {
+        bit_maps.emplace_back(
+            cell(file_sizes_[file_idx], PAGE_SIZE_BUFFER_POOL));
+      }
     }
+  }
+#endif
 
-    void WritePage(page_id_infile page_id, const char *page_data, int file_handler = 0);
-    void ReadPage(page_id_infile page_id, char *page_data, int file_handler = 0);
+ private:
+  inline int OpenFile(const std::string& file_name, int o_flag) {
+    auto fd_os = ::open(file_name.c_str(), o_flag, 0777);
+    fd_oss_.push_back(std::make_pair(fd_os, true));
+    file_names_.push_back(file_name);
+    file_sizes_.push_back(GetFileSize(fd_os));
+#ifdef DEBUG
+    debug::get_bitmaps().emplace_back(
+        cell(file_sizes_[file_sizes_.size() - 1], PAGE_SIZE_BUFFER_POOL));
+#endif
 
-    void WriteLog(char *log_data, int size);
-    bool ReadLog(char *log_data, int size, int offset);
+    return fd_oss_.size() - 1;
+  }
+  inline void CloseFile(int fd_gbp) {
+    auto fd_os = GetFileDescriptor(fd_gbp);
+    close(fd_os);
+    fd_oss_[fd_gbp].second = false;
+  }
 
-    page_id_infile AllocatePage();
-    void DeallocatePage(page_id_infile page_id);
+  // stream to write log file
+  int log_io_;
+  std::string log_name_;
 
-    int GetNumFlushes() const;
-    bool GetFlushState() const;
-    inline void SetFlushLogFuture(std::future<void> *f) { flush_log_f_ = f; }
-    inline bool HasFlushLogFuture() { return flush_log_f_ != nullptr; }
+  // stream to write db file
+  std::vector<std::pair<int, bool>> fd_oss_;
+  std::vector<std::string> file_names_;
+  std::atomic<page_id> next_page_id_;
+  int num_flushes_;
+  bool flush_log_;
+  std::future<void>* flush_log_f_;
 
-  private:
-    int GetFileSize(int file_handler);
+  std::vector<size_t> file_sizes_;
+};
 
-    // stream to write log file
-    int log_io_;
-    std::string log_name_;
-
-    // stream to write db file
-    std::vector<int> file_handlers_;
-    std::atomic<page_id_infile> next_page_id_;
-    int num_flushes_;
-    bool flush_log_;
-    std::future<void> *flush_log_f_;
-  };
-
-} // namespace cmudb
+}  // namespace gbp

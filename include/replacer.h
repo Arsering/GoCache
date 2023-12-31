@@ -9,14 +9,15 @@
 
 namespace gbp {
 
-template <typename T> class Replacer {
-public:
+template <typename T>
+class Replacer {
+ public:
   Replacer() {}
   virtual ~Replacer() {}
-  virtual void Insert(const T &value) = 0;
-  virtual bool Victim(T &value) = 0;
-  virtual bool Erase(const T &value) = 0;
+  virtual void Insert(const T& value) = 0;
+  virtual bool Victim(T& value) = 0;
+  virtual bool Erase(const T& value) = 0;
   virtual size_t Size() = 0;
 };
 
-} // namespace cmudb
+}  // namespace gbp

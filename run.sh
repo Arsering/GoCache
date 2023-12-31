@@ -16,6 +16,7 @@ fi
 echo 1 > /proc/sys/vm/drop_caches
 
 cd ..
-./bin/graphscope_bufferpool
-
-
+./bin/graphscope_bufferpool 
+# nohup ./bin/graphscope_bufferpool &
+# sleep 2s
+# nohup perf record -F 999 -a -g -p `pidof graphscope_bufferpool` -o ./perf.data &

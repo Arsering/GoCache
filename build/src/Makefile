@@ -225,6 +225,33 @@ config.cpp.s:
 	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/config.cpp.s
 .PHONY : config.cpp.s
 
+debug.o: debug.cpp.o
+
+.PHONY : debug.o
+
+# target to build an object file
+debug.cpp.o:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/debug.cpp.o
+.PHONY : debug.cpp.o
+
+debug.i: debug.cpp.i
+
+.PHONY : debug.i
+
+# target to preprocess a source file
+debug.cpp.i:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/debug.cpp.i
+.PHONY : debug.cpp.i
+
+debug.s: debug.cpp.s
+
+.PHONY : debug.s
+
+# target to generate assembly for a file
+debug.cpp.s:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/debug.cpp.s
+.PHONY : debug.cpp.s
+
 disk_manager.o: disk_manager.cpp.o
 
 .PHONY : disk_manager.o
@@ -279,6 +306,33 @@ extendible_hash.cpp.s:
 	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.s
 .PHONY : extendible_hash.cpp.s
 
+fifo_replacer.o: fifo_replacer.cpp.o
+
+.PHONY : fifo_replacer.o
+
+# target to build an object file
+fifo_replacer.cpp.o:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.o
+.PHONY : fifo_replacer.cpp.o
+
+fifo_replacer.i: fifo_replacer.cpp.i
+
+.PHONY : fifo_replacer.i
+
+# target to preprocess a source file
+fifo_replacer.cpp.i:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.i
+.PHONY : fifo_replacer.cpp.i
+
+fifo_replacer.s: fifo_replacer.cpp.s
+
+.PHONY : fifo_replacer.s
+
+# target to generate assembly for a file
+fifo_replacer.cpp.s:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.s
+.PHONY : fifo_replacer.cpp.s
+
 logger.o: logger.cc.o
 
 .PHONY : logger.o
@@ -305,33 +359,6 @@ logger.s: logger.cc.s
 logger.cc.s:
 	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/logger.cc.s
 .PHONY : logger.cc.s
-
-lru_replacer.o: lru_replacer.cpp.o
-
-.PHONY : lru_replacer.o
-
-# target to build an object file
-lru_replacer.cpp.o:
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/lru_replacer.cpp.o
-.PHONY : lru_replacer.cpp.o
-
-lru_replacer.i: lru_replacer.cpp.i
-
-.PHONY : lru_replacer.i
-
-# target to preprocess a source file
-lru_replacer.cpp.i:
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/lru_replacer.cpp.i
-.PHONY : lru_replacer.cpp.i
-
-lru_replacer.s: lru_replacer.cpp.s
-
-.PHONY : lru_replacer.s
-
-# target to generate assembly for a file
-lru_replacer.cpp.s:
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/lru_replacer.cpp.s
-.PHONY : lru_replacer.cpp.s
 
 page.o: page.cpp.o
 
@@ -379,18 +406,21 @@ help:
 	@echo "... config.o"
 	@echo "... config.i"
 	@echo "... config.s"
+	@echo "... debug.o"
+	@echo "... debug.i"
+	@echo "... debug.s"
 	@echo "... disk_manager.o"
 	@echo "... disk_manager.i"
 	@echo "... disk_manager.s"
 	@echo "... extendible_hash.o"
 	@echo "... extendible_hash.i"
 	@echo "... extendible_hash.s"
+	@echo "... fifo_replacer.o"
+	@echo "... fifo_replacer.i"
+	@echo "... fifo_replacer.s"
 	@echo "... logger.o"
 	@echo "... logger.i"
 	@echo "... logger.s"
-	@echo "... lru_replacer.o"
-	@echo "... lru_replacer.i"
-	@echo "... lru_replacer.s"
 	@echo "... page.o"
 	@echo "... page.i"
 	@echo "... page.s"
