@@ -22,6 +22,7 @@ src/CMakeFiles/bufferpool.dir/config.cpp.o: ../src/config.cpp
 
 src/CMakeFiles/bufferpool.dir/debug.cpp.o: ../include/config.h
 src/CMakeFiles/bufferpool.dir/debug.cpp.o: ../include/debug.h
+src/CMakeFiles/bufferpool.dir/debug.cpp.o: ../include/logger.h
 src/CMakeFiles/bufferpool.dir/debug.cpp.o: ../src/debug.cpp
 
 src/CMakeFiles/bufferpool.dir/disk_manager.cpp.o: ../include/config.h

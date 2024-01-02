@@ -181,12 +181,9 @@ ThreadLog* get_thread_logger();
 std::atomic<size_t>& get_counter_g();
 // performance counter of Graph Semantic
 std::atomic<size_t>& get_counter_gs();
-// performance counter of Buffer Pool Manager
-std::atomic<size_t>& get_counter_bpm();
 // performance counter of Pread
 std::atomic<size_t>& get_counter_pr();
 std::atomic<size_t>& get_mark_warmup();
-std::atomic<size_t>& get_counter_copy();
 
 std::atomic<size_t>& get_mark_mmapwarmup();
 size_t& get_pool_size();

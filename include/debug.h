@@ -6,9 +6,10 @@
 #include <cstddef>
 #include <iostream>
 #include "config.h"
+#include "logger.h"
 
 namespace gbp {
-#define DEBUG
+// #define DEBUG
 
 namespace debug {
 class BitMap {
@@ -93,10 +94,28 @@ class BitMap {
 std::atomic<size_t>& get_counter_read();
 std::atomic<size_t>& get_counter_fetch();
 std::atomic<size_t>& get_counter_fetch_unique();
+std::atomic<size_t>& get_counter();
 
 BitMap& get_bitset(uint32_t file_id);
 std::vector<debug::BitMap>& get_bitmaps();
 void reinit_bit_maps(std::vector<size_t>& file_sizes);
+
+#define GET_LATENCY(target_fun, latency) \
+  {                                      \
+    auto st = GetSystime();              \
+    target_fun;                          \
+    latency = GetSystemTime();           \
+  }
+
+std::atomic<size_t>& get_counter_MAP_find();
+std::atomic<size_t>& get_counter_FPL_get();
+std::atomic<size_t>& get_counter_pread();
+std::atomic<size_t>& get_counter_MAP_eviction();
+std::atomic<size_t>& get_counter_ES_eviction();
+std::atomic<size_t>& get_counter_MAP_insert();
+std::atomic<size_t>& get_counter_ES_insert();
+std::atomic<size_t>& get_counter_copy();
+std::atomic<size_t>& get_log_marker();
 
 }  // namespace debug
 }  // namespace gbp

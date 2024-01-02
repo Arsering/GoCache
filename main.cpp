@@ -48,14 +48,13 @@ int test_read(gbp::BufferPoolManager& bpm, size_t file_size) {
 }
 
 int test1() {
-  sleep(1);
-
-  size_t file_size = 1024LU * 10;
+  size_t file_size = 20000;
+  size_t obj_size = 128 * 4;
   std::default_random_engine e;
   std::uniform_int_distribution<int> u(0, file_size);  // 左闭右闭区间
   e.seed(time(0));
 
-  size_t pool_size = 1024LU * 1024LU;
+  size_t pool_size = file_size;
   gbp::DiskManager* disk_manager = new gbp::DiskManager("test_dir/test.db");
   auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
   bpm.init(pool_size, disk_manager);
@@ -80,24 +79,44 @@ int test1() {
   //   }
   // }
   std::vector<char> str;
-  str.resize(5);
+  str.resize(obj_size);
   size_t start_ts, end_ts, sum = 0;
-  for (int j = 0; j < 1; j++) {
-    for (int i = 0; i < file_size; i++) {
+
+  for (int j = 0; j < 2; j++) {
+    for (int i = j * file_size; i < file_size * (j + 1); i++) {
       // std::cout << i << std::endl;
       start_ts = gbp::GetSystemTime();
-      bpm.GetObject(str.data(), i * PAGE_SIZE_BUFFER_POOL, 5);
+      bpm.GetObject(str.data(), i * PAGE_SIZE_BUFFER_POOL, obj_size);
       end_ts = gbp::GetSystemTime();
       sum += end_ts - start_ts;
       std::cout << str.data();
     }
+    std::cout << std::endl;
+    gbp::debug::get_log_marker().store(1);
   }
 
-  // sleep(2);
-
-  test_read(bpm, file_size);
-  std::cout << "sum = " << sum << std::endl;
-
+  std::cout << "MAP_find = "
+            << gbp::debug::get_counter_MAP_find().load() / file_size
+            << std::endl;
+  std::cout << "FPL_get = "
+            << gbp::debug::get_counter_FPL_get().load() / file_size
+            << std::endl;
+  std::cout << "pread = " << gbp::debug::get_counter_pread().load() / file_size
+            << std::endl;
+  std::cout << "MAP_eviction = "
+            << gbp::debug::get_counter_MAP_eviction().load() / file_size
+            << std::endl;
+  std::cout << "ES_eviction = "
+            << gbp::debug::get_counter_ES_eviction().load() / file_size
+            << std::endl;
+  std::cout << "MAP_insert = "
+            << gbp::debug::get_counter_MAP_insert().load() / file_size
+            << std::endl;
+  std::cout << "ES_insert = "
+            << gbp::debug::get_counter_ES_insert().load() / file_size
+            << std::endl;
+  std::cout << "copy = " << gbp::debug::get_counter_copy().load() / file_size
+            << std::endl;
   return 0;
 }
 

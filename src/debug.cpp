@@ -20,6 +20,7 @@ std::atomic<size_t>& get_counter_read() {
   static std::atomic<size_t> counter(0);
   return counter;
 }
+
 std::atomic<size_t>& get_counter_fetch() {
   static std::atomic<size_t> counter(0);
   return counter;
@@ -28,5 +29,59 @@ std::atomic<size_t>& get_counter_fetch_unique() {
   static std::atomic<size_t> counter(0);
   return counter;
 }
+
+std::atomic<size_t>& get_counter_bpm() {
+  static std::atomic<size_t> counter(0);
+  return counter;
+}
+
+/**
+ * For break down
+ */
+
+std::atomic<size_t>& get_counter_MAP_find() {
+  static std::atomic<size_t> counter(0);
+  return counter;
+}
+
+std::atomic<size_t>& get_counter_FPL_get() {
+  static std::atomic<size_t> counter(0);
+  return counter;
+}
+
+std::atomic<size_t>& get_counter_pread() {
+  static std::atomic<size_t> counter(0);
+  return counter;
+}
+
+std::atomic<size_t>& get_counter_MAP_eviction() {
+  static std::atomic<size_t> counter(0);
+  return counter;
+}
+
+std::atomic<size_t>& get_counter_ES_eviction() {
+  static std::atomic<size_t> counter(0);
+  return counter;
+}
+
+std::atomic<size_t>& get_counter_MAP_insert() {
+  static std::atomic<size_t> counter(0);
+  return counter;
+}
+
+std::atomic<size_t>& get_counter_ES_insert() {
+  static std::atomic<size_t> counter(0);
+  return counter;
+}
+
+std::atomic<size_t>& get_counter_copy() {
+  static std::atomic<size_t> counter(0);
+  return counter;
+}
+std::atomic<size_t>& get_log_marker() {
+  static std::atomic<size_t> counter(0);
+  return counter;
+}
+
 }  // namespace debug
 }  // namespace gbp

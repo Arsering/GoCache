@@ -36,13 +36,13 @@ class FIFOReplacer : public Replacer<T> {
 
   ~FIFOReplacer();
 
-  void Insert(const T& value);
+  void Insert(const T& value) override;
 
-  bool Victim(T& value);
+  bool Victim(T& value) override;
 
-  bool Erase(const T& value);
+  bool Erase(const T& value) override;
 
-  size_t Size();
+  size_t Size() const override;
 
  private:
   ListNode head_;
