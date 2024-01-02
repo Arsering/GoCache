@@ -7,7 +7,7 @@ set(CMAKE_C_FLAGS "-g")
 
 set(CMAKE_BUILD_TYPE "Debug")
 # set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wextra -lpthread -O0")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wextra -lpthread -O3")
 
 project(graphscope_bufferpool)
 set(CMAKE_BUILD_TYPE "Debug")

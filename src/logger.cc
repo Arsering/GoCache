@@ -31,11 +31,7 @@ std::atomic<size_t>& get_counter_gs() {
   static std::atomic<size_t> counter(0);
   return counter;
 }
-// performance counter of Buffer Pool Manager
-std::atomic<size_t>& get_counter_bpm() {
-  static std::atomic<size_t> counter(0);
-  return counter;
-}
+
 // performance counter of Pread
 std::atomic<size_t>& get_counter_pr() {
   static std::atomic<size_t> counter(0);
@@ -44,10 +40,6 @@ std::atomic<size_t>& get_counter_pr() {
 
 // marker of warmup
 std::atomic<size_t>& get_mark_warmup() {
-  static std::atomic<size_t> counter(0);
-  return counter;
-}
-std::atomic<size_t>& get_counter_copy() {
   static std::atomic<size_t> counter(0);
   return counter;
 }

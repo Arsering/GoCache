@@ -83,7 +83,7 @@ bool FIFOReplacer<T>::Erase(const T& value) {
 }
 
 template <typename T>
-size_t FIFOReplacer<T>::Size() {
+size_t FIFOReplacer<T>::Size() const {
   std::lock_guard<std::mutex> lck(latch_);
   return map_.size();
 }

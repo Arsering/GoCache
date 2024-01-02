@@ -61,6 +61,8 @@ iostream
 -
 config.h
 ../include/config.h
+logger.h
+../include/logger.h
 
 ../include/disk_manager.h
 atomic
@@ -225,6 +227,8 @@ iostream
 -
 
 ../include/wrappedvector.h
+assert.h
+-
 atomic
 -
 cstdint
