@@ -1,3 +1,4 @@
+#include <cstdio>
 #include <fcntl.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,6 +16,7 @@
 #include <string_view>
 
 #include "include/orgin_mmap.h"
+#include "include/test_hash_map.h"
 
 template <typename T>
 T* Decoder(void* data) {
@@ -307,19 +309,40 @@ int test_shared() {
   std::cout << buf << std::endl;
   return 0;
 }
+
 int main() {
   // graphbuffer::DiskManager *disk_manager = new
   // graphbuffer::DiskManager("test.db");
   // size_t pool_size = 1000;
   // gbp::BufferPoolManager* bpm = &gbp::BufferPoolManager::GetGlobalInstance();
   // bpm->init(pool_size);
-  test1();
 
-  generate_files();
-  // test_mmap_array();
-    generate_string();
-    test_string();
 
-  std::cout << "Read test achieves success!!!" << std::endl;
-  return 0;
+  // test1();
+
+  // generate_files();
+  // // test_mmap_array();
+  //   generate_string();
+  //   test_string();
+
+  // std::cout << "Read test achieves success!!!" << std::endl;
+  // return 0;
+  printf("begin gtl\n");
+  int test_threads=50;
+  int test_cycles=10000;
+  gbp::Tester t1;
+  t1.init(0);
+  auto startTime = std::chrono::high_resolution_clock::now(); 
+  t1.test_concurrent_hashmap(test_threads,test_cycles, 0);
+  auto endTime = std::chrono::high_resolution_clock::now(); 
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+  std::cout << "Total time: " << duration.count() << " milliseconds" << std::endl;
+  printf("begin tbb\n");
+  gbp::Tester t2;
+  t2.init(1);
+  startTime = std::chrono::high_resolution_clock::now(); 
+  t2.test_concurrent_hashmap(test_threads,test_cycles, 0);
+  endTime = std::chrono::high_resolution_clock::now();
+  duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+  std::cout << "Total time: " << duration.count() << " milliseconds" << std::endl;
 }

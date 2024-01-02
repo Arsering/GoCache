@@ -6,7 +6,7 @@
 
 namespace gbp {
     template<typename K,typename V>
-    class WrappedTbbHM:HashTable<K,V>{
+    class WrappedTbbHM:public HashTable<K,V>{
 
     using HashMap = tbb::concurrent_hash_map<K,V>;
     typedef typename HashMap::const_accessor HashMapConstAccessor;

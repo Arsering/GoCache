@@ -6,7 +6,7 @@
 namespace gbp {
 
     template<typename K,typename V>
-    class WrappedGtlHM:HashTable<K,V>{
+    class WrappedGtlHM:public HashTable<K,V>{
         using MAPT = phmap::parallel_flat_hash_map<K, V, phmap::priv::hash_default_hash<uint64_t>,
                                         phmap::priv::hash_default_eq<uint64_t>,
                                         std::allocator<std::pair<const uint64_t, uint32_t>>, 4, std::shared_mutex> ;

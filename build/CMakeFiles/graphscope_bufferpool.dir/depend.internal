@@ -22,6 +22,7 @@ CMakeFiles/graphscope_bufferpool.dir/main.cpp.o
  /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/rw_lock.h
  /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/rwmutex.h
  /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/tbb_hash_map.h
+ /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/test_hash_map.h
  /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/type_traits.h
  /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/value.h
  /data4/zyc/data/buffer_pool/graphscope_bufferpool/main.cpp

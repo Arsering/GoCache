@@ -360,6 +360,33 @@ page.cpp.s:
 	cd /data4/zyc/data/buffer_pool/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page.cpp.s
 .PHONY : page.cpp.s
 
+test_hash_map.o: test_hash_map.cc.o
+
+.PHONY : test_hash_map.o
+
+# target to build an object file
+test_hash_map.cc.o:
+	cd /data4/zyc/data/buffer_pool/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/test_hash_map.cc.o
+.PHONY : test_hash_map.cc.o
+
+test_hash_map.i: test_hash_map.cc.i
+
+.PHONY : test_hash_map.i
+
+# target to preprocess a source file
+test_hash_map.cc.i:
+	cd /data4/zyc/data/buffer_pool/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/test_hash_map.cc.i
+.PHONY : test_hash_map.cc.i
+
+test_hash_map.s: test_hash_map.cc.s
+
+.PHONY : test_hash_map.s
+
+# target to generate assembly for a file
+test_hash_map.cc.s:
+	cd /data4/zyc/data/buffer_pool/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/test_hash_map.cc.s
+.PHONY : test_hash_map.cc.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -394,6 +421,9 @@ help:
 	@echo "... page.o"
 	@echo "... page.i"
 	@echo "... page.s"
+	@echo "... test_hash_map.o"
+	@echo "... test_hash_map.i"
+	@echo "... test_hash_map.s"
 .PHONY : help
 
 

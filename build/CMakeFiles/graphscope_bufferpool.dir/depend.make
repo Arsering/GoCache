@@ -21,6 +21,7 @@ CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/replacer.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/rw_lock.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/rwmutex.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/tbb_hash_map.h
+CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/test_hash_map.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/type_traits.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/value.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../main.cpp

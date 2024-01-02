@@ -20,6 +20,7 @@ src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/replacer.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/rw_lock.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/rwmutex.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/tbb_hash_map.h
+src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/test_hash_map.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/type_traits.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../src/buffer_pool_manager.cpp
 
@@ -68,6 +69,19 @@ src/CMakeFiles/bufferpool.dir/page.cpp.o: ../include/replacer.h
 src/CMakeFiles/bufferpool.dir/page.cpp.o: ../include/rw_lock.h
 src/CMakeFiles/bufferpool.dir/page.cpp.o: ../include/rwmutex.h
 src/CMakeFiles/bufferpool.dir/page.cpp.o: ../include/tbb_hash_map.h
+src/CMakeFiles/bufferpool.dir/page.cpp.o: ../include/test_hash_map.h
 src/CMakeFiles/bufferpool.dir/page.cpp.o: ../include/type_traits.h
 src/CMakeFiles/bufferpool.dir/page.cpp.o: ../src/page.cpp
+
+src/CMakeFiles/bufferpool.dir/test_hash_map.cc.o: ../include/gtl_parallel_hash.h
+src/CMakeFiles/bufferpool.dir/test_hash_map.cc.o: ../include/hash_table.h
+src/CMakeFiles/bufferpool.dir/test_hash_map.cc.o: ../include/parallel_hashmap/phmap.h
+src/CMakeFiles/bufferpool.dir/test_hash_map.cc.o: ../include/parallel_hashmap/phmap_base.h
+src/CMakeFiles/bufferpool.dir/test_hash_map.cc.o: ../include/parallel_hashmap/phmap_bits.h
+src/CMakeFiles/bufferpool.dir/test_hash_map.cc.o: ../include/parallel_hashmap/phmap_config.h
+src/CMakeFiles/bufferpool.dir/test_hash_map.cc.o: ../include/parallel_hashmap/phmap_fwd_decl.h
+src/CMakeFiles/bufferpool.dir/test_hash_map.cc.o: ../include/parallel_hashmap/phmap_utils.h
+src/CMakeFiles/bufferpool.dir/test_hash_map.cc.o: ../include/tbb_hash_map.h
+src/CMakeFiles/bufferpool.dir/test_hash_map.cc.o: ../include/test_hash_map.h
+src/CMakeFiles/bufferpool.dir/test_hash_map.cc.o: ../src/test_hash_map.cc
 

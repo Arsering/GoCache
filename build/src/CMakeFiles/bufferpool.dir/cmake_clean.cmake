@@ -8,6 +8,7 @@ file(REMOVE_RECURSE
   "CMakeFiles/bufferpool.dir/logger.cc.o"
   "CMakeFiles/bufferpool.dir/lru_replacer.cpp.o"
   "CMakeFiles/bufferpool.dir/page.cpp.o"
+  "CMakeFiles/bufferpool.dir/test_hash_map.cc.o"
 )
 
 # Per-language clean rules from dependency scanning.

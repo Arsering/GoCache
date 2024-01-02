@@ -21,10 +21,8 @@ disk_manager.h
 /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/disk_manager.h
 extendible_hash.h
 /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/extendible_hash.h
-tbb_hash_map.h
-/data4/zyc/data/buffer_pool/graphscope_bufferpool/include/tbb_hash_map.h
-gtl_parallel_hash.h
-/data4/zyc/data/buffer_pool/graphscope_bufferpool/include/gtl_parallel_hash.h
+test_hash_map.h
+/data4/zyc/data/buffer_pool/graphscope_bufferpool/include/test_hash_map.h
 logger.h
 /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/logger.h
 lru_replacer.h
@@ -324,6 +322,22 @@ iostream
 hash_table.h
 /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/hash_table.h
 
+/data4/zyc/data/buffer_pool/graphscope_bufferpool/include/test_hash_map.h
+gtl_parallel_hash.h
+/data4/zyc/data/buffer_pool/graphscope_bufferpool/include/gtl_parallel_hash.h
+hash_table.h
+/data4/zyc/data/buffer_pool/graphscope_bufferpool/include/hash_table.h
+tbb_hash_map.h
+/data4/zyc/data/buffer_pool/graphscope_bufferpool/include/tbb_hash_map.h
+cstdio
+-
+memory
+-
+chrono
+-
+random
+-
+
 /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/type_traits.h
 
 /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/value.h
@@ -337,6 +351,8 @@ iostream
 -
 
 /data4/zyc/data/buffer_pool/graphscope_bufferpool/main.cpp
+cstdio
+-
 fcntl.h
 -
 stdlib.h
@@ -367,4 +383,6 @@ string_view
 -
 include/orgin_mmap.h
 /data4/zyc/data/buffer_pool/graphscope_bufferpool/include/orgin_mmap.h
+include/test_hash_map.h
+/data4/zyc/data/buffer_pool/graphscope_bufferpool/include/test_hash_map.h
 
