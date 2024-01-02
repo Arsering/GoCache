@@ -13,7 +13,7 @@ namespace gbp {
 
     class Tester{
     public:    
-        Tester():rd(), gen(rd()), distribution(1, 10){}
+        Tester():rd(), gen(rd()), distribution(1, 100){}
         std::shared_ptr<HashTable<int, int>> myhash;
         std::random_device rd;
         std::mt19937 gen;

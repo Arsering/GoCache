@@ -310,6 +310,38 @@ int test_shared() {
   return 0;
 }
 
+void test_hashmap(){
+  printf("begin gtl\n");
+  int test_threads=64;
+  int test_cycles=100000;
+  //while(test_threads>0){
+    gbp::Tester t1;
+    t1.init(0);
+    auto startTime = std::chrono::high_resolution_clock::now(); 
+    t1.test_concurrent_hashmap(test_threads,test_cycles, 0);
+    auto endTime = std::chrono::high_resolution_clock::now(); 
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+    std::cout<< test_threads << " Total time: " << duration.count() << " milliseconds" << std::endl;
+    printf("begin tbb\n");
+    gbp::Tester t2;
+    t2.init(1);
+    startTime = std::chrono::high_resolution_clock::now(); 
+    t2.test_concurrent_hashmap(test_threads,test_cycles, 0);
+    endTime = std::chrono::high_resolution_clock::now();
+    duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+    std::cout << test_threads << " Total time: " << duration.count() << " milliseconds" << std::endl;
+  //   test_threads/=2;
+  // }
+  // printf("begin unordered map\n");
+  // gbp::Tester t3;
+  // t3.init(2);
+  // startTime = std::chrono::high_resolution_clock::now(); 
+  // t3.test_concurrent_hashmap(test_threads,test_cycles, 0);
+  // endTime = std::chrono::high_resolution_clock::now();
+  // duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+  // std::cout << "Total time: " << duration.count() << " milliseconds" << std::endl;
+}
+
 int main() {
   // graphbuffer::DiskManager *disk_manager = new
   // graphbuffer::DiskManager("test.db");
@@ -320,29 +352,14 @@ int main() {
 
   // test1();
 
-  // generate_files();
-  // // test_mmap_array();
-  //   generate_string();
-  //   test_string();
+  generate_files();
+  // test_mmap_array();
+    generate_string();
+    test_string();
 
-  // std::cout << "Read test achieves success!!!" << std::endl;
-  // return 0;
-  printf("begin gtl\n");
-  int test_threads=50;
-  int test_cycles=10000;
-  gbp::Tester t1;
-  t1.init(0);
-  auto startTime = std::chrono::high_resolution_clock::now(); 
-  t1.test_concurrent_hashmap(test_threads,test_cycles, 0);
-  auto endTime = std::chrono::high_resolution_clock::now(); 
-  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-  std::cout << "Total time: " << duration.count() << " milliseconds" << std::endl;
-  printf("begin tbb\n");
-  gbp::Tester t2;
-  t2.init(1);
-  startTime = std::chrono::high_resolution_clock::now(); 
-  t2.test_concurrent_hashmap(test_threads,test_cycles, 0);
-  endTime = std::chrono::high_resolution_clock::now();
-  duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-  std::cout << "Total time: " << duration.count() << " milliseconds" << std::endl;
+  std::cout << "Read test achieves success!!!" << std::endl;
+  return 0;
+
+  //test_hashmap();
+  
 }

@@ -46,12 +46,11 @@ namespace gbp{
             auto rand=distribution(gen);
             int j;
             auto key=rand*test_cycles+i+rand;
-            if(myhash->Find(key, j)){
-                assert(j==key+47);
-            }
-            if(rand<=4){
-                continue;
-            }else if(rand<=7){
+            if(rand<=34){
+                    if(myhash->Find(key, j)){
+                    assert(j==key+47);
+                }
+            }else if(rand<=67){
                 myhash->Insert(rand*test_cycles+rand,rand*test_cycles+rand+47 );
             }else{
                 myhash->Remove(key);
