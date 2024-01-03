@@ -24,7 +24,7 @@ FIFOReplacer<T>::~FIFOReplacer() {}
  */
 template <typename T>
 void FIFOReplacer<T>::Insert(const T& value) {
-  std::lock_guard<std::mutex> lck(latch_);
+  // std::lock_guard<std::mutex> lck(latch_);
   ListNode* cur;
   if (map_.find(value) != map_.end()) {
     cur = map_[value];

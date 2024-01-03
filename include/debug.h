@@ -9,8 +9,9 @@
 #include "logger.h"
 
 namespace gbp {
-// #define DEBUG
+#define DEBUG
 
+#define DEBUG_1
 namespace debug {
 class BitMap {
  public:
