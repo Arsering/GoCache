@@ -32,7 +32,7 @@ int test_read(gbp::BufferPoolManager& bpm, size_t file_size) {
     for (int i = 0; i < file_size; i++) {
       // std::cout << i << std::endl;
       start_ts = gbp::GetSystemTime();
-      bpm.GetObject(str.data(), i * PAGE_SIZE_BUFFER_POOL, 5);
+      bpm.GetObject(str.data(), i * gbp::PAGE_SIZE_BUFFER_POOL, 5);
       end_ts = gbp::GetSystemTime();
       sum += end_ts - start_ts;
       std::cout << str.data();
@@ -48,7 +48,7 @@ int test_read(gbp::BufferPoolManager& bpm, size_t file_size) {
 }
 
 int test1() {
-  size_t file_size = 20000;
+  size_t file_size = 1024LU * 10 * 2;
   size_t obj_size = 128 * 4;
   std::default_random_engine e;
   std::uniform_int_distribution<int> u(0, file_size);  // 左闭右闭区间
@@ -58,21 +58,23 @@ int test1() {
   gbp::DiskManager* disk_manager = new gbp::DiskManager("test_dir/test.db");
   auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
   bpm.init(pool_size, disk_manager);
-#if DEBUG
+  // bpm.Resize(0, file_size * 3 * gbp::PAGE_SIZE_BUFFER_POOL);
+#ifdef DEBUG_1
   bpm.ReinitBitMap();
-  bpm.WarmUp();
+  // bpm.WarmUp();
   std::cout << "warmup finished" << std::endl;
 #endif
   // bpm.Resize(0, file_size * 4096);
 
   // {
   //   std::string str;
-  //   for (gbp::page_id page_num = 0; page_num < file_size; page_num++) {
+  //   for (gbp::page_id page_num = 0; page_num < file_size * 3; page_num++) {
   //     str = std::to_string(page_num);
   //     if (page_num % 10000 == 0)
   //       std::cout << "page_num = " << str << std::endl;
-  //     bpm.SetObject(str.data(), page_num * PAGE_SIZE_BUFFER_POOL,
-  //     str.size()); if (!bpm.FlushPage(page_num)) {
+  //     bpm.SetObject(str.data(), page_num * gbp::PAGE_SIZE_BUFFER_POOL,
+  //                   str.size());
+  //     if (!bpm.FlushPage(page_num)) {
   //       std::cout << "failed" << std::endl;
   //       return -1;
   //     }
@@ -81,18 +83,20 @@ int test1() {
   std::vector<char> str;
   str.resize(obj_size);
   size_t start_ts, end_ts, sum = 0;
+  gbp::debug::get_log_marker().store(1);
 
   for (int j = 0; j < 2; j++) {
     for (int i = j * file_size; i < file_size * (j + 1); i++) {
+      // for (int i = 0; i < file_size; i++) {
       // std::cout << i << std::endl;
       start_ts = gbp::GetSystemTime();
-      bpm.GetObject(str.data(), i * PAGE_SIZE_BUFFER_POOL, obj_size);
+      bpm.GetObject(str.data(), i * gbp::PAGE_SIZE_BUFFER_POOL, obj_size);
       end_ts = gbp::GetSystemTime();
       sum += end_ts - start_ts;
       std::cout << str.data();
     }
     std::cout << std::endl;
-    gbp::debug::get_log_marker().store(1);
+    gbp::debug::get_log_marker().store(0);
   }
 
   std::cout << "MAP_find = "
@@ -117,6 +121,39 @@ int test1() {
             << std::endl;
   std::cout << "copy = " << gbp::debug::get_counter_copy().load() / file_size
             << std::endl;
+  return 0;
+}
+int test3() {
+  size_t file_size = 20 * 1024LU;
+  std::string file_name = "test_dir/test.db";
+
+  int data_file = ::open(file_name.c_str(), O_RDWR | O_DIRECT | O_CREAT, 0777);
+  // std::ignore =
+  //     ::ftruncate(data_file, 2 * file_size * gbp::PAGE_SIZE_BUFFER_POOL);
+
+  char* data_file_mmaped =
+      (char*) ::mmap(NULL, 3 * file_size * gbp::PAGE_SIZE_BUFFER_POOL,
+                     PROT_READ | PROT_WRITE, MAP_SHARED, data_file, 0);
+  auto ret =
+      ::madvise(data_file_mmaped, 3 * file_size * gbp::PAGE_SIZE_BUFFER_POOL,
+                MADV_RANDOM);  // Turn off readahead
+  volatile size_t sum = 0;
+  volatile size_t st = 0;
+  st = gbp::GetSystemTime();
+  for (int j = 0; j < 2; j++) {
+    // for (int i = j * file_size; i < file_size * (j + 1); i++) {
+    for (int i = 0; i < file_size; i++) {
+      sum += data_file_mmaped[i * gbp::PAGE_SIZE_BUFFER_POOL];
+    }
+    if (j == 0) {
+      std::cout << "a" << std::endl;
+      auto latency = gbp::GetSystemTime() - st;
+      std::cout << "Latency of MMAP = " << latency / file_size << std::endl;
+      st = gbp::GetSystemTime();
+    }
+  }
+  auto latency = gbp::GetSystemTime() - st;
+  std::cout << "Latency of MMAP = " << latency / file_size << std::endl;
   return 0;
 }
 
@@ -374,10 +411,9 @@ int main(int argc, char** argv) {
   // size_t pool_size = 1000;
   // gbp::BufferPoolManager* bpm = &gbp::BufferPoolManager::GetGlobalInstance();
   // bpm->init(pool_size);
+
   test1();
-  char* a = (char*) malloc(10);
-  char* b = a;
-  free(b);
+  // test3();
 
   // generate_files();
   // test_mmap_array();

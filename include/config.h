@@ -24,8 +24,8 @@ extern std::atomic<bool> ENABLE_LOGGING;
 #define INVALID_LSN -1                  // representing an invalid lsn
 #define HEADER_PAGE_ID 0                // the header page id
 // #define PAGE_SIZE 4096                  // size of a data page in byte
-#define PAGE_SIZE_OS 4096  // size of a memory page in byte
-#define PAGE_SIZE_BUFFER_POOL 4096
+const static size_t PAGE_SIZE_OS = 4096;  // size of a memory page in byte
+const static size_t PAGE_SIZE_BUFFER_POOL = 4096;
 #define LOG_BUFFER_SIZE \
   ((BUFFER_POOL_SIZE + 1) * PAGE_SIZE)  // size of a log buffer in byte
 #define BUCKET_SIZE 50                  // size of extendible hash bucket

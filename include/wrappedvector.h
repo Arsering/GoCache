@@ -18,10 +18,7 @@ class WrappedVector {
 
  public:
   WrappedVector() = default;
-  WrappedVector(page_id vector_size) : size_(vector_size) {
-    size_ = 0;
-    Resize(vector_size);
-  }
+  WrappedVector(page_id vector_size) : size_(0) { Resize(vector_size); }
 
   bool Find(page_id page_id_f, page_id& page_id_m) {
     assert(page_id_f < size_);

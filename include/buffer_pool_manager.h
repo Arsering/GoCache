@@ -83,7 +83,7 @@ struct VectorSync {
 
   Page* GetItem() {
     Page* ret = nullptr;
-    std::lock_guard<std::mutex> lock(latch_);
+    // std::lock_guard<std::mutex> lock(latch_);
     if (size_ == 0)
       return ret;
     else {
@@ -93,7 +93,7 @@ struct VectorSync {
   }
 
   int InsertItem(Page* item) {
-    std::lock_guard<std::mutex> lock(latch_);
+    // std::lock_guard<std::mutex> lock(latch_);
     if (size_ < capacity_) {
       data_[size_++] = item;
       return 0;
@@ -163,7 +163,7 @@ class BufferPoolManager {
       for (size_t page_idx_f = 0; page_idx_f < page_f_num; page_idx_f++) {
         FetchPage(page_idx_f, fd_gbp);
         if (free_list_->GetSize() == 0) {
-          LOG(INFO) << "pool is full";
+          // LOG(INFO) << "pool is full";
           return;
         }
       }
