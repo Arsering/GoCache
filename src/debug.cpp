@@ -83,5 +83,10 @@ std::atomic<size_t>& get_log_marker() {
   return counter;
 }
 
+std::atomic<size_t>& get_counter_any() {
+  static std::atomic<size_t> counter(0);
+  return counter;
+}
+
 }  // namespace debug
 }  // namespace gbp
