@@ -63,8 +63,7 @@ void DiskManager::ReadPage(page_id page_id_f, char* page_data,
   if (get_mark_warmup().load() == 1)
     debug::get_counter_read().fetch_add(1);
 #endif
-  if (get_mark_warmup().load() == 1)
-    LOG(INFO) << "pread";
+
   size_t offset = (size_t) page_id_f * PAGE_SIZE_BUFFER_POOL;
   if (fd_oss_.size() < fd_gbp || !fd_oss_[fd_gbp].second) {
     std::cerr << "Meet unavailable file while reading" << std::endl;
