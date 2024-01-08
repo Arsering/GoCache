@@ -5,12 +5,13 @@ set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 set(CMAKE_C_FLAGS "-g")
 # file(GLOB SRC_FILE *.c) # 建立变量SRC_FILE为目录下.c文件列表
 
-set(CMAKE_BUILD_TYPE "Debug")
-# set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -Wall -Wextra -lpthread -O3")
+# set(CMAKE_BUILD_TYPE "Debug")
 
 project(graphscope_bufferpool)
-set(CMAKE_BUILD_TYPE "Debug")
+
+set(DEFAULT_BUILD_TYPE "Release")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -O0")
+set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0")
 
 # find glog---------------------------------------------------------------------
 include("cmake/FindGlog.cmake")

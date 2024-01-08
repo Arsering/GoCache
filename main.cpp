@@ -83,11 +83,11 @@ int test1() {
   std::vector<char> str;
   str.resize(obj_size);
   size_t start_ts, end_ts, sum = 0;
-  gbp::debug::get_log_marker().store(1);
+  gbp::debug::get_log_marker().store(0);
 
   for (int j = 0; j < 2; j++) {
-    for (int i = j * file_size; i < file_size * (j + 1); i++) {
-      // for (int i = 0; i < file_size; i++) {
+    // for (int i = j * file_size; i < file_size * (j + 1); i++) {
+    for (int i = 0; i < file_size; i++) {
       // std::cout << i << std::endl;
       start_ts = gbp::GetSystemTime();
       bpm.GetObject(str.data(), i * gbp::PAGE_SIZE_BUFFER_POOL, obj_size);
@@ -96,7 +96,7 @@ int test1() {
       std::cout << str.data();
     }
     std::cout << std::endl;
-    gbp::debug::get_log_marker().store(0);
+    gbp::debug::get_log_marker().store(1);
   }
 
   std::cout << "MAP_find = "
