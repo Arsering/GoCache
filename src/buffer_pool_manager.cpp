@@ -83,14 +83,16 @@ PageDescriptor BufferPoolManager::FetchPage(page_id page_id_f, int fd_gbp) {
     debug::get_counter_fetch_unique().fetch_add(1);
   debug::get_bitset(fd_gbp).set(page_id_f);
 #endif
-  size_t st, latency;
 
   page_id page_id_m;
   Page* tar = nullptr;
   assert(fd_gbp < page_tables_.size());
   assert(fd_gbp >= 0);
 #ifdef DEBUG
-  { st = GetSystemTime(); }
+  {
+    size_t st, latency;
+    st = GetSystemTime();
+  }
 #endif
   if (page_tables_[fd_gbp]->Find(page_id_f, page_id_m)) {  // 1.1
 #ifdef DEBUG
