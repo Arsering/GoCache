@@ -6,6 +6,34 @@
 
 #IncludeRegexTransform: 
 
+../include/buffer_obj.h
+sys/mman.h
+-
+cstdio
+-
+cstring
+-
+fstream
+-
+iostream
+-
+memory
+-
+mutex
+-
+string
+-
+vector
+-
+flex/utils/property/types.h
+../include/flex/utils/property/types.h
+glog/logging.h
+../include/glog/logging.h
+logger.h
+../include/logger.h
+page.h
+../include/page.h
+
 ../include/buffer_pool_manager.h
 assert.h
 -
@@ -17,6 +45,8 @@ vector
 -
 math.h
 -
+buffer_obj.h
+../include/buffer_obj.h
 config.h
 ../include/config.h
 debug.h
@@ -103,6 +133,8 @@ hash_table.h
 ../include/hash_table.h
 
 ../include/fifo_replacer.h
+assert.h
+-
 iostream
 -
 map
@@ -113,6 +145,8 @@ mutex
 -
 unordered_map
 -
+page.h
+../include/page.h
 replacer.h
 ../include/replacer.h
 

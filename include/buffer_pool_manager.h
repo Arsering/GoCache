@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <math.h>
+#include "buffer_obj.h"
 #include "config.h"
 #include "debug.h"
 #include "disk_manager.h"
@@ -136,6 +137,11 @@ class BufferPoolManager {
   int SetObject(const char* buf, size_t file_offset, size_t object_size,
                 int fd_gbp = 0);
 
+  BufferObjectImp2 GetObject(size_t file_offset, size_t object_size,
+                             int fd_gbp = 0);
+  int SetObject(BufferObjectImp2 buf, size_t file_offset, size_t object_size,
+                int fd_gbp = 0);
+
   int Resize(uint16_t fd_gbp, size_t new_size) {
     std::lock_guard lock(latch_);
     assert(fd_gbp < page_tables_.size());
@@ -197,5 +203,21 @@ class BufferPoolManager {
   PageDescriptor FetchPage(page_id page_id, int file_handler = 0);
   inline Page* Pid2Ptr(uint32_t page_id) { return pages_ + page_id; }
   inline uint32_t Ptr2Pid(Page* page) { return ((Page*) page - pages_); }
+};
+class Test {
+ private:
+  char* data_ = nullptr;
+  size_t size_ = 0;
+  Page* page_ = nullptr;
+  bool need_delete_ = false;
+
+ public:
+  Test() {
+    data_ = nullptr;
+    size_ = 0;
+    page_ = nullptr;
+    need_delete_ = false;
+  }
+  ~Test() {}
 };
 }  // namespace gbp

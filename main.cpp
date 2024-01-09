@@ -48,13 +48,13 @@ int test_read(gbp::BufferPoolManager& bpm, size_t file_size) {
 }
 
 int test1() {
-  size_t file_size = 1024LU * 10 * 2;
+  size_t file_size = 20000;
   size_t obj_size = 128 * 4;
   std::default_random_engine e;
   std::uniform_int_distribution<int> u(0, file_size);  // 左闭右闭区间
   e.seed(time(0));
 
-  size_t pool_size = file_size;
+  size_t pool_size = file_size * 2;
   gbp::DiskManager* disk_manager = new gbp::DiskManager("test_dir/test.db");
   auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
   bpm.init(pool_size, disk_manager);
@@ -70,11 +70,11 @@ int test1() {
   //   std::string str;
   //   for (gbp::page_id page_num = 0; page_num < file_size * 3; page_num++) {
   //     str = std::to_string(page_num);
+  //     gbp::BufferObject input(str.size(), str.data());
   //     if (page_num % 10000 == 0)
   //       std::cout << "page_num = " << str << std::endl;
-  //     bpm.SetObject(str.data(), page_num * gbp::PAGE_SIZE_BUFFER_POOL,
-  //                   str.size());
-  //     if (!bpm.FlushPage(page_num)) {
+  //     bpm.SetObject(input, page_num * gbp::PAGE_SIZE_BUFFER_POOL,
+  //     str.size()); if (!bpm.FlushPage(page_num)) {
   //       std::cout << "failed" << std::endl;
   //       return -1;
   //     }
@@ -90,10 +90,12 @@ int test1() {
     for (int i = 0; i < file_size; i++) {
       // std::cout << i << std::endl;
       start_ts = gbp::GetSystemTime();
-      bpm.GetObject(str.data(), i * gbp::PAGE_SIZE_BUFFER_POOL, obj_size);
+      auto ret = bpm.GetObject(i * gbp::PAGE_SIZE_BUFFER_POOL, obj_size);
       end_ts = gbp::GetSystemTime();
-      sum += end_ts - start_ts;
-      std::cout << str.data();
+
+      if (j > 0)
+        sum += end_ts - start_ts;
+      std::cout << ret.Data();
     }
     std::cout << std::endl;
     gbp::debug::get_log_marker().store(1);
@@ -119,8 +121,12 @@ int test1() {
   std::cout << "ES_insert = "
             << gbp::debug::get_counter_ES_insert().load() / file_size
             << std::endl;
+
   std::cout << "copy = " << gbp::debug::get_counter_copy().load() / file_size
             << std::endl;
+  std::cout << "bpm = " << gbp::debug::get_counter_bpm().load() / file_size
+            << std::endl;
+  std::cout << "sum = " << sum / file_size << std::endl;
   return 0;
 }
 int test3() {
