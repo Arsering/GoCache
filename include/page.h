@@ -38,7 +38,7 @@ class Page {
   inline page_id GetPageId() { return page_id_; }
   inline int32_t GetFileHandler() { return fd_gbp_; }
   // get page pin count
-  inline int GetPinCount() { return pin_count_; }
+  inline uint32_t GetPinCount() { return pin_count_.load(); }
   bool Unpin();
   // method use to latch/unlatch page content
   inline void WUnlatch() { rwlatch_.WUnlock(); }
@@ -85,7 +85,7 @@ class Page {
 class PageDescriptor : public NonCopyable {
  public:
   PageDescriptor(Page* inner) { inner_ = inner; }
-  ~PageDescriptor() { inner_->Unpin(); }
+  ~PageDescriptor() = default;
   Page* GetPage() { return inner_; }
 
  private:

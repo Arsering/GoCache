@@ -20,7 +20,7 @@ void BufferPoolManager::init(size_t pool_size, DiskManager* disk_manager) {
   madvise(buffer_pool_, pool_size * PAGE_SIZE_BUFFER_POOL, MADV_RANDOM);
   pages_ = new Page[pool_size_];
   // page_table_ = new std::vector<ExtendibleHash<page_id_infile, Page *>>();
-  replacer_ = new FIFOReplacer<uint32_t>;
+  replacer_ = new FIFOReplacer<uint32_t>(pages_);
   free_list_.reset(new VectorSync(pool_size_));
 
   for (auto fd_os : disk_manager_->fd_oss_) {
@@ -366,8 +366,9 @@ int BufferPoolManager::GetObject(char* buf, size_t file_offset,
 #ifdef DEBUG
     st = GetSystemTime();
 #endif
-
     object_size_t = pd.GetPage()->GetObject(buf, page_offset, object_size);
+    pd.GetPage()->Unpin();
+
 #ifdef DEBUG
     latency = GetSystemTime() - st;
     if (debug::get_log_marker() == 1)
@@ -378,6 +379,7 @@ int BufferPoolManager::GetObject(char* buf, size_t file_offset,
     page_id++;
     page_offset = 0;
   }
+  std::cout << 'e' << std::endl;
 
   return 0;
 }
@@ -393,6 +395,7 @@ int BufferPoolManager::SetObject(const char* buf, size_t file_offset,
   while (object_size > 0) {
     auto pd = FetchPage(page_id, fd_gbp);
     object_size_t = pd.GetPage()->SetObject(buf, page_offset, object_size);
+    pd.GetPage()->Unpin();
 
     object_size -= object_size_t;
     buf += object_size_t;
@@ -400,6 +403,37 @@ int BufferPoolManager::SetObject(const char* buf, size_t file_offset,
     page_offset = 0;
   }
   return 0;
+}
+
+BufferObjectImp2 BufferPoolManager::GetObject(size_t file_offset,
+                                              size_t object_size, int fd_gbp) {
+  size_t page_offset = file_offset % PAGE_SIZE_BUFFER_POOL;
+  if (PAGE_SIZE_BUFFER_POOL - page_offset >= object_size) {
+    size_t page_id = file_offset / PAGE_SIZE_BUFFER_POOL;
+
+    size_t st = GetSystemTime();
+    auto pd = FetchPage(page_id, fd_gbp);
+    st = GetSystemTime() - st;
+    if (debug::get_log_marker() == 1)
+      debug::get_counter_bpm().fetch_add(st);
+
+    st = GetSystemTime();
+    BufferObjectImp2 ret(object_size, pd.GetPage()->GetData() + page_offset,
+                         pd.GetPage());
+    st = GetSystemTime() - st;
+    if (debug::get_log_marker() == 1)
+      debug::get_counter_MAP_find().fetch_add(st);
+    return ret;
+  } else {
+    BufferObjectImp2 ret(object_size);
+    GetObject(ret.Data(), file_offset, object_size, fd_gbp);
+    return ret;
+  }
+}
+
+int BufferPoolManager::SetObject(BufferObjectImp2 buf, size_t file_offset,
+                                 size_t object_size, int fd_gbp) {
+  return SetObject(buf.Data(), file_offset, object_size, fd_gbp);
 }
 
 }  // namespace gbp

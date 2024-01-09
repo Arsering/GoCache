@@ -9,14 +9,32 @@
 
 #pragma once
 
+#include <assert.h>
 #include <iostream>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
+
+#include "page.h"
 #include "replacer.h"
 
 namespace gbp {
+
+class Pid2Ptr {
+ private:
+  Page* start_page_ = nullptr;
+
+ public:
+  Pid2Ptr() = default;
+  ~Pid2Ptr() = default;
+
+  Page* GetPtr(size_t pid) const { return start_page_ + pid; }
+  int init(Page* start_page) {
+    start_page_ = start_page;
+    return 0;
+  }
+};
 
 template <typename T>
 class FIFOReplacer : public Replacer<T> {
@@ -30,7 +48,7 @@ class FIFOReplacer : public Replacer<T> {
 
  public:
   // do not change public interface
-  FIFOReplacer();
+  FIFOReplacer(Page* start_page);
   FIFOReplacer(const FIFOReplacer& other) = delete;
   FIFOReplacer& operator=(const FIFOReplacer&) = delete;
 
@@ -49,6 +67,7 @@ class FIFOReplacer : public Replacer<T> {
   ListNode tail_;
   std::unordered_map<T, ListNode*> map_;
   mutable std::mutex latch_;
+  Pid2Ptr pid2ptr_;
   // add your member variables here
 };
 

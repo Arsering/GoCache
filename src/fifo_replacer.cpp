@@ -1,19 +1,19 @@
 /**
- * LRU implementation
+ * FIFO implementation
  */
 #include "../include/fifo_replacer.h"
-#include "../include/page.h"
 
 namespace gbp {
 
 template <typename T>
-FIFOReplacer<T>::FIFOReplacer() {
+FIFOReplacer<T>::FIFOReplacer(Page* start_page) {
   head_ = ListNode();
   tail_ = ListNode();
   head_.next = &tail_;
   head_.prev = nullptr;
   tail_.prev = &head_;
   tail_.next = nullptr;
+  pid2ptr_.init(start_page);
 }
 
 template <typename T>
@@ -50,16 +50,20 @@ void FIFOReplacer<T>::Insert(const T& value) {
 template <typename T>
 bool FIFOReplacer<T>::Victim(T& value) {
   std::lock_guard<std::mutex> lck(latch_);
-  if (map_.empty()) {
-    std::cerr << "List is empty!!!" << std::endl;
-    return false;
+  assert(tail_.prev != &head_);
+
+  ListNode* victim = tail_.prev;
+  while (true) {
+    assert(victim != &head_);
+    if (pid2ptr_.GetPtr((size_t) victim->val)->GetPinCount() == 0)
+      break;
+    victim = victim->prev;
   }
-  ListNode* last = tail_.prev;
-  tail_.prev = last->prev;
-  last->prev->next = &tail_;
-  value = last->val;
-  map_.erase(last->val);
-  delete last;
+  tail_.prev = victim->prev;
+  victim->prev->next = &tail_;
+  value = victim->val;
+  map_.erase(victim->val);
+  delete victim;
   return true;
 }
 

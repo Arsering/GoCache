@@ -66,7 +66,7 @@ class DiskManager {
 
  private:
   inline int OpenFile(const std::string& file_name, int o_flag) {
-    auto fd_os = ::open(file_name.c_str(), o_flag, 0777);
+    auto fd_os = ::open(file_name.c_str(), o_flag);
     fd_oss_.push_back(std::make_pair(fd_os, true));
     file_names_.push_back(file_name);
     file_sizes_.push_back(GetFileSize(fd_os));
