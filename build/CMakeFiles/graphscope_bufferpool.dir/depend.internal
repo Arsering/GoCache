@@ -20,3 +20,5 @@ CMakeFiles/graphscope_bufferpool.dir/main.cpp.o
  ../include/value.h
  ../include/wrappedvector.h
  /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp
+ /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.h
+ /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/utils.h

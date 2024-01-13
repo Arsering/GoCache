@@ -301,8 +301,6 @@ iostream
 -
 buffer_pool_manager.h
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/buffer_pool_manager.h
-glog/logging.h
-/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/glog/logging.h
 assert.h
 -
 ctime
@@ -313,4 +311,26 @@ string_view
 -
 orgin_mmap.h
 /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/orgin_mmap.h
+tests/tests.h
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.h
+tests/utils.h
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/utils.h
+
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.h
+
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/utils.h
+assert.h
+-
+stdlib.h
+-
+sys/time.h
+-
+boost/algorithm/string.hpp
+-
+fstream
+-
+sstream
+-
+vector
+-
 

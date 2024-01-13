@@ -61,128 +61,6 @@ void BufferPoolManager::RegisterFile(int fd_gbp) {
   page_tables_.push_back(std::make_unique<WrappedVector>(file_size_in_page));
 }
 
-/**
- * 1. search hash table.
- *  1.1 if exist, pin the page and return immediately
- *  1.2 if no exist, find a replacement entry from either free list or lru
- *      replacer. (NOTE: always find from free list first)
- * 2. If the entry chosen for replacement is dirty, write it back to disk.
- * 3. Delete the entry for the old page from the hash table and insert an
- * entry for the new page.
- * 4. Update page metadata, read page content from disk file and return page
- * pointer
- *
- * This function must mark the Page as pinned and remove its entry from
- * LRUReplacer before it is returned to the caller.
- */
-PageDescriptor BufferPoolManager::FetchPage(page_id page_id_f, int fd_gbp) {
-  // std::lock_guard<std::mutex> lck(latch_);
-#ifdef DEBUG_1
-  debug::get_counter_fetch().fetch_add(1);
-  if (!debug::get_bitset(fd_gbp).test(page_id_f))
-    debug::get_counter_fetch_unique().fetch_add(1);
-  debug::get_bitset(fd_gbp).set(page_id_f);
-#endif
-
-  page_id page_id_m;
-  Page* tar = nullptr;
-  assert(fd_gbp < page_tables_.size());
-  assert(fd_gbp >= 0);
-#ifdef DEBUG
-  {
-    size_t st, latency;
-    st = GetSystemTime();
-  }
-#endif
-  if (page_tables_[fd_gbp]->Find(page_id_f, page_id_m)) {  // 1.1
-#ifdef DEBUG
-    {
-      latency = GetSystemTime() - st;
-      if (debug::get_log_marker() == 1)
-        debug::get_counter_MAP_find().fetch_add(latency);
-    }
-#endif
-    tar = (Page*) pages_ + page_id_m;
-    tar->pin_count_++;
-    return tar;
-  }
-#ifdef DEBUG
-  {
-    latency = GetSystemTime() - st;
-    if (debug::get_log_marker() == 1)
-      debug::get_counter_MAP_find().fetch_add(latency);
-  }
-#endif
-  // 1.2
-  tar = GetVictimPage();
-  if (tar == nullptr)
-    return tar;
-
-  // 2
-  if (tar->is_dirty_) {
-    disk_manager_->WritePage(tar->GetPageId(), tar->GetData(),
-                             tar->GetFileHandler());
-  }
-
-  // 3
-  if (tar->GetFileHandler() != -1) {
-#ifdef DEBUG
-    { st = GetSystemTime(); }
-#endif
-    page_tables_[tar->GetFileHandler()]->Remove(tar->GetPageId());
-#ifdef DEBUG
-    {
-      latency = GetSystemTime() - st;
-      if (debug::get_log_marker() == 1)
-        debug::get_counter_MAP_eviction().fetch_add(latency);
-    }
-#endif
-  }
-#ifdef DEBUG
-  { st = GetSystemTime(); }
-#endif
-  page_tables_[fd_gbp]->Insert(page_id_f, Ptr2Pid(tar));
-#ifdef DEBUG
-  {
-    latency = GetSystemTime() - st;
-    if (debug::get_log_marker() == 1)
-      debug::get_counter_MAP_insert().fetch_add(latency);
-  }
-#endif
-// 4
-#ifdef DEBUG
-  { st = GetSystemTime(); }
-#endif
-  disk_manager_->ReadPage(page_id_f, tar->GetData(), fd_gbp);
-#ifdef DEBUG
-  {
-    latency = GetSystemTime() - st;
-    if (debug::get_log_marker() == 1)
-      debug::get_counter_pread().fetch_add(latency);
-  }
-#endif
-  tar->pin_count_.store(1);
-  tar->is_dirty_ = false;
-  tar->page_id_ = page_id_f;
-  tar->fd_gbp_ = fd_gbp;
-  tar->buffer_pool_manager_ = this;
-// 1. 换为32int
-// 2. 屏蔽map
-#ifdef DEBUG
-  { st = GetSystemTime(); }
-#endif
-  replacer_->Insert(Ptr2Pid(tar));
-#ifdef DEBUG
-  {
-    latency = GetSystemTime() - st;
-    if (debug::get_log_marker() == 1)
-      debug::get_counter_ES_insert().fetch_add(latency);
-  }
-#endif
-
-  return PageDescriptor(tar);
-}
-
 /*
  * Implementation of unpin page
  * if pin_count>0, decrement it and if it becomes zero, put it back to
@@ -321,31 +199,31 @@ Page* BufferPoolManager::GetVictimPage() {
   Page* tar = nullptr;
   uint32_t page_idx_m;
 
-  size_t st, latency;
-#ifdef DEBUG
+  size_t st;
+#ifdef DEBUG_1
   { st = GetSystemTime(); }
 #endif
   tar = free_list_->GetItem();
-#ifdef DEBUG
+#ifdef DEBUG_1
   {
-    latency = GetSystemTime() - st;
+    st = GetSystemTime() - st;
     if (debug::get_log_marker() == 1)
-      debug::get_counter_FPL_get().fetch_add(latency);
+      debug::get_counter_FPL_get().fetch_add(st);
   }
 #endif
   if (tar == nullptr) {
     if (replacer_->Size() == 0) {
       return nullptr;
     }
-#ifdef DEBUG
+#ifdef DEBUG_1
     { st = GetSystemTime(); }
 #endif
     replacer_->Victim(page_idx_m);
-#ifdef DEBUG
+#ifdef DEBUG_1
     {
-      latency = GetSystemTime() - st;
+      st = GetSystemTime() - st;
       if (debug::get_log_marker() == 1)
-        debug::get_counter_ES_eviction().fetch_add(latency);
+        debug::get_counter_ES_eviction().fetch_add(st);
     }
 #endif
     tar = Pid2Ptr(page_idx_m);
@@ -362,7 +240,16 @@ int BufferPoolManager::GetObject(char* buf, size_t file_offset,
   size_t object_size_t = 0;
   size_t st, latency;
   while (object_size > 0) {
+#ifdef DEBUG
+    st = GetSystemTime();
+#endif
     auto pd = FetchPage(page_id, fd_gbp);
+#ifdef DEBUG
+    latency = GetSystemTime() - st;
+    if (debug::get_log_marker() == 1)
+      debug::get_counter_bpm().fetch_add(latency);
+#endif
+
 #ifdef DEBUG
     st = GetSystemTime();
 #endif
@@ -379,8 +266,6 @@ int BufferPoolManager::GetObject(char* buf, size_t file_offset,
     page_id++;
     page_offset = 0;
   }
-  std::cout << 'e' << std::endl;
-
   return 0;
 }
 
@@ -405,33 +290,48 @@ int BufferPoolManager::SetObject(const char* buf, size_t file_offset,
   return 0;
 }
 
-BufferObjectImp2 BufferPoolManager::GetObject(size_t file_offset,
-                                              size_t object_size, int fd_gbp) {
+BufferObject BufferPoolManager::GetObject(size_t file_offset,
+                                          size_t object_size, int fd_gbp) {
   size_t page_offset = file_offset % PAGE_SIZE_BUFFER_POOL;
+  size_t st;
   if (PAGE_SIZE_BUFFER_POOL - page_offset >= object_size) {
     size_t page_id = file_offset / PAGE_SIZE_BUFFER_POOL;
-
-    size_t st = GetSystemTime();
+#ifdef DEBUG
+    st = GetSystemTime();
+#endif
     auto pd = FetchPage(page_id, fd_gbp);
+#ifdef DEBUG
     st = GetSystemTime() - st;
     if (debug::get_log_marker() == 1)
       debug::get_counter_bpm().fetch_add(st);
-
+#endif
+#ifdef DEBUG
     st = GetSystemTime();
-    BufferObjectImp2 ret(object_size, pd.GetPage()->GetData() + page_offset,
-                         pd.GetPage());
+#endif
+    BufferObject ret(object_size, pd.GetPage()->GetData() + page_offset,
+                     pd.GetPage());
+#ifdef DEBUG
     st = GetSystemTime() - st;
     if (debug::get_log_marker() == 1)
-      debug::get_counter_MAP_find().fetch_add(st);
+      debug::get_counter_copy().fetch_add(st);
+#endif
     return ret;
   } else {
-    BufferObjectImp2 ret(object_size);
+#ifdef DEBUG
+    size_t st = GetSystemTime();
+#endif
+    BufferObject ret(object_size);
+#ifdef DEBUG
+    st = GetSystemTime() - st;
+    if (debug::get_log_marker() == 1)
+      debug::get_counter_copy().fetch_add(st);
+#endif
     GetObject(ret.Data(), file_offset, object_size, fd_gbp);
     return ret;
   }
 }
 
-int BufferPoolManager::SetObject(BufferObjectImp2 buf, size_t file_offset,
+int BufferPoolManager::SetObject(BufferObject buf, size_t file_offset,
                                  size_t object_size, int fd_gbp) {
   return SetObject(buf.Data(), file_offset, object_size, fd_gbp);
 }

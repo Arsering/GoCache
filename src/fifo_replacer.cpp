@@ -35,6 +35,8 @@ void FIFOReplacer<T>::Insert(const T& value) {
   } else {
     cur = new ListNode(value);
   }
+  cur = new ListNode(value);
+
   ListNode* fir = head_.next;
   cur->next = fir;
   fir->prev = cur;
@@ -49,7 +51,7 @@ void FIFOReplacer<T>::Insert(const T& value) {
  */
 template <typename T>
 bool FIFOReplacer<T>::Victim(T& value) {
-  std::lock_guard<std::mutex> lck(latch_);
+  // std::lock_guard<std::mutex> lck(latch_);
   assert(tail_.prev != &head_);
 
   ListNode* victim = tail_.prev;
@@ -73,7 +75,7 @@ bool FIFOReplacer<T>::Victim(T& value) {
  */
 template <typename T>
 bool FIFOReplacer<T>::Erase(const T& value) {
-  std::lock_guard<std::mutex> lck(latch_);
+  // std::lock_guard<std::mutex> lck(latch_);
   if (map_.find(value) != map_.end()) {
     ListNode* cur = map_[value];
     cur->prev->next = cur->next;
@@ -88,7 +90,7 @@ bool FIFOReplacer<T>::Erase(const T& value) {
 
 template <typename T>
 size_t FIFOReplacer<T>::Size() const {
-  std::lock_guard<std::mutex> lck(latch_);
+  // std::lock_guard<std::mutex> lck(latch_);
   return map_.size();
 }
 

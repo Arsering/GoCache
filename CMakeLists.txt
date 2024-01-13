@@ -30,10 +30,12 @@ aux_source_directory(${PROJECT_SOURCE_DIR} ALL_SRCS) # 添加当前目录下所�
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
 add_subdirectory(src)
+add_subdirectory(tests)
 
 # 包含静态库路径
 link_directories(${LIBRARY_OUTPUT_PATH})
 # 链接静态库
 link_libraries(bufferpool)
+link_libraries(tests)
 
 add_executable(${PROJECT_NAME} ${ALL_SRCS})	# 指定生成目标，注意这里要用${ALL_SRCS}!!!

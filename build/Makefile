@@ -182,6 +182,19 @@ bufferpool/fast:
 	$(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/build
 .PHONY : bufferpool/fast
 
+#=============================================================================
+# Target rules for targets named tests
+
+# Build rule for target.
+tests: cmake_check_build_system
+	$(MAKE) -f CMakeFiles/Makefile2 tests
+.PHONY : tests
+
+# fast build rule for target.
+tests/fast:
+	$(MAKE) -f tests/CMakeFiles/tests.dir/build.make tests/CMakeFiles/tests.dir/build
+.PHONY : tests/fast
+
 main.o: main.cpp.o
 
 .PHONY : main.o
@@ -223,6 +236,7 @@ help:
 	@echo "... edit_cache"
 	@echo "... graphscope_bufferpool"
 	@echo "... bufferpool"
+	@echo "... tests"
 	@echo "... main.o"
 	@echo "... main.i"
 	@echo "... main.s"
