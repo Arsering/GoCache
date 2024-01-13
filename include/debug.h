@@ -9,9 +9,8 @@
 #include "logger.h"
 
 namespace gbp {
-// #define DEBUG
-
 // #define DEBUG_1
+
 namespace debug {
 class BitMap {
  public:
@@ -116,10 +115,14 @@ std::atomic<size_t>& get_counter_ES_eviction();
 std::atomic<size_t>& get_counter_MAP_insert();
 std::atomic<size_t>& get_counter_ES_insert();
 std::atomic<size_t>& get_counter_copy();
+std::atomic<size_t>& get_counter_malloc();
 std::atomic<size_t>& get_log_marker();
 
 std::atomic<size_t>& get_counter_bpm();
 std::atomic<size_t>& get_counter_any();
+
+std::atomic<size_t>& get_counter_CopyObj();
+std::atomic<size_t>& get_counter_RefObj();
 
 }  // namespace debug
 }  // namespace gbp

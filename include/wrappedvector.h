@@ -22,7 +22,6 @@ class WrappedVector {
 
   bool Find(page_id page_id_f, page_id& page_id_m) {
     assert(page_id_f < size_);
-
     if (index_table[page_id_f] == std::numeric_limits<page_id>::max()) {
       return false;
     } else {

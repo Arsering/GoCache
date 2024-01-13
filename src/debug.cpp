@@ -78,12 +78,27 @@ std::atomic<size_t>& get_counter_copy() {
   static std::atomic<size_t> counter(0);
   return counter;
 }
+
+std::atomic<size_t>& get_counter_malloc() {
+  static std::atomic<size_t> counter(0);
+  return counter;
+}
+
 std::atomic<size_t>& get_log_marker() {
   static std::atomic<size_t> counter(0);
   return counter;
 }
 
 std::atomic<size_t>& get_counter_any() {
+  static std::atomic<size_t> counter(0);
+  return counter;
+}
+
+std::atomic<size_t>& get_counter_CopyObj() {
+  static std::atomic<size_t> counter(0);
+  return counter;
+}
+std::atomic<size_t>& get_counter_RefObj() {
   static std::atomic<size_t> counter(0);
   return counter;
 }

@@ -28,12 +28,6 @@
 #include "logger.h"
 #include "page.h"
 
-namespace gs {
-#define OV false
-
-#define MMAP_ADVICE_l MADV_RANDOM
-}  // namespace gs
-
 namespace gbp {
 #if !OV
 #define LBMalloc(size) malloc(size)
@@ -538,6 +532,43 @@ enum class ObjectType {
   gbpEmpty,
 };
 
+struct BufferObjectInner {
+  char* data_ = nullptr;
+  size_t size_ = 0;
+  Page* page_ = nullptr;
+  bool need_delete_ = false;
+  bool need_unpin_ = true;
+  ObjectType type_;
+  BufferObjectInner() {
+    data_ = nullptr;
+    size_ = 0;
+    page_ = nullptr;
+    need_delete_ = false;
+    type_ = ObjectType::gbpClass;
+  }
+
+  BufferObjectInner(size_t s) {
+    Malloc(s);
+    page_ = nullptr;
+    type_ = ObjectType::gbpClass;
+  }
+
+  BufferObjectInner(size_t s, char* data, Page* page = nullptr) {
+    data_ = data;
+    size_ = s;
+    page_ = page;
+    need_delete_ = false;
+    type_ = ObjectType::gbpClass;
+  }
+
+ private:
+  void Malloc(size_t s) {
+    data_ = (char*) LBMalloc(s);
+    assert(data_ != NULL);
+    need_delete_ = true;
+    size_ = s;
+  }
+};
 class BufferObjectImp2 {
  private:
   char* data_ = nullptr;
@@ -545,6 +576,7 @@ class BufferObjectImp2 {
   Page* page_ = nullptr;
   bool need_delete_ = false;
   bool need_unpin_ = true;
+  ObjectType type_;
 
  public:
   BufferObjectImp2() {
@@ -552,11 +584,13 @@ class BufferObjectImp2 {
     size_ = 0;
     page_ = nullptr;
     need_delete_ = false;
+    type_ = ObjectType::gbpClass;
   }
 
   BufferObjectImp2(size_t s) {
     Malloc(s);
     page_ = nullptr;
+    type_ = ObjectType::gbpClass;
   }
 
   BufferObjectImp2(size_t s, char* data, Page* page = nullptr) {
@@ -564,17 +598,59 @@ class BufferObjectImp2 {
     size_ = s;
     page_ = page;
     need_delete_ = false;
+    type_ = ObjectType::gbpClass;
   }
+
+  BufferObjectImp2(const gs::Any& value) {
+    type_ = ObjectType::gbpAny;
+    if (value.type == gs::PropertyType::kInt32) {
+      Malloc(sizeof(int32_t));
+      memcpy(data_, &value.value.i, sizeof(int32_t));
+    } else if (value.type == gs::PropertyType::kInt64) {
+      Malloc(sizeof(int64_t));
+      memcpy(data_, &value.value.l, sizeof(int64_t));
+    } else if (value.type == gs::PropertyType::kString) {
+      Malloc(sizeof(std::string_view));
+      memcpy(data_, &value.value.s, sizeof(std::string_view));
+      //      return value.s.to_string();
+    } else if (value.type == gs::PropertyType::kDate) {
+      Malloc(sizeof(gs::Date));
+      memcpy(data_, &value.value.d, sizeof(gs::Date));
+    } else if (value.type == gs::PropertyType::kEmpty) {
+      data_ = nullptr;
+      size_ = 0;
+      page_ = nullptr;
+      need_delete_ = false;
+    } else if (value.type == gs::PropertyType::kDouble) {
+      Malloc(sizeof(double));
+      memcpy(data_, &value.value.db, sizeof(double));
+    } else {
+      LOG(FATAL) << "Unexpected property type: "
+                 << static_cast<int>(value.type);
+    }
+  }
+
   BufferObjectImp2(const BufferObjectImp2&) = delete;
-  BufferObjectImp2& operator=(const BufferObjectImp2&) = delete;
+  // BufferObjectImp2& operator=(const BufferObjectImp2&) = delete;
+  BufferObjectImp2& operator=(const BufferObjectImp2& src) {
+    Move(src, *this);
+    return *this;
+  }
+
   BufferObjectImp2(BufferObjectImp2&& src) noexcept {
     data_ = src.data_;
     size_ = src.size_;
     page_ = src.page_;
     need_delete_ = src.need_delete_;
+    type_ = src.type_;
 
     src.need_delete_ = false;
     src.page_ = nullptr;
+  }
+
+  BufferObjectImp2& operator=(BufferObjectImp2&& src) noexcept {
+    Move(src, *this);
+    return *this;
   }
 
   ~BufferObjectImp2() {
@@ -584,6 +660,39 @@ class BufferObjectImp2 {
     if (page_ != nullptr) {
       page_->Unpin();
     }
+  }
+
+  static BufferObjectImp2 Copy(const BufferObjectImp2& rhs) {
+    BufferObjectImp2 ret(rhs.Size());
+    memcpy(ret.Data(), rhs.Data(), rhs.Size());
+    return ret;
+  }
+
+  static void Move(const BufferObjectImp2& src, BufferObjectImp2& dst) {
+    dst.data_ = src.data_;
+    dst.size_ = src.size_;
+    dst.page_ = src.page_;
+    dst.need_delete_ = src.need_delete_;
+    dst.type_ = src.type_;
+
+    const_cast<BufferObjectImp2&>(src).need_delete_ = false;
+    const_cast<BufferObjectImp2&>(src).page_ = nullptr;
+  }
+
+  template <typename INNER_T>
+  INNER_T& Obj() {
+    if (size_ != sizeof(INNER_T)) {
+      std::cerr << "size_!=sizeof(INNER_T)" << std::endl;
+      exit(-1);
+    }
+    return *reinterpret_cast<INNER_T*>(data_);
+  }
+
+  std::string to_string() const {
+    if (type_ != ObjectType::gbpAny)
+      LOG(FATAL) << "Can't convert current type to std::string!!";
+    auto value = reinterpret_cast<const gs::Any*>(Data());
+    return value->to_string();
   }
 
   void Malloc(size_t s) {

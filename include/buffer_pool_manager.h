@@ -137,9 +137,9 @@ class BufferPoolManager {
   int SetObject(const char* buf, size_t file_offset, size_t object_size,
                 int fd_gbp = 0);
 
-  BufferObjectImp2 GetObject(size_t file_offset, size_t object_size,
-                             int fd_gbp = 0);
-  int SetObject(BufferObjectImp2 buf, size_t file_offset, size_t object_size,
+  BufferObject GetObject(size_t file_offset, size_t object_size,
+                         int fd_gbp = 0);
+  int SetObject(BufferObject buf, size_t file_offset, size_t object_size,
                 int fd_gbp = 0);
 
   int Resize(uint16_t fd_gbp, size_t new_size) {
@@ -200,7 +200,129 @@ class BufferPoolManager {
   Page* GetVictimPage();
   void RegisterFile(int file_handler);
 
-  PageDescriptor FetchPage(page_id page_id, int file_handler = 0);
+  /**
+   * 1. search hash table.
+   *  1.1 if exist, pin the page and return immediately
+   *  1.2 if no exist, find a replacement entry from either free list or lru
+   *      replacer. (NOTE: always find from free list first)
+   * 2. If the entry chosen for replacement is dirty, write it back to disk.
+   * 3. Delete the entry for the old page from the hash table and insert an
+   * entry for the new page.
+   * 4. Update page metadata, read page content from disk file and return page
+   * pointer
+   *
+   * This function must mark the Page as pinned and remove its entry from
+   * LRUReplacer before it is returned to the caller.
+   */
+  __always_inline PageDescriptor FetchPage(page_id page_id_f, int fd_gbp) {
+    // std::lock_guard<std::mutex> lck(latch_);
+#ifdef DEBUG
+    debug::get_counter_fetch().fetch_add(1);
+    if (!debug::get_bitset(fd_gbp).test(page_id_f))
+      debug::get_counter_fetch_unique().fetch_add(1);
+    debug::get_bitset(fd_gbp).set(page_id_f);
+#endif
+
+    size_t st;
+    page_id page_id_m;
+    Page* tar = nullptr;
+    assert(fd_gbp < page_tables_.size());
+    assert(fd_gbp >= 0);
+#ifdef DEBUG_1
+    st = GetSystemTime();
+#endif
+    if (page_tables_[fd_gbp]->Find(page_id_f, page_id_m)) {  // 1.1
+#ifdef DEBUG_1
+      {
+        st = GetSystemTime() - st;
+        if (debug::get_log_marker() == 1)
+          debug::get_counter_MAP_find().fetch_add(st);
+      }
+#endif
+      tar = (Page*) pages_ + page_id_m;
+      tar->pin_count_++;
+      return tar;
+    }
+#ifdef DEBUG_1
+    {
+      st = GetSystemTime() - st;
+      if (debug::get_log_marker() == 1) {
+        debug::get_counter_MAP_find().fetch_add(st);
+        // LOG(FATAL) << "aaa";
+        // std::cout << "aaa" << std::endl;
+        // exit(-1);
+      }
+    }
+#endif
+    // 1.2
+    tar = GetVictimPage();
+    if (tar == nullptr)
+      return tar;
+
+    // 2
+    if (tar->is_dirty_) {
+      disk_manager_->WritePage(tar->GetPageId(), tar->GetData(),
+                               tar->GetFileHandler());
+    }
+
+    // 3
+    if (tar->GetFileHandler() != -1) {
+#ifdef DEBUG_1
+      { st = GetSystemTime(); }
+#endif
+      page_tables_[tar->GetFileHandler()]->Remove(tar->GetPageId());
+#ifdef DEBUG_1
+      {
+        st = GetSystemTime() - st;
+        if (debug::get_log_marker() == 1)
+          debug::get_counter_MAP_eviction().fetch_add(st);
+      }
+#endif
+    }
+#ifdef DEBUG_1
+    { st = GetSystemTime(); }
+#endif
+    page_tables_[fd_gbp]->Insert(page_id_f, Ptr2Pid(tar));
+#ifdef DEBUG_1
+    {
+      st = GetSystemTime() - st;
+      if (debug::get_log_marker() == 1)
+        debug::get_counter_MAP_insert().fetch_add(st);
+    }
+#endif
+// 4
+#ifdef DEBUG_1
+    { st = GetSystemTime(); }
+#endif
+    disk_manager_->ReadPage(page_id_f, tar->GetData(), fd_gbp);
+#ifdef DEBUG_1
+    {
+      st = GetSystemTime() - st;
+      if (debug::get_log_marker() == 1)
+        debug::get_counter_pread().fetch_add(st);
+    }
+#endif
+    tar->pin_count_.store(1);
+    tar->is_dirty_ = false;
+    tar->page_id_ = page_id_f;
+    tar->fd_gbp_ = fd_gbp;
+    tar->buffer_pool_manager_ = this;
+// 1. 换为32int
+// 2. 屏蔽map
+#ifdef DEBUG_1
+    { st = GetSystemTime(); }
+#endif
+    replacer_->Insert(Ptr2Pid(tar));
+#ifdef DEBUG_1
+    {
+      st = GetSystemTime() - st;
+      if (debug::get_log_marker() == 1)
+        debug::get_counter_ES_insert().fetch_add(st);
+    }
+#endif
+    return PageDescriptor(tar);
+  }
+
   inline Page* Pid2Ptr(uint32_t page_id) { return pages_ + page_id; }
   inline uint32_t Ptr2Pid(Page* page) { return ((Page*) page - pages_); }
 };

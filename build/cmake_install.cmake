@@ -40,6 +40,7 @@ endif()
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
   include("/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src/cmake_install.cmake")
+  include("/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/tests/cmake_install.cmake")
 
 endif()
 

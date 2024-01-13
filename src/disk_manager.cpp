@@ -59,7 +59,7 @@ void DiskManager::WritePage(page_id page_id_f, const char* page_data,
  */
 void DiskManager::ReadPage(page_id page_id_f, char* page_data,
                            int fd_gbp) const {
-#ifdef DEBUG_1
+#ifdef DEBUG
   if (get_mark_warmup().load() == 1)
     debug::get_counter_read().fetch_add(1);
 #endif

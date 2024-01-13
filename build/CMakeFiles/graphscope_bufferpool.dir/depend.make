@@ -19,4 +19,6 @@ CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/type_traits.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/value.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/wrappedvector.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../main.cpp
+CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../tests/tests.h
+CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../tests/utils.h
 
