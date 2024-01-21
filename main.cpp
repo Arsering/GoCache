@@ -49,17 +49,18 @@ int test_read(gbp::BufferPoolManager& bpm, size_t file_size) {
 }
 
 int test1() {
-  size_t file_size = 1024LU * 10 * 2;
+  size_t file_size = 1024LU;  // file size in page (4k)
   size_t obj_size = 128 * 4;
   std::default_random_engine e;
   std::uniform_int_distribution<int> u(0, file_size);  // 左闭右闭区间
   e.seed(time(0));
 
   size_t pool_size = file_size;
-  gbp::DiskManager* disk_manager = new gbp::DiskManager("test_dir/test.db");
+  gbp::DiskManager* disk_manager = new gbp::DiskManager("tests/test.db");
   auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
-  bpm.init(pool_size, disk_manager);
-  // bpm.Resize(0, file_size * 3 * gbp::PAGE_SIZE_BUFFER_POOL);
+  bpm.init(10, pool_size, disk_manager);
+  // bpm.Resize(0, file_size * gbp::PAGE_SIZE_BUFFER_POOL);
+
 #ifdef DEBUG_1
   bpm.ReinitBitMap();
   // bpm.WarmUp();
@@ -69,7 +70,7 @@ int test1() {
 
   // {
   //   std::string str;
-  //   for (gbp::page_id page_num = 0; page_num < file_size * 3; page_num++) {
+  //   for (gbp::page_id page_num = 0; page_num < file_size; page_num++) {
   //     str = std::to_string(page_num);
   //     if (page_num % 10000 == 0)
   //       std::cout << "page_num = " << str << std::endl;
@@ -86,12 +87,14 @@ int test1() {
   size_t start_ts, end_ts, sum = 0;
   gbp::debug::get_log_marker().store(0);
 
-  for (int j = 0; j < 2; j++) {
+  for (int j = 0; j < 1; j++) {
     // for (int i = j * file_size; i < file_size * (j + 1); i++) {
     for (int i = 0; i < file_size; i++) {
       // std::cout << i << std::endl;
       start_ts = gbp::GetSystemTime();
+
       bpm.GetObject(str.data(), i * gbp::PAGE_SIZE_BUFFER_POOL, obj_size);
+
       end_ts = gbp::GetSystemTime();
       sum += end_ts - start_ts;
       std::cout << str.data();
@@ -158,50 +161,50 @@ int test3() {
   return 0;
 }
 
-int test2() {
-  std::default_random_engine e;
-  std::uniform_int_distribution<int> u(0, 100);  // 左闭右闭区间
-  e.seed(time(0));
+// int test2() {
+//   std::default_random_engine e;
+//   std::uniform_int_distribution<int> u(0, 100);  // 左闭右闭区间
+//   e.seed(time(0));
 
-  std::string another_file_name = "test1.db";
+//   std::string another_file_name = "test1.db";
 
-  size_t pool_size = 10;
-  gbp::DiskManager* disk_manager = new gbp::DiskManager("test.db");
-  gbp::BufferPoolManager* bpm = &gbp::BufferPoolManager::GetGlobalInstance();
-  bpm->init(pool_size, disk_manager);
-  {
-    for (gbp::page_id page_num = 0; page_num < 100; page_num++) {
-      auto page = bpm->NewPage(page_num);
-      strcpy(page->GetData(), "Hello");
-      page->SetDirty();
+//   size_t pool_size = 10;
+//   gbp::DiskManager* disk_manager = new gbp::DiskManager("test.db");
+//   gbp::BufferPoolManager* bpm = &gbp::BufferPoolManager::GetGlobalInstance();
+//   bpm->init(pool_size, disk_manager);
+//   {
+//     for (gbp::page_id page_num = 0; page_num < 100; page_num++) {
+//       auto page = bpm->NewPage(page_num);
+//       strcpy(page->GetData(), "Hello");
+//       page->SetDirty();
 
-      if (!bpm->FlushPage(page_num)) {
-        std::cout << "failed" << std::endl;
-        return -1;
-      }
-      bpm->ReleasePage(page);
+//       if (!bpm->FlushPage(page_num)) {
+//         std::cout << "failed" << std::endl;
+//         return -1;
+//       }
+//       bpm->ReleasePage(page);
 
-      page = bpm->NewPage(page_num, 1);
-      strcpy(page->GetData(), "Hello");
-      page->SetDirty();
-      if (!bpm->FlushPage(page_num, 1)) {
-        std::cout << "failed 1" << std::endl;
-        return -1;
-      }
-      bpm->ReleasePage(page);
-    }
-  }
-  std::cout << "Write test achieves success!!!" << std::endl;
+//       page = bpm->NewPage(page_num, 1);
+//       strcpy(page->GetData(), "Hello");
+//       page->SetDirty();
+//       if (!bpm->FlushPage(page_num, 1)) {
+//         std::cout << "failed 1" << std::endl;
+//         return -1;
+//       }
+//       bpm->ReleasePage(page);
+//     }
+//   }
+//   std::cout << "Write test achieves success!!!" << std::endl;
 
-  for (int i = 0; i < 100; i++) {
-    gbp::page_id page_num = i;
-    // std::cout << page_num << std::endl;
-    // auto page = bpm->FetchPage(page_num);
-    // std::cout << page->GetData()[0] << std::endl;
-  }
-  std::cout << "Read test achieves success!!!" << std::endl;
-  return 0;
-}
+//   for (int i = 0; i < 100; i++) {
+//     gbp::page_id page_num = i;
+//     // std::cout << page_num << std::endl;
+//     // auto page = bpm->FetchPage(page_num);
+//     // std::cout << page->GetData()[0] << std::endl;
+//   }
+//   std::cout << "Read test achieves success!!!" << std::endl;
+//   return 0;
+// }
 
 class Student {
   int age_;
@@ -413,10 +416,10 @@ int main(int argc, char** argv) {
   // gbp::BufferPoolManager* bpm = &gbp::BufferPoolManager::GetGlobalInstance();
   // bpm->init(pool_size);
 
-  // test1();
+  test1();
   // test3();
 
-  test::test_concurrency(argc, argv);
+  // test::test_concurrency(argc, argv);
   // readSSDIObytes();
   // std::cout << GetMemoryUsage() << std::endl;
   // std::cout << GetMemoryUsage() << std::endl;

@@ -16,10 +16,12 @@
 #include "type_traits.h"
 
 namespace gbp {
+class BufferPoolInner;
 class BufferPoolManager;
 
 class Page {
   friend class BufferPoolManager;
+  friend class BufferPoolInner;
 
  public:
   Page() : fd_gbp_(-1) {}
@@ -79,7 +81,7 @@ class Page {
   std::atomic<uint32_t> pin_count_ = 0;
   bool is_dirty_ = false;
   RWMutex rwlatch_;
-  BufferPoolManager* buffer_pool_manager_;
+  BufferPoolInner* buffer_pool_;
 };
 
 class PageDescriptor : public NonCopyable {

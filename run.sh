@@ -13,10 +13,19 @@ else
     echo -e "\033[41;36m Compile succeed \033[0m"
 fi
 
-echo 1 > /proc/sys/vm/drop_caches
-echo 1 > /proc/sys/vm/drop_caches
-
 cd ..
+
+CUR_DIR=.
+export time=$(date "+%Y-%m-%d-%H:%M:%S")
+export LOG_DIR=${CUR_DIR}/logs/${time}
+mkdir -p ${LOG_DIR}
+
+# echo 1 > /proc/sys/vm/drop_caches 
+# echo 1 > /proc/sys/vm/drop_caches
+# echo 1 > /proc/sys/vm/drop_caches
+
+
+./bin/graphscope_bufferpool > ${LOG_DIR}/log.log
 # ./bin/graphscope_bufferpool 
 # cgexec -g memory:yz_256M ./bin/graphscope_bufferpool
 # nohup ./bin/graphscope_bufferpool &

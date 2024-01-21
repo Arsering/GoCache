@@ -1,6 +1,7 @@
 file(REMOVE_RECURSE
   "../../lib/libbufferpool.pdb"
   "../../lib/libbufferpool.so"
+  "CMakeFiles/bufferpool.dir/buffer_pool_inner.cpp.o"
   "CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o"
   "CMakeFiles/bufferpool.dir/config.cpp.o"
   "CMakeFiles/bufferpool.dir/debug.cpp.o"

@@ -30,7 +30,7 @@ void write_pwrite(int fd_os, size_t file_size, size_t io_num, size_t io_size,
                   size_t thread_id) {
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::uniform_int_distribution<uint64_t> rnd(0, gbp::cell(file_size, 512));
+  std::uniform_int_distribution<uint64_t> rnd(0, gbp::cell(file_size, io_size));
 
   char* out_buf = (char*) aligned_alloc(512, io_size);
   {
@@ -49,6 +49,39 @@ void write_pwrite(int fd_os, size_t file_size, size_t io_num, size_t io_size,
       std::cout << io_id << std::endl;
     ret = ::pwrite(fd_os, out_buf, io_size, curr_io_fileoffset);
     // assert(ret == io_size);
+    IO_throughput.fetch_add(io_size);
+  }
+  // std::cout << thread_id << std::endl;
+}
+
+void read_bufferpool(int fd_os, size_t file_size_inByte, size_t io_num,
+                     size_t io_size, size_t thread_id) {
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<uint64_t> rnd(
+      0, gbp::cell(file_size_inByte, io_size));
+
+  auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
+
+  size_t curr_io_fileoffset, ret;
+  volatile size_t sum = 0;
+  size_t st;
+  // for (size_t io_id = 0; io_id < io_num; io_id++)
+  while (true) {
+    curr_io_fileoffset = rnd(gen) * io_size;
+
+    // curr_io_fileoffset = io_id * io_size;
+    st = gbp::GetSystemTime();
+    auto ret = bpm.GetObject(curr_io_fileoffset, io_size);
+    for (size_t i = 0; i < io_size; i += 4096) {
+      sum += ret.Data()[i];
+    }
+    st = gbp::GetSystemTime() - st;
+
+    // std::string slice{in_buf, 10};
+    // std::cout << "aa = " << slice << std::endl;
+    // std::cout << "st = " << st << std::endl;
+    IO_throughput.fetch_add(io_size);
   }
   // std::cout << thread_id << std::endl;
 }
@@ -65,17 +98,12 @@ void read_pread(int fd_os, size_t file_size_inByte, size_t io_num,
   size_t curr_io_fileoffset, ret;
   volatile size_t sum = 0;
   size_t st;
-  for (size_t io_id = 0; io_id < io_num; io_id++)
-  // while (true)
-  {
-    // curr_io_fileoffset = rnd(gen) * io_size;
+  // for (size_t io_id = 0; io_id < io_num; io_id++)
+  while (true) {
+    curr_io_fileoffset = rnd(gen) * io_size;
 
-    curr_io_fileoffset = io_id * io_size;
-    if (io_id % 100000 == 0)
-      std::cout << "aa = " << io_id << std::endl;
-    // if (io_id % 1000000 == 0)
-    //     std::cout << IO_throughput.load() << std::endl;
-    // std::cout << curr_io_fileoffset << std::endl;
+    // curr_io_fileoffset = io_id * io_size;
+
     st = gbp::GetSystemTime();
     ret = ::pread(fd_os, in_buf, io_size, curr_io_fileoffset);
     for (size_t i = 0; i < io_size; i += 4096) {
@@ -91,6 +119,7 @@ void read_pread(int fd_os, size_t file_size_inByte, size_t io_num,
   }
   // std::cout << thread_id << std::endl;
 }
+
 void read_mmap(char* data_file_mmaped, size_t file_size_inByte, size_t io_num,
                size_t io_size, size_t thread_id) {
   std::random_device rd;
@@ -101,22 +130,19 @@ void read_mmap(char* data_file_mmaped, size_t file_size_inByte, size_t io_num,
   size_t curr_io_fileoffset, ret;
   volatile size_t sum = 0;
   size_t st;
+  // for (size_t io_id = 0; io_id < io_num; io_id++)
   while (true) {
-    for (size_t io_id = 0; io_id < io_num; io_id++)
-    // while (true)
-    {
-      // curr_io_fileoffset = rnd(gen) * io_size;
-      curr_io_fileoffset = io_id * io_size;
-      if (io_id % 1000 == 0)
-        std::cout << "aa = " << io_id << std::endl;
-      st = gbp::GetSystemTime();
-      for (size_t i = 0; i < io_size; i += 4096) {
-        sum += data_file_mmaped[curr_io_fileoffset + i];
-      }
-      st = gbp::GetSystemTime() - st;
-      // std::cout << "st = " << st << std::endl;
-      IO_throughput.fetch_add(io_size);
+    curr_io_fileoffset = rnd(gen) * io_size;
+    // curr_io_fileoffset = io_id * io_size;
+    // if (io_id % 1000 == 0)
+    //   std::cout << "aa = " << io_id << std::endl;
+    st = gbp::GetSystemTime();
+    for (size_t i = 0; i < io_size; i += 4096) {
+      sum += data_file_mmaped[curr_io_fileoffset + i];
     }
+    st = gbp::GetSystemTime() - st;
+    // std::cout << "st = " << st << std::endl;
+    IO_throughput.fetch_add(io_size);
   }
   // std::cout << thread_id << std::endl;
 }
@@ -157,16 +183,24 @@ void logging() {
 int test_concurrency(int argc, char** argv) {
   // volatile char *buf = (char *)malloc(1024LU * 1024 * 1024 * 100);
   // memset((char *)buf, 0, 1024LU * 1024 * 1024 * 100);
-  std::string file_name = "./test/db/test.db";
-  size_t file_size_inByte = 1024LU * 1024LU * 1024LU * 700;
+  std::string file_name = "./tests/db/test.db";
+  // std::string file_name = "/dev/nvme0n1";
+  size_t file_size_inByte = 1024LU * 1024LU * 1024LU * 30;
   int data_file = ::open(file_name.c_str(), O_RDWR | O_CREAT | O_DIRECT);
   assert(data_file != -1);
-  ::ftruncate(data_file, file_size_inByte);
-  return 0;
-  char* data_file_mmaped = (char*) ::mmap(
-      NULL, file_size_inByte, PROT_READ | PROT_WRITE, MAP_SHARED, data_file, 0);
-  ::madvise(data_file_mmaped, file_size_inByte,
-            MADV_RANDOM);  // Turn off readahead
+  // ::ftruncate(data_file, file_size_inByte);
+
+  // char *data_file_mmaped = (char *)::mmap(
+  //     NULL, file_size_inByte, PROT_READ, MAP_SHARED, data_file, 0);
+  // assert(data_file_mmaped != nullptr);
+  // ::madvise(data_file_mmaped, file_size_inByte,
+  //           MADV_RANDOM); // Turn off readahead
+
+  size_t pool_size = 1024LU * 1024LU * 6;
+  gbp::DiskManager* disk_manager = new gbp::DiskManager(file_name);
+  auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
+  bpm.init(1, pool_size, disk_manager);
+  bpm.Resize(0, file_size_inByte);
 
   // std::cout << "aaaa" << std::endl;
   size_t io_size = 512 * 8;
@@ -180,11 +214,13 @@ int test_concurrency(int argc, char** argv) {
 
   for (size_t i = 0; i < worker_num; i++) {
     // thread_pool.emplace_back(write_pwrite, data_file, file_size_inByte,
-    // io_num, io_size, i);
-    thread_pool.emplace_back(read_pread, data_file, file_size_inByte, io_num,
-                             io_size, i);
+    //                          io_num, io_size, i);
+    // thread_pool.emplace_back(read_pread, data_file, file_size_inByte, io_num,
+    //                          io_size, i);
     // thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
-    // io_num, io_size, i);
+    //                          io_num, io_size, i);
+    thread_pool.emplace_back(read_bufferpool, data_file, file_size_inByte,
+                             io_num, io_size, i);
   }
   for (auto& thread : thread_pool) {
     thread.join();

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <assert.h>
 #include <atomic>
 #include <cstdint>
@@ -49,6 +51,7 @@ class WrappedVector {
   bool Resize(page_id new_size) {
     if (new_size <= size_)
       return true;
+
     index_table.resize(new_size);
     for (int i = size_; i < new_size; i++) {
       index_table[i] = std::numeric_limits<page_id>::max();
