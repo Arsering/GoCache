@@ -34,6 +34,7 @@ const static size_t PAGE_SIZE_BUFFER_POOL = 4096;
 inline size_t cell(size_t val, size_t mod_val) {
   return val / mod_val + (val % mod_val == 0 ? 0 : 1);
 }
+
 typedef uint32_t page_id;  // page id type
 typedef int32_t txn_id_t;  // transaction id type
 typedef int32_t lsn_t;     // log sequence number type
@@ -53,5 +54,5 @@ using pidx_m = uint32_t;
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
 // #define MMAP_ADVICE_l MADV_NORMAL
-
+std::atomic<size_t>& get_pool_num();
 }  // namespace gbp

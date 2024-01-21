@@ -171,6 +171,33 @@ bufferpool/fast:
 	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/build
 .PHONY : bufferpool/fast
 
+buffer_pool_inner.o: buffer_pool_inner.cpp.o
+
+.PHONY : buffer_pool_inner.o
+
+# target to build an object file
+buffer_pool_inner.cpp.o:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/buffer_pool_inner.cpp.o
+.PHONY : buffer_pool_inner.cpp.o
+
+buffer_pool_inner.i: buffer_pool_inner.cpp.i
+
+.PHONY : buffer_pool_inner.i
+
+# target to preprocess a source file
+buffer_pool_inner.cpp.i:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/buffer_pool_inner.cpp.i
+.PHONY : buffer_pool_inner.cpp.i
+
+buffer_pool_inner.s: buffer_pool_inner.cpp.s
+
+.PHONY : buffer_pool_inner.s
+
+# target to generate assembly for a file
+buffer_pool_inner.cpp.s:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/buffer_pool_inner.cpp.s
+.PHONY : buffer_pool_inner.cpp.s
+
 buffer_pool_manager.o: buffer_pool_manager.cpp.o
 
 .PHONY : buffer_pool_manager.o
@@ -400,6 +427,9 @@ help:
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
 	@echo "... bufferpool"
+	@echo "... buffer_pool_inner.o"
+	@echo "... buffer_pool_inner.i"
+	@echo "... buffer_pool_inner.s"
 	@echo "... buffer_pool_manager.o"
 	@echo "... buffer_pool_manager.i"
 	@echo "... buffer_pool_manager.s"

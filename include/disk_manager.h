@@ -24,6 +24,7 @@ namespace gbp {
 
 class DiskManager {
   friend class BufferPoolManager;
+  friend class BufferPoolInner;
 
  public:
   DiskManager(const std::string& db_file);
