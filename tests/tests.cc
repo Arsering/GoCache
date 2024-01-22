@@ -59,7 +59,7 @@ void read_bufferpool(int fd_os, size_t file_size_inByte, size_t io_num,
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_int_distribution<uint64_t> rnd(
-      0, gbp::cell(file_size_inByte, io_size));
+      0, gbp::cell(file_size_inByte, io_size) - 1);
 
   auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
 
@@ -183,8 +183,8 @@ void logging() {
 int test_concurrency(int argc, char** argv) {
   // volatile char *buf = (char *)malloc(1024LU * 1024 * 1024 * 100);
   // memset((char *)buf, 0, 1024LU * 1024 * 1024 * 100);
-  // std::string file_name = "./tests/db/test.db";
-  std::string file_name = "/dev/vdb";
+  std::string file_name = "./tests/db/test.db";
+  // std::string file_name = "/dev/vdb";
   size_t file_size_inByte = 1024LU * 1024LU * 1024LU * 30;
   int data_file = ::open(file_name.c_str(), O_RDWR | O_CREAT | O_DIRECT);
   assert(data_file != -1);
@@ -196,10 +196,10 @@ int test_concurrency(int argc, char** argv) {
   // ::madvise(data_file_mmaped, file_size_inByte,
   //           MADV_RANDOM); // Turn off readahead
 
-  size_t pool_size = 1024LU * 1024LU * 6;
+  size_t pool_size = 1024LU * 1024LU * 1;
   gbp::DiskManager* disk_manager = new gbp::DiskManager(file_name);
   auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
-  bpm.init(1, pool_size, disk_manager);
+  bpm.init(10, pool_size, disk_manager);
   bpm.Resize(0, file_size_inByte);
 
   // std::cout << "aaaa" << std::endl;

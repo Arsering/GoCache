@@ -82,7 +82,7 @@ uint64_t readSSDIObytes() {
 
   uint64_t sum = 0;
   for (std::string line; std::getline(stat, line);) {
-    if (line.find("nvme0n1") != std::string::npos) {
+    if (line.find("vdb") != std::string::npos) {
       std::vector<std::string> strs;
       boost::split(strs, line, boost::is_any_of("\t "),
                    boost::token_compress_on);
