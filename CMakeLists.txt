@@ -39,3 +39,7 @@ link_libraries(bufferpool)
 link_libraries(tests)
 
 add_executable(${PROJECT_NAME} ${ALL_SRCS})	# 指定生成目标，注意这里要用${ALL_SRCS}!!!
+find_package(Boost REQUIRED COMPONENTS system filesystem
+             # required by folly
+             context program_options regex thread)
+target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})

@@ -416,10 +416,10 @@ int main(int argc, char** argv) {
   // gbp::BufferPoolManager* bpm = &gbp::BufferPoolManager::GetGlobalInstance();
   // bpm->init(pool_size);
 
-  test1();
+  // test1();
   // test3();
 
-  // test::test_concurrency(argc, argv);
+  test::test_concurrency(argc, argv);
   // readSSDIObytes();
   // std::cout << GetMemoryUsage() << std::endl;
   // std::cout << GetMemoryUsage() << std::endl;

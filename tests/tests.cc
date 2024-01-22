@@ -183,8 +183,8 @@ void logging() {
 int test_concurrency(int argc, char** argv) {
   // volatile char *buf = (char *)malloc(1024LU * 1024 * 1024 * 100);
   // memset((char *)buf, 0, 1024LU * 1024 * 1024 * 100);
-  std::string file_name = "./tests/db/test.db";
-  // std::string file_name = "/dev/nvme0n1";
+  // std::string file_name = "./tests/db/test.db";
+  std::string file_name = "/dev/vdb";
   size_t file_size_inByte = 1024LU * 1024LU * 1024LU * 30;
   int data_file = ::open(file_name.c_str(), O_RDWR | O_CREAT | O_DIRECT);
   assert(data_file != -1);
