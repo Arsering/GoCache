@@ -116,6 +116,8 @@ class BufferPoolInner {
       //                       disk_manager_->GetFileDescriptor(fd_gbp)),
       //                   PAGE_SIZE_BUFFER_POOL);
       for (size_t page_idx_f = 0; page_idx_f < page_f_num; page_idx_f++) {
+        if (page_idx_f % get_pool_num().load() != pool_ID_)
+          continue;
         FetchPage(page_idx_f, fd_gbp);
         if (free_list_->GetSize() == 0) {
           // LOG(INFO) << "pool is full";

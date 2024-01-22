@@ -358,7 +358,6 @@ PageDescriptor BufferPoolInner::FetchPage(page_id page_id_f, int fd_gbp) {
 
   assert(page_id_f % get_pool_num().load() == pool_ID_);
   page_id page_id_inpool = page_id_f / get_pool_num().load();
-  //   page_id page_id_inpool = page_id_f / pool_ID_;
 
   size_t st;
   page_id page_id_m;
