@@ -72,8 +72,27 @@ class BufferPoolManager {
 #endif
 
   void WarmUp() {
-    for (auto pool : pools_)
-      pool->WarmUp();
+    // for (auto pool : pools_)
+    //   pool->WarmUp();
+    for (int fd_gbp = 0; fd_gbp < disk_manager_->file_sizes_.size(); fd_gbp++) {
+      if (!disk_manager_->fd_oss_[fd_gbp].second)
+        continue;
+      size_t page_f_num =
+          cell(disk_manager_->file_sizes_[fd_gbp], PAGE_SIZE_BUFFER_POOL);
+      // LOG(INFO) << "page_f_num of " << disk_manager_->file_names_[fd_gbp]
+      //           << "= "
+      //           << cell(disk_manager_->GetFileSize(
+      //                       disk_manager_->GetFileDescriptor(fd_gbp)),
+      //                   PAGE_SIZE_BUFFER_POOL);
+      for (size_t page_idx_f = 0; page_idx_f < page_f_num; page_idx_f++) {
+        // if (page_idx_f % get_pool_num().load() != pool_ID_)
+        pools_[page_idx_f % pool_num_]->FetchPage(page_idx_f, fd_gbp);
+        // if (free_list_->GetSize() == 0) {
+        //   // LOG(INFO) << "pool is full";
+        //   return;
+        // }
+      }
+    }
   }
 
   int OpenFile(const std::string& file_name, int o_flag) {

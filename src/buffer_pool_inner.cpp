@@ -359,7 +359,7 @@ PageDescriptor BufferPoolInner::FetchPage(page_id page_id_f, int fd_gbp) {
   assert(page_id_f % get_pool_num().load() == pool_ID_);
   page_id page_id_inpool = page_id_f / get_pool_num().load();
 
-  size_t st;
+  // size_t st;
   page_id page_id_m;
   Page* tar = nullptr;
   assert(fd_gbp < page_tables_.size());
