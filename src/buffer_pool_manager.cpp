@@ -200,11 +200,11 @@ Page* BufferPoolManager::GetVictimPage() {
   uint32_t page_idx_m;
 
   size_t st;
-#ifdef DEBUG_1
+#ifdef DEBUG
   { st = GetSystemTime(); }
 #endif
   tar = free_list_->GetItem();
-#ifdef DEBUG_1
+#ifdef DEBUG
   {
     st = GetSystemTime() - st;
     if (debug::get_log_marker() == 1)
@@ -215,11 +215,11 @@ Page* BufferPoolManager::GetVictimPage() {
     if (replacer_->Size() == 0) {
       return nullptr;
     }
-#ifdef DEBUG_1
+#ifdef DEBUG
     { st = GetSystemTime(); }
 #endif
     replacer_->Victim(page_idx_m);
-#ifdef DEBUG_1
+#ifdef DEBUG
     {
       st = GetSystemTime() - st;
       if (debug::get_log_marker() == 1)

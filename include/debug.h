@@ -11,6 +11,8 @@
 namespace gbp {
 // #define DEBUG_1
 
+#define DEBUG_2
+
 namespace debug {
 class BitMap {
  public:
@@ -123,6 +125,8 @@ std::atomic<size_t>& get_counter_any();
 
 std::atomic<size_t>& get_counter_CopyObj();
 std::atomic<size_t>& get_counter_RefObj();
+std::atomic<size_t>& get_counter_bp();
 
+std::ofstream& get_result_file(size_t file_id, std::string file_path = " ");
 }  // namespace debug
 }  // namespace gbp
