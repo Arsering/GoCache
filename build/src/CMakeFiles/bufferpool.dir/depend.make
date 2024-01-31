@@ -59,7 +59,9 @@ src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.o: ../include/type_traits.h
 src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.o: ../src/extendible_hash.cpp
 
 src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.o: ../include/config.h
+src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.o: ../include/debug.h
 src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.o: ../include/fifo_replacer.h
+src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.o: ../include/logger.h
 src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.o: ../include/page.h
 src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.o: ../include/replacer.h
 src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.o: ../include/rwmutex.h

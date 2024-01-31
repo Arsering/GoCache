@@ -215,6 +215,7 @@ Page* BufferPoolInner::GetVictimPage() {
     { st = GetSystemTime(); }
 #endif
     replacer_->Victim(page_idx_m);
+
 #ifdef DEBUG_1
     {
       st = GetSystemTime() - st;
@@ -347,16 +348,32 @@ int BufferPoolInner::SetObject(BufferObject buf, size_t file_offset,
  * LRUReplacer before it is returned to the caller.
  */
 PageDescriptor BufferPoolInner::FetchPage(page_id page_id_f, int fd_gbp) {
-  std::lock_guard<std::mutex> lck(latch_);
-
-#ifdef DEBUG
-  debug::get_counter_fetch().fetch_add(1);
-  if (!debug::get_bitset(fd_gbp).test(page_id_f))
-    debug::get_counter_fetch_unique().fetch_add(1);
-  debug::get_bitset(fd_gbp).set(page_id_f);
+#ifdef DEBUG_t
+  if (debug::get_log_marker() == 1)
+    debug::get_counter_fetch().fetch_add(1);
+    // if (!debug::get_bitset(fd_gbp).test(page_id_f))
+    //   debug::get_counter_fetch_unique().fetch_add(1);
+    // debug::get_bitset(fd_gbp).set(page_id_f);
 #endif
 
-  assert(page_id_f % get_pool_num().load() == pool_ID_);
+#ifdef DEBUG_t
+  // if (latch_.try_lock()) {
+  //   latch_.unlock();
+  // } else {
+  //   if (debug::get_log_marker() == 1)
+  //     debug::get_counter_contention().fetch_add(1);
+  // }
+  size_t st = gbp::GetSystemTime();
+
+#endif
+  std::lock_guard<std::mutex> lck(latch_);
+#ifdef DEBUG_t
+  st = gbp::GetSystemTime() - st;
+  if (debug::get_log_marker() == 1)
+    debug::get_counter_contention().fetch_add(st);
+#endif
+
+  // assert(page_id_f % get_pool_num().load() == pool_ID_);
   page_id page_id_inpool = page_id_f / get_pool_num().load();
 
   // size_t st;
@@ -403,7 +420,8 @@ PageDescriptor BufferPoolInner::FetchPage(page_id page_id_f, int fd_gbp) {
 #ifdef DEBUG_1
     { st = GetSystemTime(); }
 #endif
-    page_tables_[tar->GetFileHandler()]->Remove(tar->GetPageId());
+    page_tables_[tar->GetFileHandler()]->Remove(tar->GetPageId() /
+                                                get_pool_num().load());
 #ifdef DEBUG_1
     {
       st = GetSystemTime() - st;

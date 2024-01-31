@@ -5,11 +5,14 @@
 #include <bitset>
 #include <cstddef>
 #include <iostream>
+#include <mutex>
 #include "config.h"
 #include "logger.h"
 
 namespace gbp {
 // #define DEBUG_1
+
+// #define DEBUG_t
 
 namespace debug {
 class BitMap {
@@ -123,6 +126,14 @@ std::atomic<size_t>& get_counter_any();
 
 std::atomic<size_t>& get_counter_CopyObj();
 std::atomic<size_t>& get_counter_RefObj();
+
+std::ofstream& get_result_file(size_t file_id, std::string file_path = "");
+std::atomic<size_t>& get_query_id();
+
+std::mutex& get_file_lock();
+
+std::atomic<size_t>& get_counter_eviction();
+std::atomic<size_t>& get_counter_contention();
 
 }  // namespace debug
 }  // namespace gbp

@@ -7,6 +7,8 @@
 
 #include <cstdlib>
 
+#include "debug.h"
+
 namespace gbp {
 
 template <typename T>
