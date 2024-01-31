@@ -35,7 +35,6 @@ void FIFOReplacer<T>::Insert(const T& value) {
   } else {
     cur = new ListNode(value);
   }
-  cur = new ListNode(value);
 
   ListNode* fir = head_.next;
   cur->next = fir;
@@ -53,6 +52,10 @@ template <typename T>
 bool FIFOReplacer<T>::Victim(T& value) {
   // std::lock_guard<std::mutex> lck(latch_);
   assert(tail_.prev != &head_);
+
+#ifdef DEBUG_t
+  debug::get_counter_eviction().fetch_add(1);
+#endif
 
   ListNode* victim = tail_.prev;
   while (true) {

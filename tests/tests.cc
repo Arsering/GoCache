@@ -40,6 +40,7 @@ void write_pwrite(int fd_os, size_t file_size, size_t io_num, size_t io_size,
       buf_size += ::snprintf(out_buf + buf_size, io_size - buf_size, "%s", str);
     }
   }
+  std::cout << "bb" << std::endl;
   size_t curr_io_fileoffset, ret;
   for (size_t io_id = 0; io_id < io_num; io_id++) {
     // curr_io_fileoffset = rnd(gen) * 512;
@@ -66,7 +67,7 @@ void read_bufferpool(int fd_os, size_t file_size_inByte, size_t io_num,
   size_t curr_io_fileoffset, ret;
   volatile size_t sum = 0;
   size_t st;
-  // for (size_t io_id = 0; io_id < io_num; io_id++)
+  // for (size_t io_id = 0; io_id < io_num; io_id++) {
   while (true) {
     curr_io_fileoffset = rnd(gen) * io_size;
 
@@ -78,7 +79,7 @@ void read_bufferpool(int fd_os, size_t file_size_inByte, size_t io_num,
     }
     st = gbp::GetSystemTime() - st;
 
-    // std::string slice{in_buf, 10};
+    // std::string slice{ret.Data(), 10};
     // std::cout << "aa = " << slice << std::endl;
     // std::cout << "st = " << st << std::endl;
     IO_throughput.fetch_add(io_size);
@@ -98,7 +99,7 @@ void read_pread(int fd_os, size_t file_size_inByte, size_t io_num,
   size_t curr_io_fileoffset, ret;
   volatile size_t sum = 0;
   size_t st;
-  // for (size_t io_id = 0; io_id < io_num; io_id++)
+  // for (size_t io_id = 0; io_id < io_num; io_id++) {
   while (true) {
     curr_io_fileoffset = rnd(gen) * io_size;
 
@@ -152,18 +153,27 @@ void logging() {
   auto last_shootdowns = readTLBShootdownCount();
   auto last_SSD_IO_bytes = readSSDIObytes();
   auto last_IO_throughput = IO_throughput.load();
+  auto last_eviction_operation_count =
+      gbp::debug::get_counter_eviction().load();
+  auto last_fetch_count = gbp::debug::get_counter_fetch().load();
+  auto last_contention_count = gbp::debug::get_counter_contention().load();
+
   uint64_t shootdowns;
   uint64_t SSD_IO_bytes;
   uint64_t cur_IO_throughput;
 
-  printf("%-20s%-20s%-20s%-20s\n", "IO_Throughput", "SSD_Throughput",
-         "TLB_shootdown", "Memory_usage");
+  printf("%-20s%-20s%-20s%-20s%-20s\n", "IO_Throughput", "SSD_Throughput",
+         "TLB_shootdown", "Memory_usage", "Eviction_count");
 
   while (true) {
     sleep(1);
     shootdowns = readTLBShootdownCount();
     SSD_IO_bytes = readSSDIObytes();
     cur_IO_throughput = IO_throughput.load();
+    auto cur_eviction_operation_count =
+        gbp::debug::get_counter_eviction().load();
+    auto cur_fetch_count = gbp::debug::get_counter_fetch().load();
+    auto cur_contention_count = gbp::debug::get_counter_contention().load();
 
     printf("%-20lf%-20lf%-20lu%-20lf\n",
            (cur_IO_throughput - last_IO_throughput) / (double) B2GB,
@@ -175,6 +185,9 @@ void logging() {
     last_shootdowns = shootdowns;
     last_SSD_IO_bytes = SSD_IO_bytes;
     last_IO_throughput = cur_IO_throughput;
+    last_eviction_operation_count = cur_eviction_operation_count;
+    last_fetch_count = cur_fetch_count;
+    last_contention_count = cur_contention_count;
 
     if (!log_thread_run)
       break;
@@ -185,28 +198,34 @@ int test_concurrency(int argc, char** argv) {
   // memset((char *)buf, 0, 1024LU * 1024 * 1024 * 100);
   std::string file_name = "./tests/db/test.db";
   // std::string file_name = "/dev/vdb";
-  size_t file_size_inByte = 1024LU * 1024LU * 1024LU * 30;
+  size_t file_size_inByte = 1024LU * 1024LU * 1024LU * 1;
   int data_file = ::open(file_name.c_str(), O_RDWR | O_CREAT | O_DIRECT);
   assert(data_file != -1);
   // ::ftruncate(data_file, file_size_inByte);
 
-  // char *data_file_mmaped = (char *)::mmap(
-  //     NULL, file_size_inByte, PROT_READ, MAP_SHARED, data_file, 0);
-  // assert(data_file_mmaped != nullptr);
-  // ::madvise(data_file_mmaped, file_size_inByte,
-  //           MADV_RANDOM); // Turn off readahead
+  char* data_file_mmaped = (char*) ::mmap(NULL, file_size_inByte, PROT_READ,
+                                          MAP_SHARED, data_file, 0);
+  assert(data_file_mmaped != nullptr);
+  ::madvise(data_file_mmaped, file_size_inByte,
+            MADV_RANDOM);  // Turn off readahead
 
-  size_t pool_size = 1024LU * 1024LU * 1;
-  gbp::DiskManager* disk_manager = new gbp::DiskManager(file_name);
-  auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
-  bpm.init(10, pool_size, disk_manager);
-  bpm.Resize(0, file_size_inByte);
+  // size_t pool_num = 400;
+  // size_t pool_size = 1024LU * 1024LU / 4 / 5 / pool_num + 1;
+  // gbp::DiskManager* disk_manager = new gbp::DiskManager(file_name);
+  // auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
+  // bpm.init(pool_num, pool_size, disk_manager);
+  // // bpm.Resize(0, file_size_inByte);
+  // gbp::debug::get_log_marker().store(0);
+  // std::cout << "warm up starting" << std::endl;
+  // bpm.WarmUp();
+  // std::cout << "warm up finishing" << std::endl;
+  // gbp::debug::get_log_marker().store(1);
 
   // std::cout << "aaaa" << std::endl;
   size_t io_size = 512 * 8;
   size_t io_num = file_size_inByte / io_size;
   // size_t io_num = 1;
-  size_t worker_num = 1;
+  size_t worker_num = 100;
   std::vector<std::thread> thread_pool;
   std::thread log_thread(logging);
   IO_throughput.store(0);
@@ -214,13 +233,14 @@ int test_concurrency(int argc, char** argv) {
 
   for (size_t i = 0; i < worker_num; i++) {
     // thread_pool.emplace_back(write_pwrite, data_file, file_size_inByte,
-    //                          io_num, io_size, i);
+    // io_num,
+    //                          io_size, i);
     // thread_pool.emplace_back(read_pread, data_file, file_size_inByte, io_num,
     //                          io_size, i);
-    // thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
-    //                          io_num, io_size, i);
-    thread_pool.emplace_back(read_bufferpool, data_file, file_size_inByte,
+    thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
                              io_num, io_size, i);
+    // thread_pool.emplace_back(read_bufferpool, data_file, file_size_inByte,
+    //                          io_num, io_size, i);
   }
   for (auto& thread : thread_pool) {
     thread.join();
