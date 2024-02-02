@@ -22,10 +22,9 @@ mkdir -p ${LOG_DIR}
 
 # echo 1 > /proc/sys/vm/drop_caches 
 echo 1 > /proc/sys/vm/drop_caches
-echo 1 > /proc/sys/vm/drop_caches
 
 
-cgexec -g memory:yz_256M ./bin/graphscope_bufferpool > ${LOG_DIR}/log.log
+./bin/graphscope_bufferpool > ${LOG_DIR}/log.log
 # cgexec -g memory:yz_574M
 # ./bin/graphscope_bufferpool 
 # cgexec -g memory:yz_256M ./bin/graphscope_bufferpool
