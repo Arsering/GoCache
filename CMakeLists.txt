@@ -13,13 +13,13 @@ set(DEFAULT_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -O0")
 set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0")
 
-# find glog---------------------------------------------------------------------
-include("cmake/FindGlog.cmake")
-if (NOT GLOG_FOUND)
-    message(FATAL_ERROR "glog not found, please install the glog library")
-else ()
-    include_directories(SYSTEM ${GLOG_INCLUDE_DIRS})
-endif ()
+# # find glog---------------------------------------------------------------------
+# include("cmake/FindGlog.cmake")
+# if (NOT GLOG_FOUND)
+#     message(FATAL_ERROR "glog not found, please install the glog library")
+# else ()
+#     include_directories(SYSTEM ${GLOG_INCLUDE_DIRS})
+# endif ()
 
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
