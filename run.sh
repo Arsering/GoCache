@@ -20,7 +20,7 @@ export time=$(date "+%Y-%m-%d-%H:%M:%S")
 export LOG_DIR=${CUR_DIR}/logs/${time}
 mkdir -p ${LOG_DIR}
 
-# echo 1 > /proc/sys/vm/drop_caches 
+echo 1 > /proc/sys/vm/drop_caches 
 echo 1 > /proc/sys/vm/drop_caches
 
 
