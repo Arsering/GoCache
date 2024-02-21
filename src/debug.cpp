@@ -103,22 +103,6 @@ std::atomic<size_t>& get_counter_RefObj() {
   return counter;
 }
 
-std::ofstream& get_result_file(size_t file_id, std::string file_path) {
-  static bool marker = false;
-  static std::vector<std::ofstream> files;
-  if (!marker) {
-    files.resize(8);
-    for (int i = 1; i < 8; i++)
-      files[i].open(file_path + "/results_" + std::to_string(i) + ".log",
-                    std::ios::out);
-    marker = true;
-  }
-  // if (file_id > 7)
-  //   LOG(FATAL) << "Bad file_id";
-  assert(file_id <= 7);
-  return files[file_id];
-}
-
 std::atomic<size_t>& get_query_id() {
   thread_local std::atomic<size_t> counter(0);
   return counter;

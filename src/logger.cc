@@ -61,4 +61,25 @@ std::atomic<size_t>& get_counter_operation() {
   static std::atomic<size_t> counter(0);
   return counter;
 }
+
+std::ofstream& get_query_file(std::string query_file_path) {
+  static std::ofstream query_file;
+  static bool marker = false;
+  if (!marker) {
+    query_file.open(query_file_path + "/query_file.log", std::ios::out);
+    marker = true;
+  }
+  return query_file;
+}
+
+std::ofstream& get_result_file(std::string result_file_path) {
+  static std::ofstream result_file;
+  static bool marker = false;
+  if (!marker) {
+    result_file.open(result_file_path + "/result_file.log", std::ios::out);
+    marker = true;
+  }
+  return result_file;
+}
+
 }  // namespace gbp
