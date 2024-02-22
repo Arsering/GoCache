@@ -87,6 +87,14 @@ std::atomic<size_t>& get_counter_any() {
   static std::atomic<size_t> counter(0);
   return counter;
 }
+std::atomic<size_t>& get_query_id() {
+  thread_local std::atomic<size_t> counter(0);
+  return counter;
+}
 
+std::mutex& get_file_lock() {
+  static std::mutex latch;
+  return latch;
+}
 }  // namespace debug
 }  // namespace gbp

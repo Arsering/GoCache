@@ -5,6 +5,7 @@
 #include <bitset>
 #include <cstddef>
 #include <iostream>
+#include <mutex>
 #include "config.h"
 #include "logger.h"
 
@@ -121,5 +122,7 @@ std::atomic<size_t>& get_log_marker();
 std::atomic<size_t>& get_counter_bpm();
 std::atomic<size_t>& get_counter_any();
 
+std::atomic<size_t>& get_query_id();
+std::mutex& get_file_lock();
 }  // namespace debug
 }  // namespace gbp
