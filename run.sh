@@ -24,7 +24,7 @@ echo 1 > /proc/sys/vm/drop_caches
 echo 1 > /proc/sys/vm/drop_caches
 
 
-./bin/graphscope_bufferpool > ${LOG_DIR}/log.log
+cgexec -g memory:yz_30g ./bin/graphscope_bufferpool > ${LOG_DIR}/log.log
 # cgexec -g memory:yz_574M
 # ./bin/graphscope_bufferpool 
 # cgexec -g memory:yz_256M ./bin/graphscope_bufferpool
