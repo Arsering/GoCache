@@ -89,3 +89,6 @@ src/CMakeFiles/bufferpool.dir/page.cpp.o: ../include/type_traits.h
 src/CMakeFiles/bufferpool.dir/page.cpp.o: ../include/wrappedvector.h
 src/CMakeFiles/bufferpool.dir/page.cpp.o: ../src/page.cpp
 
+src/CMakeFiles/bufferpool.dir/utils.cpp.o: ../include/utils.h
+src/CMakeFiles/bufferpool.dir/utils.cpp.o: ../src/utils.cpp
+
