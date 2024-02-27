@@ -103,5 +103,13 @@ std::atomic<size_t>& get_counter_RefObj() {
   return counter;
 }
 
+std::mutex& get_file_lock() {
+  static std::mutex latch;
+  return latch;
+}
+std::atomic<size_t>& get_query_id() {
+  thread_local std::atomic<size_t> counter(0);
+  return counter;
+}
 }  // namespace debug
 }  // namespace gbp

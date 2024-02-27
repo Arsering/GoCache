@@ -23,16 +23,20 @@
 #include <mutex>
 #include <string>
 #include <vector>
-#include "flex/utils/property/types.h"
-#include "glog/logging.h"
+
 #include "logger.h"
 #include "page.h"
+#define GRAPHSCOPE
+
+#ifdef GRAPHSCOPE
+#include "flex/utils/property/types.h"
+#endif
 
 namespace gbp {
 #if !OV
-#define LBMalloc(size) malloc(size)
-#define LBFree(p) free(p)
-#define LBRealloc(p, size) realloc((p), (size))
+#define LBMalloc(size) ::malloc(size)
+#define LBFree(p) ::free(p)
+#define LBRealloc(p, size) ::realloc((p), (size))
 /**
  * Representation for a memory block. It can be used to store a const
  * reference to a memory block, or a memory block malloced, and thus owned by
@@ -600,6 +604,7 @@ class BufferObjectImp2 {
     need_delete_ = false;
     type_ = ObjectType::gbpClass;
   }
+#ifdef GRAPHSCOPE
 
   BufferObjectImp2(const gs::Any& value) {
     type_ = ObjectType::gbpAny;
@@ -629,8 +634,8 @@ class BufferObjectImp2 {
                  << static_cast<int>(value.type);
     }
   }
-
-  BufferObjectImp2(const BufferObjectImp2&) = delete;
+#endif
+  BufferObjectImp2(const BufferObjectImp2& src) { Move(src, *this); }
   // BufferObjectImp2& operator=(const BufferObjectImp2&) = delete;
   BufferObjectImp2& operator=(const BufferObjectImp2& src) {
     Move(src, *this);
@@ -688,11 +693,24 @@ class BufferObjectImp2 {
     return *reinterpret_cast<INNER_T*>(data_);
   }
 
+#ifdef GRAPHSCOPE
   std::string to_string() const {
     if (type_ != ObjectType::gbpAny)
       LOG(FATAL) << "Can't convert current type to std::string!!";
     auto value = reinterpret_cast<const gs::Any*>(Data());
     return value->to_string();
+  }
+#endif
+
+  void free() {
+    if (need_delete_) {
+      LBFree(data_);
+      need_delete_ = false;
+    }
+    if (page_ != nullptr) {
+      page_->Unpin();
+      page_ = nullptr;
+    }
   }
 
   void Malloc(size_t s) {
@@ -753,6 +771,7 @@ class BufferObjectImp4 {
     memcpy(ret.Data(), rhs.Data(), rhs.Size());
     return ret;
   }
+#ifdef GRAPHSCOPE
 
   BufferObjectImp4(const gs::Any& value) {
     type_ = ObjectType::gbpAny;
@@ -780,7 +799,7 @@ class BufferObjectImp4 {
                  << static_cast<int>(value.type);
     }
   }
-
+#endif
   BufferObjectImp4(const BufferObjectImp4& rhs) : inner_(rhs.inner_) {}
 
   const char* Data() const { return inner_->Data(); }
@@ -791,45 +810,50 @@ class BufferObjectImp4 {
   // const T& Obj() const {
   //   return inner_->Obj<T>();
   // }
-
+#ifdef GRAPHSCOPE
   std::string to_string() const {
     if (type_ != ObjectType::gbpAny)
       LOG(FATAL) << "Can't convert current type to std::string!!";
     auto value = reinterpret_cast<const gs::Any*>(Data());
     return value->to_string();
   }
+#endif
 };
 
 using BufferObject = BufferObjectImp2;
 
 template <typename T>
 T& Decode(BufferObject& obj) {
-  if (sizeof(T) != obj.Size()) {
-    LOG(INFO) << "sizeof T = " << sizeof(T);
-    LOG(INFO) << "sizeof obj = " << obj.Size();
-    LOG(FATAL) << "Decode size mismatch!!!";
-  }
+  assert(sizeof(T) == obj.Size());
+  // if (sizeof(T) != obj.Size())    {
+  // LOG(INFO) << "sizeof T = " << sizeof(T);
+  // LOG(INFO) << "sizeof obj = " << obj.Size();
+  // LOG(FATAL) << "Decode size mismatch!!!";}
+
   return *reinterpret_cast<T*>(obj.Data());
 }
 
 template <typename T>
 const T& Decode(const BufferObject& obj) {
-  if (sizeof(T) != obj.Size()) {
-    LOG(INFO) << "sizeof T = " << sizeof(T);
-    LOG(INFO) << "sizeof obj = " << obj.Size();
-    LOG(FATAL) << "Decode size mismatch!!!";
-  }
+  // if (sizeof(T) != obj.Size())
+  // {
+  //   LOG(INFO) << "sizeof T = " << sizeof(T);
+  //   LOG(INFO) << "sizeof obj = " << obj.Size();
+  //   LOG(FATAL) << "Decode size mismatch!!!";
+  // }
+  assert(sizeof(T) == obj.Size());
 
   return *reinterpret_cast<const T*>(obj.Data());
 }
 
 template <typename T>
 const T& Decode(const BufferObject& obj, size_t idx) {
-  if (sizeof(T) * (idx + 1) > obj.Size()) {
-    LOG(INFO) << "sizeof T = " << sizeof(T);
-    LOG(INFO) << "sizeof obj = " << obj.Size();
-    LOG(FATAL) << "Decode size mismatch!!!";
-  }
+  assert(sizeof(T) * (idx + 1) <= obj.Size());
+  // if (sizeof(T) * (idx + 1) > obj.Size()) {
+  //   LOG(INFO) << "sizeof T = " << sizeof(T);
+  //   LOG(INFO) << "sizeof obj = " << obj.Size();
+  //   LOG(FATAL) << "Decode size mismatch!!!";
+  // }
 
   return *reinterpret_cast<const T*>(obj.Data() + idx * sizeof(T));
 }

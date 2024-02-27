@@ -13,11 +13,11 @@ else
     echo -e "\033[41;36m Compile succeed \033[0m"
 fi
 
-echo 1 > /proc/sys/vm/drop_caches
-echo 1 > /proc/sys/vm/drop_caches
+# echo 1 > /proc/sys/vm/drop_caches
+# echo 1 > /proc/sys/vm/drop_caches
 
 cd ..
-# ./bin/graphscope_bufferpool 
+./bin/graphscope_bufferpool 
 # cgexec -g memory:yz_256M ./bin/graphscope_bufferpool
 # nohup ./bin/graphscope_bufferpool &
 # sleep 2s

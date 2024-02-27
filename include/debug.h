@@ -5,11 +5,13 @@
 #include <bitset>
 #include <cstddef>
 #include <iostream>
+#include <mutex>
 #include "config.h"
 #include "logger.h"
 
 namespace gbp {
-// #define DEBUG_1
+#define DEBUG_1
+// #define GRAPHSCOPE
 
 namespace debug {
 class BitMap {
@@ -124,5 +126,7 @@ std::atomic<size_t>& get_counter_any();
 std::atomic<size_t>& get_counter_CopyObj();
 std::atomic<size_t>& get_counter_RefObj();
 
+std::mutex& get_file_lock();
+std::atomic<size_t>& get_query_id();
 }  // namespace debug
 }  // namespace gbp

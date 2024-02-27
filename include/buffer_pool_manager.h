@@ -228,11 +228,11 @@ class BufferPoolManager {
     Page* tar = nullptr;
     assert(fd_gbp < page_tables_.size());
     assert(fd_gbp >= 0);
-#ifdef DEBUG_1
+#ifdef DEBUG
     st = GetSystemTime();
 #endif
     if (page_tables_[fd_gbp]->Find(page_id_f, page_id_m)) {  // 1.1
-#ifdef DEBUG_1
+#ifdef DEBUG
       {
         st = GetSystemTime() - st;
         if (debug::get_log_marker() == 1)
@@ -243,7 +243,7 @@ class BufferPoolManager {
       tar->pin_count_++;
       return tar;
     }
-#ifdef DEBUG_1
+#ifdef DEBUG
     {
       st = GetSystemTime() - st;
       if (debug::get_log_marker() == 1) {
@@ -267,11 +267,11 @@ class BufferPoolManager {
 
     // 3
     if (tar->GetFileHandler() != -1) {
-#ifdef DEBUG_1
+#ifdef DEBUG
       { st = GetSystemTime(); }
 #endif
       page_tables_[tar->GetFileHandler()]->Remove(tar->GetPageId());
-#ifdef DEBUG_1
+#ifdef DEBUG
       {
         st = GetSystemTime() - st;
         if (debug::get_log_marker() == 1)
@@ -279,11 +279,11 @@ class BufferPoolManager {
       }
 #endif
     }
-#ifdef DEBUG_1
+#ifdef DEBUG
     { st = GetSystemTime(); }
 #endif
     page_tables_[fd_gbp]->Insert(page_id_f, Ptr2Pid(tar));
-#ifdef DEBUG_1
+#ifdef DEBUG
     {
       st = GetSystemTime() - st;
       if (debug::get_log_marker() == 1)
@@ -291,11 +291,11 @@ class BufferPoolManager {
     }
 #endif
 // 4
-#ifdef DEBUG_1
+#ifdef DEBUG
     { st = GetSystemTime(); }
 #endif
     disk_manager_->ReadPage(page_id_f, tar->GetData(), fd_gbp);
-#ifdef DEBUG_1
+#ifdef DEBUG
     {
       st = GetSystemTime() - st;
       if (debug::get_log_marker() == 1)
@@ -309,11 +309,11 @@ class BufferPoolManager {
     tar->buffer_pool_manager_ = this;
 // 1. 换为32int
 // 2. 屏蔽map
-#ifdef DEBUG_1
+#ifdef DEBUG
     { st = GetSystemTime(); }
 #endif
     replacer_->Insert(Ptr2Pid(tar));
-#ifdef DEBUG_1
+#ifdef DEBUG
     {
       st = GetSystemTime() - st;
       if (debug::get_log_marker() == 1)

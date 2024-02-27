@@ -56,31 +56,33 @@ int test1() {
   e.seed(time(0));
 
   size_t pool_size = file_size;
-  gbp::DiskManager* disk_manager = new gbp::DiskManager("test_dir/test.db");
+  gbp::DiskManager* disk_manager = new gbp::DiskManager(
+      "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/"
+      "db/test.db");
   auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
   bpm.init(pool_size, disk_manager);
-  // bpm.Resize(0, file_size * 3 * gbp::PAGE_SIZE_BUFFER_POOL);
-#ifdef DEBUG_1
+  bpm.Resize(0, file_size * 3 * gbp::PAGE_SIZE_BUFFER_POOL);
+#ifdef DEBUG
   bpm.ReinitBitMap();
   // bpm.WarmUp();
   std::cout << "warmup finished" << std::endl;
 #endif
-  // bpm.Resize(0, file_size * 4096);
 
-  // {
-  //   std::string str;
-  //   for (gbp::page_id page_num = 0; page_num < file_size * 3; page_num++) {
-  //     str = std::to_string(page_num);
-  //     if (page_num % 10000 == 0)
-  //       std::cout << "page_num = " << str << std::endl;
-  //     bpm.SetObject(str.data(), page_num * gbp::PAGE_SIZE_BUFFER_POOL,
-  //                   str.size());
-  //     if (!bpm.FlushPage(page_num)) {
-  //       std::cout << "failed" << std::endl;
-  //       return -1;
-  //     }
-  //   }
-  // }
+  {
+    std::string str;
+    for (gbp::page_id page_num = 0; page_num < file_size * 3; page_num++) {
+      str = std::to_string(page_num);
+      if (page_num % 10000 == 0)
+        std::cout << "page_num = " << str << std::endl;
+      bpm.SetObject(str.data(), page_num * gbp::PAGE_SIZE_BUFFER_POOL,
+                    str.size());
+      if (!bpm.FlushPage(page_num)) {
+        std::cout << "failed" << std::endl;
+        return -1;
+      }
+    }
+  }
+
   std::vector<char> str;
   str.resize(obj_size);
   size_t start_ts, end_ts, sum = 0;
@@ -413,13 +415,10 @@ int main(int argc, char** argv) {
   // gbp::BufferPoolManager* bpm = &gbp::BufferPoolManager::GetGlobalInstance();
   // bpm->init(pool_size);
 
-  // test1();
+  test1();
   // test3();
 
-  test::test_concurrency(argc, argv);
-  // readSSDIObytes();
-  // std::cout << GetMemoryUsage() << std::endl;
-  // std::cout << GetMemoryUsage() << std::endl;
+  // test::test_concurrency(argc, argv);
 
   // generate_files();
   // test_mmap_array();

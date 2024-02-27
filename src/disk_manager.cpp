@@ -27,9 +27,11 @@ DiskManager::DiskManager(const std::string& db_file) : DiskManager() {
 }
 
 DiskManager::~DiskManager() {
+  std::cout << "m" << std::endl;
   for (auto file_handler : fd_oss_) {
     close(file_handler.first);
   }
+  std::cout << "m" << std::endl;
 }
 
 /**

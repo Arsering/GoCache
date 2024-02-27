@@ -189,4 +189,7 @@ std::atomic<size_t>& get_mark_mmapwarmup();
 size_t& get_pool_size();
 std::atomic<size_t>& get_counter_operation();
 
+std::ofstream& get_query_file(std::string query_file_path = " ");
+
+std::ofstream& get_result_file(std::string result_file_path = " ");
 }  // namespace gbp
