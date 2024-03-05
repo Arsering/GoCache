@@ -270,29 +270,29 @@ int test_concurrency(int argc, char** argv) {
   // std::string file_name = "./tests/db/test.db";
   std::string file_name = "/dev/vdb";
 
-  size_t file_size_inByte = 1024LU * 1024LU * 1024LU * 150;
+  size_t file_size_inByte = 1024LU * 1024LU * 1024LU * 1000;
   int data_file = ::open(file_name.c_str(), O_RDWR | O_CREAT | O_DIRECT);
   assert(data_file != -1);
   // ::ftruncate(data_file, file_size_inByte);
 
   char* data_file_mmaped = nullptr;
-  data_file_mmaped = (char*) ::mmap(NULL, file_size_inByte, PROT_READ,
-                                    MAP_SHARED, data_file, 0);
-  assert(data_file_mmaped != nullptr);
-  ::madvise(data_file_mmaped, file_size_inByte,
-            MADV_RANDOM);  // Turn off readahead
+  // data_file_mmaped = (char*) ::mmap(NULL, file_size_inByte, PROT_READ,
+  //                                   MAP_SHARED, data_file, 0);
+  // assert(data_file_mmaped != nullptr);
+  // ::madvise(data_file_mmaped, file_size_inByte,
+  //           MADV_RANDOM);  // Turn off readahead
 
-  // size_t pool_num = 50;
-  // size_t pool_size = 1024LU * 1024LU / 4 * 28 / pool_num + 1;
-  // gbp::DiskManager* disk_manager = new gbp::DiskManager(file_name);
-  // auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
-  // bpm.init(pool_num, pool_size, disk_manager);
-  // bpm.Resize(0, file_size_inByte);
-  // gbp::debug::get_log_marker().store(0);
-  // // std::cout << "warm up starting" << std::endl;
-  // // bpm.WarmUp();
-  // // std::cout << "warm up finishing" << std::endl;
-  // gbp::debug::get_log_marker().store(1);
+  size_t pool_num = 50;
+  size_t pool_size = 1024LU * 1024LU / 4 * 345 / pool_num + 1;
+  gbp::DiskManager* disk_manager = new gbp::DiskManager(file_name);
+  auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
+  bpm.init(pool_num, pool_size, disk_manager);
+  bpm.Resize(0, file_size_inByte);
+  gbp::debug::get_log_marker().store(0);
+  // std::cout << "warm up starting" << std::endl;
+  // bpm.WarmUp();
+  // std::cout << "warm up finishing" << std::endl;
+  gbp::debug::get_log_marker().store(1);
 
   size_t io_size = 512 * 8;
   size_t io_num = file_size_inByte / io_size;
@@ -314,10 +314,10 @@ int test_concurrency(int argc, char** argv) {
     //                          i);
     // thread_pool.emplace_back(read_pread, data_file, file_size_inByte, io_num,
     //                          io_size, i);
-    thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
-                             io_num, io_size, i);
-    // thread_pool.emplace_back(read_bufferpool, data_file, file_size_inByte,
+    // thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
     //                          io_num, io_size, i);
+    thread_pool.emplace_back(read_bufferpool, data_file, file_size_inByte,
+                             io_num, io_size, i);
   }
   for (auto& thread : thread_pool) {
     thread.join();

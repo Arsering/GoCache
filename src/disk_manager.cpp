@@ -118,7 +118,7 @@ size_t DiskManager::GetFileSize(int fd_os) const {
 }
 
 int DiskManager::Resize(uint16_t fd_gbp, size_t new_size) {
-  std::ignore = ::ftruncate(GetFileDescriptor(fd_gbp), new_size);
+  // std::ignore = ::ftruncate(GetFileDescriptor(fd_gbp), new_size);
   // file_sizes_[fd_gbp] = GetFileSize(GetFileDescriptor(fd_gbp));
   file_sizes_[fd_gbp] = new_size;
 
