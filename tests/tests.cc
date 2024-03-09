@@ -26,8 +26,8 @@ const static size_t exp_num = 1024LU * 1024 * 1024LU;
 static bool log_thread_run = true;
 static std::atomic<size_t> IO_throughput;
 static std::mutex latch;
-void init(int fd_os, size_t file_size, size_t io_size, size_t start_offset,
-          size_t thread_id) {
+void write_mmap(char* data_file_mmaped, size_t file_size, size_t io_size,
+                size_t start_offset, size_t thread_id) {
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_int_distribution<uint64_t> rnd(0, gbp::cell(file_size, io_size));
@@ -48,8 +48,9 @@ void init(int fd_os, size_t file_size, size_t io_size, size_t start_offset,
   for (size_t io_id = 0; io_id < io_num; io_id++) {
     curr_io_fileoffset = start_offset + io_id * io_size;
     size_t page_id = curr_io_fileoffset / 4096;
-    memcpy(out_buf, &page_id, sizeof(size_t));
-    ret = ::pwrite(fd_os, out_buf, io_size, curr_io_fileoffset);
+    memcpy(data_file_mmaped + curr_io_fileoffset, &page_id, sizeof(size_t));
+    assert(*reinterpret_cast<size_t*>(data_file_mmaped + curr_io_fileoffset) ==
+           page_id);
 
     IO_throughput.fetch_add(io_size);
   }
@@ -80,7 +81,7 @@ void read_bufferpool(int fd_os, size_t file_size_inByte, size_t io_num,
       sum += ret.Data()[i];
     }
     // st = gbp::GetSystemTime() - st;
-    // assert(*reinterpret_cast<size_t*>(ret.Data()) == io_id);
+    assert(*reinterpret_cast<size_t*>(ret.Data()) == io_id);
 
     // std::string slice{ret.Data(), 10};
     // std::cout << "aa = " << slice << std::endl;
@@ -128,23 +129,34 @@ void read_mmap(char* data_file_mmaped, size_t file_size_inByte, size_t io_num,
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_int_distribution<uint64_t> rnd(
-      0, gbp::cell(file_size_inByte, io_size));
+      0, gbp::cell(file_size_inByte, io_size) - 1);
 
-  size_t curr_io_fileoffset, ret;
+  size_t curr_io_fileoffset, io_id, ret;
   volatile size_t sum = 0;
   size_t st;
   // for (size_t io_id = 0; io_id < io_num; io_id++)
   // curr_io_fileoffset = io_id * io_size;
   while (true) {
-    curr_io_fileoffset = rnd(gen);
+    io_id = rnd(gen);
     // latch.lock();
     // std::cout << curr_io_fileoffset << std::endl;
     // latch.unlock();
-    curr_io_fileoffset *= io_size;
+    curr_io_fileoffset = io_id * io_size;
     // st = gbp::GetSystemTime();
     for (size_t i = 0; i < io_size; i += 4096) {
       sum += data_file_mmaped[curr_io_fileoffset + i];
     }
+    if (*reinterpret_cast<size_t*>(data_file_mmaped + curr_io_fileoffset) !=
+        io_id) {
+      std::cout << io_id << " | "
+                << *reinterpret_cast<size_t*>(data_file_mmaped +
+                                              curr_io_fileoffset)
+                << std::endl;
+      break;
+    }
+    assert(*reinterpret_cast<size_t*>(data_file_mmaped + curr_io_fileoffset) ==
+           io_id);
+
     // st = gbp::GetSystemTime() - st;
     // std::cout << "st = " << st << std::endl;
     IO_throughput.fetch_add(io_size);
@@ -207,11 +219,12 @@ void warmup(char* data_file_mmaped, size_t file_size_inByte, size_t io_size) {
 
   size_t file_size_perFile = file_size_inByte / worker_num;
   for (size_t i = 0; i < worker_num; i++) {
-    thread_pool.emplace_back(warmup_mmap_inner, data_file_mmaped,
-                             file_size_inByte, io_size, file_size_perFile * i,
+    // thread_pool.emplace_back(warmup_mmap_inner, data_file_mmaped,
+    //                          file_size_perFile, io_size, file_size_perFile *
+    //                          i, std::ref(memory_used));
+    thread_pool.emplace_back(warmup_bufferpool_inner, data_file_mmaped,
+                             file_size_perFile, io_size, file_size_perFile * i,
                              std::ref(memory_used));
-    // thread_pool.emplace_back(warmup_bufferpool_inner, data_file_mmaped,
-    // file_size_inByte, io_size, file_size_perFile * i, std::ref(memory_used));
   }
 
   for (auto& thread : thread_pool) {
@@ -265,25 +278,27 @@ void logging() {
   }
 }
 int test_concurrency(int argc, char** argv) {
-  // volatile char *buf = (char *)malloc(1024LU * 1024 * 1024 * 100);
-  // memset((char *)buf, 0, 1024LU * 1024 * 1024 * 100);
-  // std::string file_name = "./tests/db/test.db";
-  std::string file_name = "/dev/vdb";
+  size_t file_size_GB = std::stoull(argv[1]);
+  size_t worker_num = std::stoull(argv[2]);
 
-  size_t file_size_inByte = 1024LU * 1024LU * 1024LU * 1000;
+  std::string file_name = "/home/spdk/p4510/test.db";
+  // std::string file_name = "/dev/nvme0n1";
+
+  size_t file_size_inByte = 1024LU * 1024LU * 1024LU * file_size_GB;
   int data_file = ::open(file_name.c_str(), O_RDWR | O_CREAT | O_DIRECT);
   assert(data_file != -1);
   // ::ftruncate(data_file, file_size_inByte);
 
   char* data_file_mmaped = nullptr;
-  // data_file_mmaped = (char*) ::mmap(NULL, file_size_inByte, PROT_READ,
+  // data_file_mmaped = (char *)::mmap(NULL, file_size_inByte, PROT_READ |
+  // PROT_WRITE,
   //                                   MAP_SHARED, data_file, 0);
   // assert(data_file_mmaped != nullptr);
   // ::madvise(data_file_mmaped, file_size_inByte,
-  //           MADV_RANDOM);  // Turn off readahead
+  //           MADV_RANDOM); // Turn off readahead
 
-  size_t pool_num = 50;
-  size_t pool_size = 1024LU * 1024LU / 4 * 345 / pool_num + 1;
+  size_t pool_num = 400;
+  size_t pool_size = 1024LU * 1024LU / 4 * 16 / pool_num + 1;
   gbp::DiskManager* disk_manager = new gbp::DiskManager(file_name);
   auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
   bpm.init(pool_num, pool_size, disk_manager);
@@ -297,20 +312,20 @@ int test_concurrency(int argc, char** argv) {
   size_t io_size = 512 * 8;
   size_t io_num = file_size_inByte / io_size;
   // size_t io_num = 1;
-  size_t worker_num = 50;
+  // size_t worker_num = 1000;
   std::vector<std::thread> thread_pool;
   std::thread log_thread(logging);
   IO_throughput.store(0);
-  // worker_num = file_size_inByte / (1024LU * 1024LU * 1024LU * 10);
+  // worker_num = file_size_inByte / (1024LU * 1024LU * 1024LU * 1);
 
   printf("io_num = %lu\tio_size = %lu\t#worker = %lu\n", io_num, io_size,
          worker_num);
 
-  // warmup(data_file_mmaped, file_size_inByte, io_size);
+  warmup(data_file_mmaped, file_size_inByte, io_size);
   for (size_t i = 0; i < worker_num; i++) {
-    // thread_pool.emplace_back(init, data_file, (1024LU * 1024LU * 1024LU *
-    // 10),
-    //                          io_size, (1024LU * 1024LU * 1024LU * 10) * i,
+    // thread_pool.emplace_back(write_mmap, data_file_mmaped, (1024LU * 1024LU *
+    // 1024LU * 1),
+    //                          io_size, (1024LU * 1024LU * 1024LU * 1) * i,
     //                          i);
     // thread_pool.emplace_back(read_pread, data_file, file_size_inByte, io_num,
     //                          io_size, i);
@@ -323,7 +338,8 @@ int test_concurrency(int argc, char** argv) {
     thread.join();
   }
   log_thread_run = false;
-  log_thread.join();
+  if (log_thread.joinable())
+    log_thread.join();
 
   return 0;
 }
