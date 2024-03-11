@@ -171,32 +171,32 @@ bufferpool/fast:
 	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/build
 .PHONY : bufferpool/fast
 
-buffer_pool_inner.o: buffer_pool_inner.cpp.o
+buffer_pool.o: buffer_pool.cpp.o
 
-.PHONY : buffer_pool_inner.o
+.PHONY : buffer_pool.o
 
 # target to build an object file
-buffer_pool_inner.cpp.o:
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/buffer_pool_inner.cpp.o
-.PHONY : buffer_pool_inner.cpp.o
+buffer_pool.cpp.o:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o
+.PHONY : buffer_pool.cpp.o
 
-buffer_pool_inner.i: buffer_pool_inner.cpp.i
+buffer_pool.i: buffer_pool.cpp.i
 
-.PHONY : buffer_pool_inner.i
+.PHONY : buffer_pool.i
 
 # target to preprocess a source file
-buffer_pool_inner.cpp.i:
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/buffer_pool_inner.cpp.i
-.PHONY : buffer_pool_inner.cpp.i
+buffer_pool.cpp.i:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.i
+.PHONY : buffer_pool.cpp.i
 
-buffer_pool_inner.s: buffer_pool_inner.cpp.s
+buffer_pool.s: buffer_pool.cpp.s
 
-.PHONY : buffer_pool_inner.s
+.PHONY : buffer_pool.s
 
 # target to generate assembly for a file
-buffer_pool_inner.cpp.s:
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/buffer_pool_inner.cpp.s
-.PHONY : buffer_pool_inner.cpp.s
+buffer_pool.cpp.s:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.s
+.PHONY : buffer_pool.cpp.s
 
 buffer_pool_manager.o: buffer_pool_manager.cpp.o
 
@@ -414,6 +414,33 @@ page.cpp.s:
 	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page.cpp.s
 .PHONY : page.cpp.s
 
+page_table.o: page_table.cpp.o
+
+.PHONY : page_table.o
+
+# target to build an object file
+page_table.cpp.o:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page_table.cpp.o
+.PHONY : page_table.cpp.o
+
+page_table.i: page_table.cpp.i
+
+.PHONY : page_table.i
+
+# target to preprocess a source file
+page_table.cpp.i:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page_table.cpp.i
+.PHONY : page_table.cpp.i
+
+page_table.s: page_table.cpp.s
+
+.PHONY : page_table.s
+
+# target to generate assembly for a file
+page_table.cpp.s:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page_table.cpp.s
+.PHONY : page_table.cpp.s
+
 utils.o: utils.cpp.o
 
 .PHONY : utils.o
@@ -454,9 +481,9 @@ help:
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
 	@echo "... bufferpool"
-	@echo "... buffer_pool_inner.o"
-	@echo "... buffer_pool_inner.i"
-	@echo "... buffer_pool_inner.s"
+	@echo "... buffer_pool.o"
+	@echo "... buffer_pool.i"
+	@echo "... buffer_pool.s"
 	@echo "... buffer_pool_manager.o"
 	@echo "... buffer_pool_manager.i"
 	@echo "... buffer_pool_manager.s"
@@ -481,6 +508,9 @@ help:
 	@echo "... page.o"
 	@echo "... page.i"
 	@echo "... page.s"
+	@echo "... page_table.o"
+	@echo "... page_table.i"
+	@echo "... page_table.s"
 	@echo "... utils.o"
 	@echo "... utils.i"
 	@echo "... utils.s"

@@ -20,11 +20,12 @@ export time=$(date "+%Y-%m-%d-%H:%M:%S")
 export LOG_DIR=${CUR_DIR}/logs/${time}
 mkdir -p ${LOG_DIR}
 
-echo 1 > /proc/sys/vm/drop_caches 
-echo 1 > /proc/sys/vm/drop_caches
+# echo 1 > /proc/sys/vm/drop_caches 
+# echo 1 > /proc/sys/vm/drop_caches
 
-
-nohup ./bin/graphscope_bufferpool > ${LOG_DIR}/log.log &
+FILE_SIZE_GB=16
+WORKER_NUM=10
+./bin/graphscope_bufferpool ${FILE_SIZE_GB} ${WORKER_NUM} > ${LOG_DIR}/log.log 
 # cgexec -g memory:yz_574M
 # ./bin/graphscope_bufferpool 
 # cgexec -g memory:yz_256M ./bin/graphscope_bufferpool

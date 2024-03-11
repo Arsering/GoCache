@@ -33,7 +33,7 @@ int test_read(gbp::BufferPoolManager& bpm, size_t file_size) {
     for (int i = 0; i < file_size; i++) {
       // std::cout << i << std::endl;
       start_ts = gbp::GetSystemTime();
-      bpm.GetObject(str.data(), i * gbp::PAGE_SIZE_BUFFER_POOL, 5);
+      bpm.GetObject(str.data(), i * gbp::PAGE_SIZE_FILE, 5);
       end_ts = gbp::GetSystemTime();
       sum += end_ts - start_ts;
       std::cout << str.data();
@@ -93,7 +93,7 @@ int test1() {
       // std::cout << i << std::endl;
       start_ts = gbp::GetSystemTime();
 
-      bpm.GetObject(str.data(), i * gbp::PAGE_SIZE_BUFFER_POOL, obj_size);
+      bpm.GetObject(str.data(), i * gbp::PAGE_SIZE_FILE, obj_size);
 
       end_ts = gbp::GetSystemTime();
       sum += end_ts - start_ts;
@@ -136,18 +136,17 @@ int test3() {
   //     ::ftruncate(data_file, 2 * file_size * gbp::PAGE_SIZE_BUFFER_POOL);
 
   char* data_file_mmaped =
-      (char*) ::mmap(NULL, 3 * file_size * gbp::PAGE_SIZE_BUFFER_POOL,
+      (char*) ::mmap(NULL, 3 * file_size * gbp::PAGE_SIZE_FILE,
                      PROT_READ | PROT_WRITE, MAP_SHARED, data_file, 0);
-  auto ret =
-      ::madvise(data_file_mmaped, 3 * file_size * gbp::PAGE_SIZE_BUFFER_POOL,
-                MADV_RANDOM);  // Turn off readahead
+  auto ret = ::madvise(data_file_mmaped, 3 * file_size * gbp::PAGE_SIZE_FILE,
+                       MADV_RANDOM);  // Turn off readahead
   volatile size_t sum = 0;
   volatile size_t st = 0;
   st = gbp::GetSystemTime();
   for (int j = 0; j < 2; j++) {
     // for (int i = j * file_size; i < file_size * (j + 1); i++) {
     for (int i = 0; i < file_size; i++) {
-      sum += data_file_mmaped[i * gbp::PAGE_SIZE_BUFFER_POOL];
+      sum += data_file_mmaped[i * gbp::PAGE_SIZE_FILE];
     }
     if (j == 0) {
       std::cout << "a" << std::endl;

@@ -24,8 +24,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0")
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_SOURCE_DIR}/bin)
 
-
-
 aux_source_directory(${PROJECT_SOURCE_DIR} ALL_SRCS) # 添加当前目录下所有的源文件
 include_directories(${PROJECT_SOURCE_DIR}/include)
 

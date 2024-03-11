@@ -16,58 +16,43 @@
 #include <mutex>
 #include <unordered_map>
 
-#include "page.h"
+#include "memory_pool.h"
+#include "page_table.h"
 #include "replacer.h"
 
 namespace gbp {
 
-class Pid2Ptr {
- private:
-  Page* start_page_ = nullptr;
-
- public:
-  Pid2Ptr() = default;
-  ~Pid2Ptr() = default;
-
-  Page* GetPtr(size_t pid) const { return start_page_ + pid; }
-  int init(Page* start_page) {
-    start_page_ = start_page;
-    return 0;
-  }
-};
-
-template <typename T>
-class FIFOReplacer : public Replacer<T> {
+class FIFOReplacer : public Replacer<mpage_id_type> {
   struct ListNode {
     ListNode(){};
-    ListNode(T val) : val(val){};
-    T val;
+    ListNode(mpage_id_type val) : val(val){};
+    mpage_id_type val;
     ListNode* prev;
     ListNode* next;
   };
 
  public:
   // do not change public interface
-  FIFOReplacer(Page* start_page);
+  FIFOReplacer(PageTable* pages_);
   FIFOReplacer(const FIFOReplacer& other) = delete;
   FIFOReplacer& operator=(const FIFOReplacer&) = delete;
 
   ~FIFOReplacer();
 
-  void Insert(const T& value) override;
+  void Insert(const mpage_id_type& value) override;
 
-  bool Victim(T& value) override;
+  bool Victim(mpage_id_type& value) override;
 
-  bool Erase(const T& value) override;
+  bool Erase(const mpage_id_type& value) override;
 
   size_t Size() const override;
 
  private:
   ListNode head_;
   ListNode tail_;
-  std::unordered_map<T, ListNode*> map_;
+  std::unordered_map<mpage_id_type, ListNode*> map_;
   mutable std::mutex latch_;
-  Pid2Ptr pid2ptr_;
+  PageTable* pages_;
   // add your member variables here
 };
 

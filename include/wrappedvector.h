@@ -11,55 +11,60 @@
 
 namespace gbp {
 
+template <typename IndexType, typename ItemType>
 class WrappedVector {
  private:
   // 单线程下会有性能问题，
   // FIXME: 不使用atomic
-  std::vector<page_id> index_table;
-  page_id size_ = 0;
+  std::vector<ItemType> index_table_;
+  ItemType size_ = 0;
 
  public:
   WrappedVector() = default;
-  WrappedVector(page_id vector_size) : size_(0) { Resize(vector_size); }
+  WrappedVector(IndexType vector_size) : size_(0) { Resize(vector_size); }
 
-  bool Find(page_id page_id_f, page_id& page_id_m) {
-    if (page_id_f >= size_)
-      std::cout << "cc = " << page_id_f << " | " << size_ << std::endl;
-    assert(page_id_f < size_);
-    if (index_table[page_id_f] == std::numeric_limits<page_id>::max()) {
+  std::tuple<bool, ItemType> Find(IndexType fpage_id) const {
+    assert(fpage_id < size_);
+
+    if (index_table_[fpage_id] == std::numeric_limits<ItemType>::max()) {
+      return {false, INVALID_PAGE_ID};
+    } else {
+      // mpage_id = index_table[fpage_id];
+      std::atomic<ItemType>& atomic_data =
+          as_atomic((ItemType&) index_table_[fpage_id]);
+      return {true, atomic_data.load(std::memory_order_relaxed)};
+    }
+  }
+
+  void Insert(IndexType fpage_id, mpage_id_type mpage_id) {
+    assert(fpage_id < size_);
+    index_table_[fpage_id] = mpage_id;
+  }
+
+  bool Remove(IndexType fpage_id) {
+    if (fpage_id >= size_)
+      std::cout << fpage_id << " | " << size_ << std::endl;
+    assert(fpage_id < size_);
+
+    if (index_table_[fpage_id] == std::numeric_limits<mpage_id_type>::max()) {
       return false;
     } else {
-      page_id_m = index_table[page_id_f];
+      index_table_[fpage_id] = std::numeric_limits<mpage_id_type>::max();
       return true;
     }
   }
 
-  void Insert(page_id page_id_f, page_id page_id_m) {
-    assert(page_id_f < size_);
-    index_table[page_id_f] = page_id_m;
-  }
-
-  bool Remove(page_id page_id_f) {
-    assert(page_id_f < size_);
-
-    if (index_table[page_id_f] == std::numeric_limits<page_id>::max()) {
-      return false;
-    } else {
-      index_table[page_id_f] = std::numeric_limits<page_id>::max();
-      return true;
-    }
-  }
-
-  bool Resize(page_id new_size) {
+  bool Resize(IndexType new_size) {
     if (new_size <= size_)
       return true;
 
-    index_table.resize(new_size);
+    index_table_.resize(new_size);
     for (int i = size_; i < new_size; i++) {
-      index_table[i] = std::numeric_limits<page_id>::max();
+      index_table_[i] = std::numeric_limits<ItemType>::max();
     }
     size_ = new_size;
     return true;
   }
+  IndexType Size() const { return size_; }
 };
 }  // namespace gbp

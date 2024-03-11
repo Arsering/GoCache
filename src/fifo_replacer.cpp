@@ -5,25 +5,21 @@
 
 namespace gbp {
 
-template <typename T>
-FIFOReplacer<T>::FIFOReplacer(Page* start_page) {
+FIFOReplacer::FIFOReplacer(PageTable* pages_) : pages_(pages_) {
   head_ = ListNode();
   tail_ = ListNode();
   head_.next = &tail_;
   head_.prev = nullptr;
   tail_.prev = &head_;
   tail_.next = nullptr;
-  pid2ptr_.init(start_page);
 }
 
-template <typename T>
-FIFOReplacer<T>::~FIFOReplacer() {}
+FIFOReplacer::~FIFOReplacer() {}
 
 /*
  * Insert value into fifo
  */
-template <typename T>
-void FIFOReplacer<T>::Insert(const T& value) {
+void FIFOReplacer::Insert(const mpage_id_type& value) {
   // std::lock_guard<std::mutex> lck(latch_);
   ListNode* cur;
   if (map_.find(value) != map_.end()) {
@@ -48,22 +44,22 @@ void FIFOReplacer<T>::Insert(const T& value) {
 /* If LRU is non-empty, pop the head member from LRU to argument "value", and
  * return true. If LRU is empty, return false
  */
-template <typename T>
-bool FIFOReplacer<T>::Victim(T& value) {
+bool FIFOReplacer::Victim(mpage_id_type& value) {
   // std::lock_guard<std::mutex> lck(latch_);
   assert(tail_.prev != &head_);
 
-#ifdef DEBUG_t
+#ifdef DEBUG
   debug::get_counter_eviction().fetch_add(1);
 #endif
 
   ListNode* victim = tail_.prev;
   while (true) {
     assert(victim != &head_);
-    if (pid2ptr_.GetPtr((size_t) victim->val)->GetPinCount() == 0)
+    if (pages_->FromPageId(victim->val)->GetRefCount() == 0)
       break;
     victim = victim->prev;
   }
+
   tail_.prev = victim->prev;
   victim->prev->next = &tail_;
   value = victim->val;
@@ -76,8 +72,7 @@ bool FIFOReplacer<T>::Victim(T& value) {
  * Remove value from LRU. If removal is successful, return true, otherwise
  * return false
  */
-template <typename T>
-bool FIFOReplacer<T>::Erase(const T& value) {
+bool FIFOReplacer::Erase(const mpage_id_type& value) {
   // std::lock_guard<std::mutex> lck(latch_);
   if (map_.find(value) != map_.end()) {
     ListNode* cur = map_[value];
@@ -91,14 +86,13 @@ bool FIFOReplacer<T>::Erase(const T& value) {
   }
 }
 
-template <typename T>
-size_t FIFOReplacer<T>::Size() const {
+size_t FIFOReplacer::Size() const {
   // std::lock_guard<std::mutex> lck(latch_);
   return map_.size();
 }
 
-template class FIFOReplacer<Page*>;
+// template class FIFOReplacer<Page*>;
 // test only
-template class FIFOReplacer<uint32_t>;
+// template class FIFOReplacer<uint32_t>;
 
 }  // namespace gbp

@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool_inner.cpp" "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src/CMakeFiles/bufferpool.dir/buffer_pool_inner.cpp.o"
+  "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool.cpp" "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o"
   "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool_manager.cpp" "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o"
   "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/config.cpp" "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src/CMakeFiles/bufferpool.dir/config.cpp.o"
   "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/debug.cpp" "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src/CMakeFiles/bufferpool.dir/debug.cpp.o"
@@ -13,6 +13,7 @@ set(CMAKE_DEPENDS_CHECK_CXX
   "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/fifo_replacer.cpp" "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.o"
   "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/logger.cc" "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src/CMakeFiles/bufferpool.dir/logger.cc.o"
   "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/page.cpp" "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src/CMakeFiles/bufferpool.dir/page.cpp.o"
+  "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/page_table.cpp" "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src/CMakeFiles/bufferpool.dir/page_table.cpp.o"
   "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/utils.cpp" "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src/CMakeFiles/bufferpool.dir/utils.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
