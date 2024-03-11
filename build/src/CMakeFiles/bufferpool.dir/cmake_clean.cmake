@@ -1,7 +1,7 @@
 file(REMOVE_RECURSE
   "../../lib/libbufferpool.pdb"
   "../../lib/libbufferpool.so"
-  "CMakeFiles/bufferpool.dir/buffer_pool_inner.cpp.o"
+  "CMakeFiles/bufferpool.dir/buffer_pool.cpp.o"
   "CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o"
   "CMakeFiles/bufferpool.dir/config.cpp.o"
   "CMakeFiles/bufferpool.dir/debug.cpp.o"
@@ -10,6 +10,7 @@ file(REMOVE_RECURSE
   "CMakeFiles/bufferpool.dir/fifo_replacer.cpp.o"
   "CMakeFiles/bufferpool.dir/logger.cc.o"
   "CMakeFiles/bufferpool.dir/page.cpp.o"
+  "CMakeFiles/bufferpool.dir/page_table.cpp.o"
   "CMakeFiles/bufferpool.dir/utils.cpp.o"
 )
 

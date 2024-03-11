@@ -1,7 +1,7 @@
 #include <list>
 
 #include "../include/extendible_hash.h"
-#include "../include/page.h"
+#include "../include/page_table.h"
 
 namespace gbp {
 
@@ -147,8 +147,8 @@ void ExtendibleHash<K, V>::Insert(const K& key, const V& value) {
   }
 }
 
-template class ExtendibleHash<page_id, Page*>;
-template class ExtendibleHash<Page*, std::list<Page*>::iterator>;
+template class ExtendibleHash<mpage_id_type, PTE*>;
+template class ExtendibleHash<PTE*, std::list<PTE*>::iterator>;
 // test purpose
 template class ExtendibleHash<int, std::string>;
 template class ExtendibleHash<int, std::list<int>::iterator>;

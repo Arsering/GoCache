@@ -25,7 +25,7 @@
 #include <vector>
 
 #include "logger.h"
-#include "page.h"
+#include "page_table.h"
 
 #ifdef GRAPHSCOPE
 #include "flex/utils/property/types.h"
@@ -51,7 +51,7 @@ class BufferObjectImp0 {
  private:
   char* data_ = nullptr;
   size_t size_ = 0;
-  Page* page_ = nullptr;
+  PTE* page_ = nullptr;
   bool need_delete_ = false;
 
   void Malloc(size_t s) {
@@ -107,7 +107,7 @@ class BufferObjectImp0 {
     size_ = s;
     need_delete_ = false;
   }
-  explicit BufferObjectImp0(const void* buf, size_t s, Page* page) {
+  explicit BufferObjectImp0(const void* buf, size_t s, PTE* page) {
     // size_t st = GetSystemTime();
     data_ = (char*) (buf);
     size_ = s;
@@ -116,7 +116,7 @@ class BufferObjectImp0 {
     // st = GetSystemTime() - st;
     // std::cout << "construction" << st << std::endl;
   }
-  Page* GetPage() { return page_; }
+  PTE* GetPage() { return page_; }
   /**
    * Set the BufferObjectImp0 to the const reference to the given memory block.
    *
@@ -263,7 +263,7 @@ class BufferObjectImp0 {
       LBFree(data_);
     }
     if (page_ != nullptr) {
-      page_->Unpin();
+      page_->DecRefCount();
     }
   }
   /**
@@ -538,7 +538,7 @@ enum class ObjectType {
 struct BufferObjectInner {
   char* data_ = nullptr;
   size_t size_ = 0;
-  Page* page_ = nullptr;
+  PTE* page_ = nullptr;
   bool need_delete_ = false;
   bool need_unpin_ = true;
   ObjectType type_;
@@ -556,7 +556,7 @@ struct BufferObjectInner {
     type_ = ObjectType::gbpClass;
   }
 
-  BufferObjectInner(size_t s, char* data, Page* page = nullptr) {
+  BufferObjectInner(size_t s, char* data, PTE* page = nullptr) {
     data_ = data;
     size_ = s;
     page_ = page;
@@ -576,7 +576,7 @@ class BufferObjectImp2 {
  private:
   char* data_ = nullptr;
   size_t size_ = 0;
-  Page* page_ = nullptr;
+  PTE* page_ = nullptr;
   bool need_delete_ = false;
   bool need_unpin_ = true;
   ObjectType type_;
@@ -596,7 +596,7 @@ class BufferObjectImp2 {
     type_ = ObjectType::gbpClass;
   }
 
-  BufferObjectImp2(size_t s, char* data, Page* page = nullptr) {
+  BufferObjectImp2(size_t s, char* data, PTE* page = nullptr) {
     data_ = data;
     size_ = s;
     page_ = page;
@@ -604,7 +604,6 @@ class BufferObjectImp2 {
     type_ = ObjectType::gbpClass;
   }
 #ifdef GRAPHSCOPE
-
   BufferObjectImp2(const gs::Any& value) {
     type_ = ObjectType::gbpAny;
     if (value.type == gs::PropertyType::kInt32) {
@@ -662,7 +661,7 @@ class BufferObjectImp2 {
       LBFree(data_);
     }
     if (page_ != nullptr) {
-      page_->Unpin();
+      page_->DecRefCount();
     }
   }
 
@@ -707,7 +706,7 @@ class BufferObjectImp2 {
       need_delete_ = false;
     }
     if (page_ != nullptr) {
-      page_->Unpin();
+      page_->DecRefCount();
       page_ = nullptr;
     }
   }
@@ -736,7 +735,7 @@ class BufferObjectImp3 {
   BufferObjectImp3(char* data, size_t s) {
     inner_ = std::make_shared<BufferObjectImp2>(s, data);
   }
-  BufferObjectImp3(char* data, size_t s, Page* page) {
+  BufferObjectImp3(char* data, size_t s, PTE* page) {
     inner_ = std::make_shared<BufferObjectImp2>(s, data, page);
   }
   ~BufferObjectImp3() = default;
@@ -757,7 +756,7 @@ class BufferObjectImp4 {
   BufferObjectImp4(size_t s, char* data) {
     inner_ = std::make_shared<BufferObjectImp2>(s, data);
   }
-  BufferObjectImp4(size_t s, char* data, Page* page) {
+  BufferObjectImp4(size_t s, char* data, PTE* page) {
     inner_ = std::make_shared<BufferObjectImp2>(s, data, page);
   }
 
