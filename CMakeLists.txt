@@ -3,6 +3,8 @@ set(CMAKE_C_COMPILER "/usr/bin/gcc")
 set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 # set(CMAKE_C_FLAGS "-fxray-instrument")
 set(CMAKE_C_FLAGS "-g")
+set(CMAKE_CXX_STANDARD 17)
+
 # file(GLOB SRC_FILE *.c) # 建立变量SRC_FILE为目录下.c文件列表
 
 # set(CMAKE_BUILD_TYPE "Debug")
@@ -37,7 +39,8 @@ link_libraries(bufferpool)
 link_libraries(tests)
 
 add_executable(${PROJECT_NAME} ${ALL_SRCS})	# 指定生成目标，注意这里要用${ALL_SRCS}!!!
-find_package(Boost REQUIRED COMPONENTS system filesystem
+find_package(Boost REQUIRED COMPONENTS system filesystem fiber
              # required by folly
              context program_options regex thread)
-target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} uring)
+

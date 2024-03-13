@@ -19,6 +19,8 @@ Boost_CONTEXT_LIBRARY_RELEASE:STRING=/usr/lib/x86_64-linux-gnu/libboost_context.
 //The directory containing a CMake configuration file for Boost.
 Boost_DIR:PATH=/usr/lib/x86_64-linux-gnu/cmake/Boost-1.71.0
 
+Boost_FIBER_LIBRARY_RELEASE:STRING=/usr/lib/x86_64-linux-gnu/libboost_fiber.so.1.71.0
+
 Boost_FILESYSTEM_LIBRARY_RELEASE:STRING=/usr/lib/x86_64-linux-gnu/libboost_filesystem.so.1.71.0
 
 //Path to a file.
@@ -227,6 +229,9 @@ boost_atomic_DIR:PATH=/usr/lib/x86_64-linux-gnu/cmake/boost_atomic-1.71.0
 //The directory containing a CMake configuration file for boost_context.
 boost_context_DIR:PATH=/usr/lib/x86_64-linux-gnu/cmake/boost_context-1.71.0
 
+//The directory containing a CMake configuration file for boost_fiber.
+boost_fiber_DIR:PATH=/usr/lib/x86_64-linux-gnu/cmake/boost_fiber-1.71.0
+
 //The directory containing a CMake configuration file for boost_filesystem.
 boost_filesystem_DIR:PATH=/usr/lib/x86_64-linux-gnu/cmake/boost_filesystem-1.71.0
 
@@ -406,11 +411,13 @@ CMAKE_UNAME:INTERNAL=/usr/bin/uname
 //ADVANCED property for variable: CMAKE_VERBOSE_MAKEFILE
 CMAKE_VERBOSE_MAKEFILE-ADVANCED:INTERNAL=1
 //Details about finding Boost
-FIND_PACKAGE_MESSAGE_DETAILS_Boost:INTERNAL=[/usr/lib/x86_64-linux-gnu/cmake/Boost-1.71.0/BoostConfig.cmake][cfound components: system filesystem context program_options regex thread ][v1.71.0()]
+FIND_PACKAGE_MESSAGE_DETAILS_Boost:INTERNAL=[/usr/lib/x86_64-linux-gnu/cmake/Boost-1.71.0/BoostConfig.cmake][cfound components: system filesystem fiber context program_options regex thread ][v1.71.0()]
 //ADVANCED property for variable: boost_atomic_DIR
 boost_atomic_DIR-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: boost_context_DIR
 boost_context_DIR-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: boost_fiber_DIR
+boost_fiber_DIR-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: boost_filesystem_DIR
 boost_filesystem_DIR-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: boost_headers_DIR

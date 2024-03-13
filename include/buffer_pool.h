@@ -16,9 +16,9 @@
 #include "buffer_obj.h"
 #include "config.h"
 #include "debug.h"
-#include "disk_manager.h"
 #include "extendible_hash.h"
 #include "fifo_replacer.h"
+#include "io_backend.h"
 #include "logger.h"
 #include "memory_pool.h"
 #include "page_table.h"
@@ -71,7 +71,7 @@ class BufferPool {
   BufferPool() {}
   ~BufferPool();
   void init(u_int32_t pool_ID, mpage_id_type pool_size,
-            DiskManager* disk_manager);
+            RWSysCall* disk_manager);
 
   bool UnpinPage(mpage_id_type page_id, bool is_dirty,
                  GBPfile_handle_type fd = 0);
@@ -143,7 +143,7 @@ class BufferPool {
   mpage_id_type pool_size_;  // number of pages in buffer pool
   MemoryPool* buffer_pool_ = nullptr;
   PageTable* pages_ = nullptr;  // array of pages
-  DiskManager* disk_manager_;
+  RWSysCall* disk_manager_;
 
   // std::vector<std::shared_ptr<ExtendibleHash<page_id_infile, Page*>>>
   //     page_tables_;  // to keep track of pages, this vector is append-only

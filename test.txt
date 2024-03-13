@@ -1,0 +1,7 @@
+#include <liburing.h>
+int main() {
+  io_uring ring_;
+
+  io_uring_queue_init(64, &ring_, 0 /*IORING_SETUP_IOPOLL*/);
+  return 0;
+}

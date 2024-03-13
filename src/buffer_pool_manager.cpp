@@ -9,7 +9,7 @@ namespace gbp {
  * BufferPoolManager Constructor
  */
 void BufferPoolManager::init(uint16_t pool_num, size_t pool_size,
-                             DiskManager* disk_manager) {
+                             RWSysCall* disk_manager) {
   pool_num_ = pool_num;
   get_pool_num().store(pool_num);
   pool_size_ = pool_size;
@@ -22,7 +22,7 @@ void BufferPoolManager::init(uint16_t pool_num, size_t pool_size,
 }
 
 void BufferPoolManager::init(uint16_t pool_num, size_t pool_size) {
-  DiskManager* disk_manager = new gbp::DiskManager("test.db");
+  RWSysCall* disk_manager = new gbp::RWSysCall("test.db");
   init(pool_num, pool_size, disk_manager);
 }
 

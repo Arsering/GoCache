@@ -17,9 +17,9 @@
 #include "buffer_pool.h"
 #include "config.h"
 #include "debug.h"
-#include "disk_manager.h"
 #include "extendible_hash.h"
 #include "fifo_replacer.h"
+#include "io_backend.h"
 #include "logger.h"
 #include "page_table.h"
 #include "rw_lock.h"
@@ -32,7 +32,7 @@ class BufferPoolManager {
  public:
   BufferPoolManager() = default;
   ~BufferPoolManager() = default;
-  void init(uint16_t pool_num, size_t pool_size, DiskManager* disk_manager);
+  void init(uint16_t pool_num, size_t pool_size, RWSysCall* disk_manager);
   void init(uint16_t pool_num, size_t pool_size);
   bool FlushPage(mpage_id_type page_id, GBPfile_handle_type fd = 0);
 
@@ -109,7 +109,7 @@ class BufferPoolManager {
  private:
   uint16_t pool_num_;
   size_t pool_size_;  // number of pages in buffer pool
-  DiskManager* disk_manager_;
+  RWSysCall* disk_manager_;
   std::vector<BufferPool*> pools_;
 
   void RegisterFile(GBPfile_handle_type fd);

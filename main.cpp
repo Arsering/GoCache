@@ -56,7 +56,7 @@ int test1() {
   e.seed(time(0));
 
   size_t pool_size = file_size;
-  gbp::DiskManager* disk_manager = new gbp::DiskManager("tests/test.db");
+  gbp::RWSysCall* disk_manager = new gbp::RWSysCall("tests/test.db");
   auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
   bpm.init(10, pool_size, disk_manager);
   // bpm.Resize(0, file_size * gbp::PAGE_SIZE_BUFFER_POOL);
