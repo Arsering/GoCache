@@ -26,6 +26,13 @@ constexpr uint16_t INVALID_FILE_HANDLE = std::numeric_limits<uint16_t>::max();
 constexpr size_t PAGE_SIZE_MEMORY = 4096;  // size of a memory page in byte
 constexpr size_t PAGE_SIZE_FILE = 4096;
 constexpr size_t CACHELINE_SIZE = 64;
+constexpr static size_t IOURing_MAX_DEPTH = 128;
+constexpr static size_t FIBER_CHANNEL_DEPTH = 100;
+
+constexpr bool USING_FIBER_ASYNC_RESPONSE = true;
+constexpr bool PURE_THREADING = true;
+constexpr size_t HYBRID_SPIN_THRESHOLD =
+    PURE_THREADING ? (1lu << 0) : (1lu << 30);
 
 class NonCopyable {
  protected:
@@ -40,6 +47,9 @@ using fpage_id_type = uint32_t;
 using mpage_id_type = uint32_t;
 using GBPfile_handle_type = uint32_t;
 using OSfile_handle_type = uint32_t;
+using block_id_type = uint64_t;
+using partition_id_type = uint64_t;
 
 std::atomic<size_t>& get_pool_num();
+
 }  // namespace gbp

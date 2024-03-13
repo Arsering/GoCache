@@ -10,7 +10,6 @@
 #include <bitset>
 #include <iostream>
 #include <thread>
-#include "../include/buffer_pool_manager.h"
 
 #include <assert.h>
 #include <ctime>
@@ -20,12 +19,11 @@
 #include "utils.h"
 
 namespace test {
-const static size_t MMAP_ADVICE = MADV_RANDOM;
-const static size_t exp_num = 1024LU * 1024 * 1024LU;
+std::atomic<size_t>& IO_throughput() {
+  static std::atomic<size_t> data;
+  return data;
+}
 
-static bool log_thread_run = true;
-static std::atomic<size_t> IO_throughput;
-static std::mutex latch;
 void write_mmap(char* data_file_mmaped, size_t file_size, size_t io_size,
                 size_t start_offset, size_t thread_id) {
   std::random_device rd;
@@ -52,16 +50,17 @@ void write_mmap(char* data_file_mmaped, size_t file_size, size_t io_size,
     assert(*reinterpret_cast<size_t*>(data_file_mmaped + curr_io_fileoffset) ==
            page_id);
 
-    IO_throughput.fetch_add(io_size);
+    IO_throughput().fetch_add(io_size);
   }
 }
 
-void read_bufferpool(int fd_os, size_t file_size_inByte, size_t io_num,
-                     size_t io_size, size_t thread_id) {
+void read_bufferpool(int fd_os, size_t file_size_inByte, size_t io_size,
+                     size_t thread_id) {
+  size_t io_num = gbp::ceil(file_size_inByte, io_size) - 1;
+
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::uniform_int_distribution<uint64_t> rnd(
-      0, gbp::ceil(file_size_inByte, io_size) - 1);
+  std::uniform_int_distribution<uint64_t> rnd(0, io_num);
 
   auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
 
@@ -89,29 +88,32 @@ void read_bufferpool(int fd_os, size_t file_size_inByte, size_t io_num,
       // std::string slice{ret.Data(), 10};
       // std::cout << "aa = " << slice << std::endl;
       // std::cout << "st = " << st << std::endl;
-      IO_throughput.fetch_add(io_size);
+      IO_throughput().fetch_add(io_size);
     }
   }
   // std::cout << thread_id << std::endl;
 }
 
-void read_pread(int fd_os, size_t file_size_inByte, size_t io_num,
-                size_t io_size, size_t thread_id) {
+void read_pread(int fd_os, size_t file_size_inByte, size_t io_size,
+                size_t thread_id) {
+  size_t io_num = gbp::ceil(file_size_inByte, io_size) - 1;
+
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::uniform_int_distribution<uint64_t> rnd(
-      0, gbp::ceil(file_size_inByte, io_size));
+  std::uniform_int_distribution<uint64_t> rnd(0, io_num);
 
   char* in_buf = (char*) aligned_alloc(512, io_size);
 
-  size_t curr_io_fileoffset, ret;
+  size_t curr_io_fileoffset, ret, io_id;
   volatile size_t sum = 0;
   size_t st;
-  // for (size_t io_id = 0; io_id < io_num; io_id++) {
+  // for (io_id = 0; io_id < io_num; io_id++) {
   // curr_io_fileoffset = io_id * io_size;
 
   while (true) {
-    curr_io_fileoffset = rnd(gen) * io_size;
+    io_id = rnd(gen);
+    curr_io_fileoffset = io_id * io_size;
+
     // st = gbp::GetSystemTime();
     ret = ::pread(fd_os, in_buf, io_size, curr_io_fileoffset);
     for (size_t i = 0; i < io_size; i += 4096) {
@@ -120,20 +122,21 @@ void read_pread(int fd_os, size_t file_size_inByte, size_t io_num,
     // st = gbp::GetSystemTime() - st;
 
     // std::string slice{in_buf, sizeof(size_t)};
-    // assert(*reinterpret_cast<size_t*>(in_buf) == io_id);
+    assert(*reinterpret_cast<size_t*>(in_buf) == io_id);
     // std::cout << "st = " << st << std::endl;
-    IO_throughput.fetch_add(io_size);
+    IO_throughput().fetch_add(io_size);
     assert(ret != -1);
   }
   // std::cout << thread_id << std::endl;
 }
 
-void read_mmap(char* data_file_mmaped, size_t file_size_inByte, size_t io_num,
-               size_t io_size, size_t thread_id) {
+void read_mmap(char* data_file_mmaped, size_t file_size_inByte, size_t io_size,
+               size_t thread_id) {
+  size_t io_num = gbp::ceil(file_size_inByte, io_size) - 1;
+
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::uniform_int_distribution<uint64_t> rnd(
-      0, gbp::ceil(file_size_inByte, io_size) - 1);
+  std::uniform_int_distribution<uint64_t> rnd(0, io_num);
 
   size_t curr_io_fileoffset, io_id, ret;
   volatile size_t sum = 0;
@@ -155,7 +158,7 @@ void read_mmap(char* data_file_mmaped, size_t file_size_inByte, size_t io_num,
 
     // st = gbp::GetSystemTime() - st;
     // std::cout << "st = " << st << std::endl;
-    IO_throughput.fetch_add(io_size);
+    IO_throughput().fetch_add(io_size);
   }
   // std::cout << thread_id << std::endl;
 }
@@ -232,7 +235,7 @@ void logging() {
   const size_t B2GB = 1024.0 * 1024 * 1024;
   auto last_shootdowns = readTLBShootdownCount();
   auto last_SSD_IO_bytes = readSSDIObytes();
-  auto last_IO_throughput = IO_throughput.load();
+  auto last_IO_throughput = IO_throughput().load();
   auto last_eviction_operation_count =
       gbp::debug::get_counter_eviction().load();
   auto last_fetch_count = gbp::debug::get_counter_fetch().load();
@@ -249,7 +252,7 @@ void logging() {
     sleep(1);
     shootdowns = readTLBShootdownCount();
     SSD_IO_bytes = readSSDIObytes();
-    cur_IO_throughput = IO_throughput.load();
+    cur_IO_throughput = IO_throughput().load();
     auto cur_eviction_operation_count =
         gbp::debug::get_counter_eviction().load();
     auto cur_fetch_count = gbp::debug::get_counter_fetch().load();
@@ -278,11 +281,11 @@ int test_concurrency(int argc, char** argv) {
   size_t file_size_GB = std::stoull(argv[1]);
   size_t worker_num = std::stoull(argv[2]);
 
-  std::string file_name = "tests/db/test.db";
+  std::string file_path = "tests/db/test.db";
   // std::string file_name = "/dev/vdb";
 
   size_t file_size_inByte = 1024LU * 1024LU * 1024LU * file_size_GB;
-  int data_file = ::open(file_name.c_str(), O_RDWR | O_CREAT | O_DIRECT);
+  int data_file = ::open(file_path.c_str(), O_RDWR | O_CREAT | O_DIRECT);
   assert(data_file != -1);
   // ::ftruncate(data_file, file_size_inByte);
 
@@ -294,17 +297,19 @@ int test_concurrency(int argc, char** argv) {
   // ::madvise(data_file_mmaped, file_size_inByte,
   //           MADV_RANDOM);  // Turn off readahead
 
-  size_t pool_num = 10;
-  size_t pool_size = 1024LU * 1024LU / 4 * 2 / pool_num + 1;
-  gbp::DiskManager* disk_manager = new gbp::DiskManager(file_name);
-  auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
-  bpm.init(pool_num, pool_size, disk_manager);
-  bpm.Resize(0, file_size_inByte);
-  gbp::debug::get_log_marker().store(0);
-  // std::cout << "warm up starting" << std::endl;
-  // bpm.WarmUp();
-  // std::cout << "warm up finishing" << std::endl;
-  gbp::debug::get_log_marker().store(1);
+  // size_t pool_num = 100;
+  // size_t pool_size = 1024LU * 1024LU / 4 * 4 / pool_num + 1;
+  // gbp::RWSysCall* disk_manager = new gbp::RWSysCall(file_name);
+  // auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
+  // bpm.init(pool_num, pool_size, disk_manager);
+  // bpm.Resize(0, file_size_inByte);
+  // gbp::debug::get_log_marker().store(0);
+  // // std::cout << "warm up starting" << std::endl;
+  // // bpm.WarmUp();
+  // // std::cout << "warm up finishing" << std::endl;
+  // gbp::debug::get_log_marker().store(1);
+
+  gbp::IOURing backend(file_path);
 
   size_t io_size = 512 * 8;
   size_t io_num = file_size_inByte / io_size;
@@ -312,7 +317,7 @@ int test_concurrency(int argc, char** argv) {
   // size_t worker_num = 1000;
   std::vector<std::thread> thread_pool;
   std::thread log_thread(logging);
-  IO_throughput.store(0);
+  IO_throughput().store(0);
   // worker_num = file_size_inByte / (1024LU * 1024LU * 1024LU * 1);
 
   printf("file_size = %luGB\tio_size = %luBits\t#worker = %lu\n", file_size_GB,
@@ -324,12 +329,14 @@ int test_concurrency(int argc, char** argv) {
     //                          (1024LU * 1024LU * 1024LU * 1), io_size,
     //                          (1024LU * 1024LU * 1024LU * 1) * i, i);
     // thread_pool.emplace_back(read_pread, data_file, file_size_inByte,
-    // io_num,
-    //                          io_size, i);
+    // io_size,
+    //                          i);
+    thread_pool.emplace_back(fiber_pread, &backend, file_size_inByte, io_size,
+                             i);
     // thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
-    //                          io_num, io_size, i);
-    thread_pool.emplace_back(read_bufferpool, data_file, file_size_inByte,
-                             io_num, io_size, i);
+    //                          io_size, i);
+    // thread_pool.emplace_back(read_bufferpool, data_file, file_size_inByte,
+    //                          io_size, i);
   }
   for (auto& thread : thread_pool) {
     thread.join();

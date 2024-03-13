@@ -279,33 +279,6 @@ debug.cpp.s:
 	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/debug.cpp.s
 .PHONY : debug.cpp.s
 
-disk_manager.o: disk_manager.cpp.o
-
-.PHONY : disk_manager.o
-
-# target to build an object file
-disk_manager.cpp.o:
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/disk_manager.cpp.o
-.PHONY : disk_manager.cpp.o
-
-disk_manager.i: disk_manager.cpp.i
-
-.PHONY : disk_manager.i
-
-# target to preprocess a source file
-disk_manager.cpp.i:
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/disk_manager.cpp.i
-.PHONY : disk_manager.cpp.i
-
-disk_manager.s: disk_manager.cpp.s
-
-.PHONY : disk_manager.s
-
-# target to generate assembly for a file
-disk_manager.cpp.s:
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/disk_manager.cpp.s
-.PHONY : disk_manager.cpp.s
-
 extendible_hash.o: extendible_hash.cpp.o
 
 .PHONY : extendible_hash.o
@@ -387,60 +360,6 @@ logger.cc.s:
 	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/logger.cc.s
 .PHONY : logger.cc.s
 
-page.o: page.cpp.o
-
-.PHONY : page.o
-
-# target to build an object file
-page.cpp.o:
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page.cpp.o
-.PHONY : page.cpp.o
-
-page.i: page.cpp.i
-
-.PHONY : page.i
-
-# target to preprocess a source file
-page.cpp.i:
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page.cpp.i
-.PHONY : page.cpp.i
-
-page.s: page.cpp.s
-
-.PHONY : page.s
-
-# target to generate assembly for a file
-page.cpp.s:
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page.cpp.s
-.PHONY : page.cpp.s
-
-page_table.o: page_table.cpp.o
-
-.PHONY : page_table.o
-
-# target to build an object file
-page_table.cpp.o:
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page_table.cpp.o
-.PHONY : page_table.cpp.o
-
-page_table.i: page_table.cpp.i
-
-.PHONY : page_table.i
-
-# target to preprocess a source file
-page_table.cpp.i:
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page_table.cpp.i
-.PHONY : page_table.cpp.i
-
-page_table.s: page_table.cpp.s
-
-.PHONY : page_table.s
-
-# target to generate assembly for a file
-page_table.cpp.s:
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/page_table.cpp.s
-.PHONY : page_table.cpp.s
-
 utils.o: utils.cpp.o
 
 .PHONY : utils.o
@@ -493,9 +412,6 @@ help:
 	@echo "... debug.o"
 	@echo "... debug.i"
 	@echo "... debug.s"
-	@echo "... disk_manager.o"
-	@echo "... disk_manager.i"
-	@echo "... disk_manager.s"
 	@echo "... extendible_hash.o"
 	@echo "... extendible_hash.i"
 	@echo "... extendible_hash.s"
@@ -505,12 +421,6 @@ help:
 	@echo "... logger.o"
 	@echo "... logger.i"
 	@echo "... logger.s"
-	@echo "... page.o"
-	@echo "... page.i"
-	@echo "... page.s"
-	@echo "... page_table.o"
-	@echo "... page_table.i"
-	@echo "... page_table.s"
 	@echo "... utils.o"
 	@echo "... utils.i"
 	@echo "... utils.s"

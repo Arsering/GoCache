@@ -11,7 +11,7 @@ namespace gbp {
  * WARNING: Do Not Edit This Function
  */
 void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
-                      DiskManager* disk_manager) {
+                      RWSysCall* disk_manager) {
   pool_ID_ = pool_ID;
   pool_size_ = pool_size;
   disk_manager_ = disk_manager;
@@ -124,7 +124,7 @@ bool BufferPool::FlushPage(fpage_id_type fpage_id, GBPfile_handle_type fd) {
   }
 
   if (tar->dirty) {
-    disk_manager_->WritePage(
+    disk_manager_->Write(
         fpage_id, (char*) buffer_pool_->FromPageId(pages_->ToPageId(tar)),
         tar->GetFileHandler());
     tar->dirty = false;
@@ -143,21 +143,21 @@ bool BufferPool::FlushPage(fpage_id_type fpage_id, GBPfile_handle_type fd) {
  */
 bool BufferPool::DeletePage(fpage_id_type fpage_id, GBPfile_handle_type fd) {
   // std::lock_guard<std::mutex> lck(latch_);
-  PTE* tar = nullptr;
+  // PTE* tar = nullptr;
 
-  auto [success, mpage_id] = page_tables_[fd]->Find(fpage_id);
-  if (success) {
-    tar = pages_->FromPageId(mpage_id);
-    if (tar->GetRefCount() > 0) {
-      return false;
-    }
-    replacer_->Erase(mpage_id);
-    page_tables_[fd]->Remove(fpage_id);
+  // auto [success, mpage_id] = page_tables_[fd]->Find(fpage_id);
+  // if (success) {
+  //   tar = pages_->FromPageId(mpage_id);
+  //   if (tar->GetRefCount() > 0) {
+  //     return false;
+  //   }
+  //   replacer_->Erase(mpage_id);
+  //   page_tables_[fd]->Remove(fpage_id);
 
-    tar->dirty = false;
-    free_list_->InsertItem(tar);
-  }
-  disk_manager_->DeallocatePage(fpage_id);
+  //   tar->dirty = false;
+  //   free_list_->InsertItem(tar);
+  // }
+  // disk_manager_->DeallocatePage(fpage_id);
   return true;
 }
 
@@ -173,29 +173,29 @@ PTE* BufferPool::NewPage(mpage_id_type& page_id, GBPfile_handle_type fd) {
   // std::lock_guard<std::mutex> lck(latch_);
   PTE* tar = nullptr;
 
-  tar = GetVictimPage();
-  if (tar == nullptr)
-    return tar;
+  // tar = GetVictimPage();
+  // if (tar == nullptr)
+  //   return tar;
 
-  page_id = disk_manager_->AllocatePage();
+  // page_id = disk_manager_->AllocatePage();
 
-  // 2
-  if (tar->dirty) {
-    disk_manager_->WritePage(
-        tar->GetFPageId(),
-        (char*) buffer_pool_->FromPageId(pages_->ToPageId(tar)),
-        tar->GetFileHandler());
-  }
+  // // 2
+  // if (tar->dirty) {
+  //   disk_manager_->WritePage(
+  //       tar->GetFPageId(),
+  //       (char*) buffer_pool_->FromPageId(pages_->ToPageId(tar)),
+  //       tar->GetFileHandler());
+  // }
 
-  // 3
-  page_tables_[tar->GetFileHandler()]->Remove(tar->GetFPageId());
-  page_tables_[fd]->Insert(page_id, (tar - (PTE*) pages_));
+  // // 3
+  // page_tables_[tar->GetFileHandler()]->Remove(tar->GetFPageId());
+  // page_tables_[fd]->Insert(page_id, (tar - (PTE*) pages_));
 
-  // 4
-  tar->fpage_id = page_id;
-  tar->dirty = false;
-  tar->ref_count = 1;
-  tar->fd = fd;
+  // // 4
+  // tar->fpage_id = page_id;
+  // tar->dirty = false;
+  // tar->ref_count = 1;
+  // tar->fd = fd;
 
   return tar;
 }
@@ -317,8 +317,7 @@ std::pair<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
   // 2
   fpage_data = (char*) buffer_pool_->FromPageId(pages_->ToPageId(tar));
   if (tar->dirty) {
-    disk_manager_->WritePage(tar->GetFPageId(), fpage_data,
-                             tar->GetFileHandler());
+    disk_manager_->Write(tar->GetFPageId(), fpage_data, tar->GetFileHandler());
   }
 
   // 3
@@ -352,7 +351,7 @@ std::pair<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
 #ifdef DEBUG
   { st = GetSystemTime(); }
 #endif
-  disk_manager_->ReadPage(
+  disk_manager_->Read(
       fpage_id, (char*) buffer_pool_->FromPageId(pages_->ToPageId(tar)), fd);
 #ifdef DEBUG
   {
