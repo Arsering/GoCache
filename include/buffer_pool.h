@@ -145,8 +145,6 @@ class BufferPool {
   PageTable* pages_ = nullptr;  // array of pages
   RWSysCall* disk_manager_;
 
-  // std::vector<std::shared_ptr<ExtendibleHash<page_id_infile, Page*>>>
-  //     page_tables_;  // to keep track of pages, this vector is append-only
   std::vector<WrappedVector<fpage_id_type, mpage_id_type>*> page_tables_;
   Replacer<mpage_id_type>*
       replacer_;  // to find an unpinned page for replacement

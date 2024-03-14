@@ -6,5 +6,5 @@ CXX_FLAGS =  -std=c++17 -fPIC -O0   -std=gnu++17
 
 CXX_DEFINES = -DBOOST_ALL_NO_LIB -DBOOST_ATOMIC_DYN_LINK -DBOOST_CONTEXT_DYN_LINK -DBOOST_FIBER_DYN_LINK -DBOOST_FILESYSTEM_DYN_LINK -DBOOST_PROGRAM_OPTIONS_DYN_LINK -DBOOST_REGEX_DYN_LINK -DBOOST_SYSTEM_DYN_LINK -DBOOST_THREAD_DYN_LINK
 
-CXX_INCLUDES = -I/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include 
+CXX_INCLUDES = -I/data_client2/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include 
 
