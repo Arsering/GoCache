@@ -282,6 +282,8 @@ namespace test {
   int test_concurrency(int argc, char** argv) {
     size_t file_size_GB = std::stoull(argv[1]);
     size_t worker_num = std::stoull(argv[2]);
+    size_t pool_num = std::stoull(argv[3]);
+    size_t pool_size_GB = std::stoull(argv[4]);
 
     std::string file_path = "tests/db/test.db";
     // std::string file_name = "/dev/vdb";
@@ -300,8 +302,8 @@ namespace test {
     // ::madvise(data_file_mmaped, file_size_inByte,
     //           MADV_RANDOM);  // Turn off readahead
 
-    size_t pool_num = 100;
-    size_t pool_size = 1024LU * 1024LU / 4 * 4 / pool_num + 1;
+
+    size_t pool_size = 1024LU * 1024LU / 4 * pool_size_GB / pool_num + 1;
     // gbp::RWSysCall* disk_manager = new gbp::RWSysCall(file_name);
     auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
     bpm.init(pool_num, pool_size, file_path);
@@ -313,9 +315,6 @@ namespace test {
     gbp::debug::get_log_marker().store(1);
 
     size_t io_size = 512 * 8;
-    size_t io_num = file_size_inByte / io_size;
-    // size_t io_num = 1;
-    // size_t worker_num = 1000;
     std::vector<std::thread> thread_pool;
     std::thread log_thread(logging);
     IO_throughput().store(0);
