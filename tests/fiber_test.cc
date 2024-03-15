@@ -112,8 +112,7 @@ namespace test {
     return false;
   }
 
-  void fiber_pread(gbp::IOURing* io_backend, size_t file_size_inByte,
-    size_t io_size, size_t thread_id) {
+  void fiber_pread(const std::string& file_path, size_t file_size_inByte, size_t io_size, size_t thread_id) {
     boost::circular_buffer<std::optional<async_request_fiber_type>>
       async_requests(gbp::FIBER_CHANNEL_DEPTH);
     size_t num_async_fiber_processing = 0;
@@ -138,6 +137,8 @@ namespace test {
             if (!req.has_value())
               continue;
             if (process_func(req.value())) {
+              if (*reinterpret_cast<gbp::fpage_id_type*>(req.value().io_vec[0].iov_base) != req.value().fpage_id_start)
+                std::cout << *reinterpret_cast<gbp::fpage_id_type*>(req.value().io_vec[0].iov_base) << " | " << req.value().fpage_id_start << std::endl;
               assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value().io_vec[0].iov_base) == req.value().fpage_id_start);
               free(req.value().io_vec[0].iov_base);
               req.reset();
@@ -164,12 +165,14 @@ namespace test {
       0, gbp::ceil(file_size_inByte, io_size) - 1);
 
     size_t req_num = 1000, fpage_id;
+    gbp::IOURing io_backend(file_path);
     // for (size_t req_id = 1; req_id < req_num; req_id++) {
     while (true) {
       char* in_buf = (char*)aligned_alloc(gbp::PAGE_SIZE_FILE, io_size);
-      fpage_id = rnd(gen);
-      // fpage_id = 10;
-      context_type context = context_type::GetRawObject(io_backend);
+      ::memset(in_buf, 1, io_size);
+      // fpage_id = rnd(gen);
+      fpage_id = 10;
+      context_type context = context_type::GetRawObject(&io_backend);
       async_request_fiber_type req(in_buf, io_size, (gbp::fpage_id_type)fpage_id, 1, 0,
         context);
       if constexpr (gbp::USING_FIBER_ASYNC_RESPONSE) {
