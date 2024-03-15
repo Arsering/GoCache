@@ -8,7 +8,6 @@
 #include <unistd.h>
 #include <bitset>
 #include <iostream>
-#include "buffer_pool_manager.h"
 
 #include <assert.h>
 #include <ctime>
@@ -16,7 +15,9 @@
 #include <string_view>
 
 #include "include/config.h"
-#include "orgin_mmap.h"
+#include "include/buffer_pool_manager.h"
+
+#include "include/orgin_mmap.h"
 #include "tests/tests.h"
 #include "tests/utils.h"
 
@@ -57,9 +58,8 @@ int test1() {
   e.seed(time(0));
 
   size_t pool_size = file_size;
-  gbp::RWSysCall* disk_manager = new gbp::RWSysCall("tests/test.db");
   auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
-  bpm.init(10, pool_size, disk_manager);
+  bpm.init(10, pool_size, "tests/test.db");
   // bpm.Resize(0, file_size * gbp::PAGE_SIZE_BUFFER_POOL);
 
 #ifdef DEBUG_1
@@ -514,29 +514,6 @@ int main(int argc, char** argv) {
   // test3();
 
   test::test_concurrency(argc, argv);
-
-  // std::string file_path = "tests/db/test.db";
-
-  // gbp::IOURing backend(file_path);
-  // struct iovec* iovecs = (iovec*)::calloc(10, sizeof(struct iovec));
-
-  // iovecs[0].iov_base = (char*)aligned_alloc(gbp::PAGE_SIZE_FILE, gbp::PAGE_SIZE_FILE);
-  // iovecs[0].iov_len = gbp::PAGE_SIZE_FILE;
-  // memset(iovecs[0].iov_base, 1, gbp::PAGE_SIZE_FILE);
-  // bool finish = false;
-  // std::cout << *reinterpret_cast<gbp::fpage_id_type*>(iovecs[0].iov_base) << std::endl;
-  // gbp::fpage_id_type fpage_id = 467;
-  // backend.Read(fpage_id, iovecs, 0, &finish);
-  // // backend.Read(fpage_id, iovecs[0].iov_base, 0, &finish);
-  // while (!finish)
-  //   backend.Progress();
-
-  // std::cout << *reinterpret_cast<gbp::fpage_id_type*>(iovecs[0].iov_base) << std::endl;
-
-
-  // ::pread(3, iovecs[0].iov_base, gbp::PAGE_SIZE_FILE, fpage_id * gbp::PAGE_SIZE_FILE);
-  // std::cout << *reinterpret_cast<gbp::fpage_id_type*>(iovecs[0].iov_base) << std::endl;
-
 
   // test_aa(file_path);
   return 0;

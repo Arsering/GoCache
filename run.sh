@@ -23,9 +23,10 @@ mkdir -p ${LOG_DIR}
 echo 1 > /proc/sys/vm/drop_caches 
 
 FILE_SIZE_GB=16
-WORKER_NUM=1
-# ./bin/graphscope_bufferpool ${FILE_SIZE_GB} ${WORKER_NUM} > ${LOG_DIR}/log.log 
-./bin/graphscope_bufferpool ${FILE_SIZE_GB} ${WORKER_NUM}
+WORKER_NUM=10
+./bin/graphscope_bufferpool ${FILE_SIZE_GB} ${WORKER_NUM} > ${LOG_DIR}/log.log 
+
+# ./bin/graphscope_bufferpool ${FILE_SIZE_GB} ${WORKER_NUM}
 # cgexec -g memory:yz_574M
 # ./bin/graphscope_bufferpool 
 # cgexec -g memory:yz_256M ./bin/graphscope_bufferpool

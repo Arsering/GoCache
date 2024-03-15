@@ -27,131 +27,129 @@
 
 namespace gbp {
 
-template <typename ItemType>
-struct VectorSync {
-  std::vector<ItemType> data_;
-  size_t size_;
-  size_t capacity_;
-  std::mutex latch_;
+  template <typename ItemType>
+  struct VectorSync {
+    std::vector<ItemType> data_;
+    size_t size_;
+    size_t capacity_;
+    std::mutex latch_;
 
-  VectorSync(size_t capacity) : size_(0), capacity_(capacity) {
-    data_.resize(capacity);
-  }
-  ~VectorSync() = default;
-
-  ItemType GetItem() {
-    ItemType ret = nullptr;
-    // std::lock_guard<std::mutex> lock(latch_);
-    if (size_ == 0)
-      return ret;
-    else {
-      size_--;
-      return data_[size_];
+    VectorSync(size_t capacity) : size_(0), capacity_(capacity) {
+      data_.resize(capacity);
     }
-  }
+    ~VectorSync() = default;
 
-  int InsertItem(ItemType item) {
-    // std::lock_guard<std::mutex> lock(latch_);
-    if (size_ < capacity_) {
-      data_[size_++] = item;
-      return 0;
-    } else {
-      return -1;
+    ItemType GetItem() {
+      ItemType ret = nullptr;
+      // std::lock_guard<std::mutex> lock(latch_);
+      if (size_ == 0)
+        return ret;
+      else {
+        size_--;
+        return data_[size_];
+      }
     }
-  }
-  std::vector<ItemType>& GetData() { return data_; }
-  bool Empty() { return size_ == 0; }
-  size_t GetSize() { return size_; }
-};
 
-class BufferPool {
-  friend class BufferPoolManager;
+    int InsertItem(ItemType item) {
+      // std::lock_guard<std::mutex> lock(latch_);
+      if (size_ < capacity_) {
+        data_[size_++] = item;
+        return 0;
+      }
+      else {
+        return -1;
+      }
+    }
+    std::vector<ItemType>& GetData() { return data_; }
+    bool Empty() { return size_ == 0; }
+    size_t GetSize() { return size_; }
+  };
 
- public:
-  BufferPool() {}
-  ~BufferPool();
-  void init(u_int32_t pool_ID, mpage_id_type pool_size,
-            RWSysCall* disk_manager);
+  class BufferPool {
+    friend class BufferPoolManager;
 
-  bool UnpinPage(mpage_id_type page_id, bool is_dirty,
-                 GBPfile_handle_type fd = 0);
+  public:
+    BufferPool() {}
+    ~BufferPool();
+    void init(u_int32_t pool_ID, mpage_id_type pool_size,
+      IOBackend* disk_manager);
 
-  bool ReleasePage(PageTable::PTE* tar);
+    bool UnpinPage(mpage_id_type page_id, bool is_dirty,
+      GBPfile_handle_type fd = 0);
 
-  bool FlushPage(mpage_id_type page_id, GBPfile_handle_type fd = 0);
+    bool ReleasePage(PageTable::PTE* tar);
 
-  PageTable::PTE* NewPage(mpage_id_type& page_id, GBPfile_handle_type fd = 0);
+    bool FlushPage(mpage_id_type page_id, GBPfile_handle_type fd = 0);
 
-  bool DeletePage(mpage_id_type page_id, GBPfile_handle_type fd = 0);
+    PageTable::PTE* NewPage(mpage_id_type& page_id, GBPfile_handle_type fd = 0);
 
-  inline int GetFileDescriptor(GBPfile_handle_type fd) {
-    return disk_manager_->GetFileDescriptor(fd);
-  }
+    bool DeletePage(mpage_id_type page_id, GBPfile_handle_type fd = 0);
 
-  int GetObject(char* buf, size_t file_offset, size_t object_size,
-                GBPfile_handle_type fd = 0);
-  int SetObject(const char* buf, size_t file_offset, size_t object_size,
-                GBPfile_handle_type fd = 0);
+    inline int GetFileDescriptor(GBPfile_handle_type fd) {
+      return io_backend_->GetFileDescriptor(fd);
+    }
 
-  BufferObject GetObject(size_t file_offset, size_t object_size,
-                         GBPfile_handle_type fd = 0);
-  int SetObject(BufferObject buf, size_t file_offset, size_t object_size,
-                GBPfile_handle_type fd = 0);
+    int GetObject(char* buf, size_t file_offset, size_t object_size,
+      GBPfile_handle_type fd = 0);
+    int SetObject(const char* buf, size_t file_offset, size_t object_size,
+      GBPfile_handle_type fd = 0);
 
-  int Resize(GBPfile_handle_type fd, size_t new_size) {
-    std::lock_guard lock(latch_);
-    assert(fd < page_tables_.size());
-    page_tables_[fd]->Resize(
+    BufferObject GetObject(size_t file_offset, size_t object_size,
+      GBPfile_handle_type fd = 0);
+    int SetObject(BufferObject buf, size_t file_offset, size_t object_size,
+      GBPfile_handle_type fd = 0);
+
+    int Resize(GBPfile_handle_type fd, size_t new_size) {
+      std::lock_guard lock(latch_);
+      assert(fd < page_tables_.size());
+      page_tables_[fd]->Resize(
         ceil(ceil(new_size, PAGE_SIZE_FILE), get_pool_num().load()));
-    return 0;
-  }
-  size_t GetFreePageNum() { return free_list_->GetSize(); }
+      return 0;
+    }
+    size_t GetFreePageNum() { return free_list_->GetSize(); }
 #ifdef DEBUG
-  void ReinitBitMap() { disk_manager_->ReinitBitMap(); }
+    void ReinitBitMap() { disk_manager_->ReinitBitMap(); }
 #endif
 
-  void WarmUp() {
-    for (int fd_gbp = 0; fd_gbp < disk_manager_->file_sizes_.size(); fd_gbp++) {
-      if (!disk_manager_->fd_oss_[fd_gbp].second)
-        continue;
-      size_t page_f_num =
-          ceil(disk_manager_->file_sizes_[fd_gbp], PAGE_SIZE_FILE);
-      // LOG(INFO) << "page_f_num of " << disk_manager_->file_names_[fd_gbp]
-      //           << "= "
-      //           << cell(disk_manager_->GetFileSize(
-      //                       disk_manager_->GetFileDescriptor(fd_gbp)),
-      //                   PAGE_SIZE_BUFFER_POOL);
-      for (size_t page_idx_f = 0; page_idx_f < page_f_num; page_idx_f++) {
-        if (page_idx_f % get_pool_num().load() != pool_ID_)
+    void WarmUp() {
+      size_t free_page_num = GetFreePageNum();
+      for (int fd_gbp = 0; fd_gbp < io_backend_->file_sizes_.size(); fd_gbp++) {
+        if (!io_backend_->fd_oss_[fd_gbp].second)
           continue;
-        FetchPage(page_idx_f, fd_gbp);
-        if (free_list_->GetSize() == 0) {
-          // LOG(INFO) << "pool is full";
-          return;
+        size_t page_f_num =
+          ceil(io_backend_->file_sizes_[fd_gbp], PAGE_SIZE_FILE);
+        for (size_t page_idx_f = 0; page_idx_f < page_f_num; page_idx_f++) {
+          auto mpage =
+            FetchPage(page_idx_f, fd_gbp);
+          mpage.first->DecRefCount();
+
+          if (--free_page_num == 0) {
+            LOG(INFO) << "pool is full";
+            return;
+          }
         }
       }
     }
-  }
 
-  void RegisterFile(OSfile_handle_type fd, fpage_id_type file_size_in_page);
-  std::pair<PTE*, char*> FetchPage(mpage_id_type page_id_f,
-                                   GBPfile_handle_type fd);
-  std::pair<PTE*, char*> Pin(fpage_id_type fpage_id, GBPfile_handle_type fd);
+    void RegisterFile(OSfile_handle_type fd);
+    std::pair<PTE*, char*> FetchPage(mpage_id_type page_id_f,
+      GBPfile_handle_type fd);
+    std::pair<PTE*, char*> Pin(fpage_id_type fpage_id, GBPfile_handle_type fd);
 
- private:
-  uint32_t pool_ID_ = std::numeric_limits<uint32_t>::max();
-  mpage_id_type pool_size_;  // number of pages in buffer pool
-  MemoryPool* buffer_pool_ = nullptr;
-  PageTable* pages_ = nullptr;  // array of pages
-  RWSysCall* disk_manager_;
+  private:
+    uint32_t pool_ID_ = std::numeric_limits<uint32_t>::max();
+    mpage_id_type pool_size_;  // number of pages in buffer pool
+    MemoryPool* buffer_pool_ = nullptr;
+    PageTable* pages_ = nullptr;  // array of pages
+    IOBackend* io_backend_;
 
-  std::vector<WrappedVector<fpage_id_type, mpage_id_type>*> page_tables_;
-  Replacer<mpage_id_type>*
+    std::vector<WrappedVector<fpage_id_type, mpage_id_type>*> page_tables_;
+    Replacer<mpage_id_type>*
       replacer_;  // to find an unpinned page for replacement
-  std::unique_ptr<VectorSync<PTE*>>
+    std::unique_ptr<VectorSync<PTE*>>
       free_list_;     // to find a free page for replacement
-  std::mutex latch_;  // to protect shared data structure
+    std::mutex latch_;  // to protect shared data structure
 
-  PTE* GetVictimPage();
-};
+    PTE* GetVictimPage();
+  };
 }  // namespace gbp
