@@ -34,7 +34,7 @@ namespace gbp
 #define BUCKET_SIZE 50                 // size of extendible hash bucket
 #define BUFFER_POOL_SIZE 10            // size of buffer pool
 
-  inline size_t cell(size_t val, size_t mod_val)
+  inline size_t ceil(size_t val, size_t mod_val)
   {
     return val / mod_val + (val % mod_val == 0 ? 0 : 1);
   }
@@ -47,7 +47,7 @@ namespace gbp
   {
   protected:
     // NonCopyable(const NonCopyable &) = delete;
-    NonCopyable &operator=(const NonCopyable &) = delete;
+    NonCopyable& operator=(const NonCopyable&) = delete;
 
     NonCopyable() = default;
     ~NonCopyable() = default;
@@ -59,5 +59,5 @@ namespace gbp
 #define likely(x) __builtin_expect(!!(x), 1)
 #define unlikely(x) __builtin_expect(!!(x), 0)
   // #define MMAP_ADVICE_l MADV_NORMAL
-  std::atomic<size_t> &get_pool_num();
+  std::atomic<size_t>& get_pool_num();
 } // namespace gbp

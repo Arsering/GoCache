@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp" "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles/graphscope_bufferpool.dir/main.cpp.o"
+  "/data_client2/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp" "/data_client2/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles/graphscope_bufferpool.dir/main.cpp.o"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 
@@ -27,8 +27,8 @@ set(CMAKE_CXX_TARGET_INCLUDE_PATH
 
 # Targets to which this target links.
 set(CMAKE_TARGET_LINKED_INFO_FILES
-  "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src/CMakeFiles/bufferpool.dir/DependInfo.cmake"
-  "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/tests/CMakeFiles/tests.dir/DependInfo.cmake"
+  "/data_client2/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src/CMakeFiles/bufferpool.dir/DependInfo.cmake"
+  "/data_client2/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/tests/CMakeFiles/tests.dir/DependInfo.cmake"
   )
 
 # Fortran module output directory.

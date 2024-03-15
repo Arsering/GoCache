@@ -72,6 +72,7 @@
         "stop_token": "cpp",
         "bitset": "cpp",
         "complex": "cpp",
-        "typeindex": "cpp"
+        "typeindex": "cpp",
+        "shared_mutex": "cpp"
     }
 }

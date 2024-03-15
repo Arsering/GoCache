@@ -1,4 +1,4 @@
-# Install script for directory: /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src
+# Install script for directory: /data_client2/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -44,7 +44,7 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
          FILE "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libbufferpool.so"
          RPATH "")
   endif()
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE SHARED_LIBRARY FILES "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/lib/libbufferpool.so")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/lib" TYPE SHARED_LIBRARY FILES "/data_client2/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/lib/libbufferpool.so")
   if(EXISTS "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libbufferpool.so" AND
      NOT IS_SYMLINK "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/lib/libbufferpool.so")
     if(CMAKE_INSTALL_DO_STRIP)
@@ -57,6 +57,6 @@ if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_
 endif()
 
 if("x${CMAKE_INSTALL_COMPONENT}x" STREQUAL "xUnspecifiedx" OR NOT CMAKE_INSTALL_COMPONENT)
-  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/include/flex/graphscope_bufferpool" TYPE DIRECTORY FILES "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include" FILES_MATCHING REGEX "/[^/]*\\.h$")
+  file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/include/flex/graphscope_bufferpool" TYPE DIRECTORY FILES "/data_client2/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include" FILES_MATCHING REGEX "/[^/]*\\.h$")
 endif()
 

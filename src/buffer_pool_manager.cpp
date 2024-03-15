@@ -12,7 +12,7 @@ namespace gbp
    * WARNING: Do Not Edit This Function
    */
   void BufferPoolManager::init(uint16_t pool_num, size_t pool_size,
-                               DiskManager *disk_manager)
+    DiskManager* disk_manager)
   {
     pool_num_ = pool_num;
     get_pool_num().store(pool_num);
@@ -30,7 +30,7 @@ namespace gbp
 
   void BufferPoolManager::init(uint16_t pool_num, size_t pool_size)
   {
-    DiskManager *disk_manager = new gbp::DiskManager("test.db");
+    DiskManager* disk_manager = new gbp::DiskManager("test.db");
     init(pool_num, pool_size, disk_manager);
   }
 
@@ -42,16 +42,16 @@ namespace gbp
   void BufferPoolManager::RegisterFile(int fd_gbp)
   {
     uint32_t file_size_in_page =
-        cell(disk_manager_->GetFileSize(disk_manager_->fd_oss_[fd_gbp].first),
-             PAGE_SIZE_BUFFER_POOL);
+      ceil(disk_manager_->GetFileSize(disk_manager_->fd_oss_[fd_gbp].first),
+        PAGE_SIZE_BUFFER_POOL);
     for (auto pool : pools_)
     {
       pool->RegisterFile(fd_gbp, file_size_in_page);
     }
   }
 
-  int BufferPoolManager::GetObject(char *buf, size_t file_offset,
-                                   size_t object_size, int fd_gbp)
+  int BufferPoolManager::GetObject(char* buf, size_t file_offset,
+    size_t object_size, int fd_gbp)
   {
     // std::lock_guard<std::mutex> lck(latch_);
     size_t page_id = file_offset / PAGE_SIZE_BUFFER_POOL;
@@ -74,8 +74,8 @@ namespace gbp
     return 0;
   }
 
-  int BufferPoolManager::SetObject(const char *buf, size_t file_offset,
-                                   size_t object_size, int fd_gbp)
+  int BufferPoolManager::SetObject(const char* buf, size_t file_offset,
+    size_t object_size, int fd_gbp)
   {
     // std::lock_guard<std::mutex> lck(latch_);
 
@@ -98,7 +98,7 @@ namespace gbp
   }
 
   BufferObject BufferPoolManager::GetObject(size_t file_offset,
-                                            size_t object_size, int fd_gbp)
+    size_t object_size, int fd_gbp)
   {
     size_t page_offset = file_offset % PAGE_SIZE_BUFFER_POOL;
     size_t st;
@@ -118,7 +118,7 @@ namespace gbp
       st = GetSystemTime();
 #endif
       BufferObject ret(object_size, pd.GetPage()->GetData() + page_offset,
-                       pd.GetPage());
+        pd.GetPage());
 #ifdef DEBUG
       st = GetSystemTime() - st;
       if (debug::get_log_marker() == 1)
@@ -143,7 +143,7 @@ namespace gbp
   }
 
   int BufferPoolManager::SetObject(BufferObject buf, size_t file_offset,
-                                   size_t object_size, int fd_gbp)
+    size_t object_size, int fd_gbp)
   {
     return SetObject(buf.Data(), file_offset, object_size, fd_gbp);
   }

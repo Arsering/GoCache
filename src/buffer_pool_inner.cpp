@@ -12,7 +12,7 @@ namespace gbp
    * WARNING: Do Not Edit This Function
    */
   void BufferPoolInner::init(u_int32_t pool_ID, size_t pool_size,
-                             DiskManager *disk_manager)
+    DiskManager* disk_manager)
   {
     pool_ID_ = pool_ID;
     pool_size_ = pool_size;
@@ -30,15 +30,15 @@ namespace gbp
     for (auto fd_os : disk_manager_->fd_oss_)
     {
       uint32_t file_size_in_page =
-          cell(disk_manager_->GetFileSize(fd_os.first), PAGE_SIZE_BUFFER_POOL);
+        ceil(disk_manager_->GetFileSize(fd_os.first), PAGE_SIZE_BUFFER_POOL);
       page_tables_.push_back(std::make_unique<WrappedVector>(
-          cell(file_size_in_page, get_pool_num().load())));
+        ceil(file_size_in_page, get_pool_num().load())));
     }
 
     // put all the pages into free list
     for (size_t i = 0; i < pool_size_; ++i)
     {
-      pages_[i].data_ = (char *)buffer_pool_ + (i * PAGE_SIZE_BUFFER_POOL);
+      pages_[i].data_ = (char*)buffer_pool_ + (i * PAGE_SIZE_BUFFER_POOL);
       pages_[i].ResetMemory();
       free_list_->GetData()[i] = &(pages_[i]);
     }
@@ -69,15 +69,15 @@ namespace gbp
    * dirty flag of this page
    */
   bool BufferPoolInner::UnpinPage(page_id page_id_f, bool is_dirty,
-                                  uint32_t fd_gbp)
+    uint32_t fd_gbp)
   {
     page_id page_id_m;
-    Page *tar = nullptr;
+    Page* tar = nullptr;
     if (!page_tables_[fd_gbp]->Find(page_id_f, page_id_m))
     {
       return false;
     }
-    tar = (Page *)pages_ + page_id_m;
+    tar = (Page*)pages_ + page_id_m;
 
     tar->is_dirty_ = is_dirty;
     if (tar->GetPinCount() <= 0)
@@ -97,7 +97,7 @@ namespace gbp
    * replacer if pin_count<=0 before this call, return false. is_dirty: set the
    * dirty flag of this page
    */
-  bool BufferPoolInner::ReleasePage(Page *tar)
+  bool BufferPoolInner::ReleasePage(Page* tar)
   {
     // std::lock_guard<std::mutex> lck(latch_);
     if (tar->GetPinCount() <= 0)
@@ -118,12 +118,12 @@ namespace gbp
   bool BufferPoolInner::FlushPage(page_id page_id_f, uint32_t fd_gbp)
   {
     // std::lock_guard<std::mutex> lck(latch_);
-    Page *tar = nullptr;
+    Page* tar = nullptr;
     page_id page_id_m;
 
     if (!page_tables_[fd_gbp]->Find(page_id_f, page_id_m))
       return false;
-    tar = (Page *)pages_ + page_id_m;
+    tar = (Page*)pages_ + page_id_m;
     if (tar->page_id_ == INVALID_PAGE_ID)
     {
       return false;
@@ -149,12 +149,12 @@ namespace gbp
   bool BufferPoolInner::DeletePage(page_id page_id_f, uint32_t fd_gbp)
   {
     // std::lock_guard<std::mutex> lck(latch_);
-    Page *tar = nullptr;
+    Page* tar = nullptr;
     page_id page_id_m;
 
     if (page_tables_[fd_gbp]->Find(page_id_f, page_id_m))
     {
-      tar = (Page *)pages_ + page_id_m;
+      tar = (Page*)pages_ + page_id_m;
       if (tar->GetPinCount() > 0)
       {
         return false;
@@ -177,10 +177,10 @@ namespace gbp
    * update new page's metadata, zero out memory and add corresponding entry
    * into page table. return nullptr if all the pages in pool are pinned
    */
-  Page *BufferPoolInner::NewPage(page_id &page_id, int fd_gbp)
+  Page* BufferPoolInner::NewPage(page_id& page_id, int fd_gbp)
   {
     // std::lock_guard<std::mutex> lck(latch_);
-    Page *tar = nullptr;
+    Page* tar = nullptr;
     uint32_t page_idx_m;
 
     tar = GetVictimPage();
@@ -193,12 +193,12 @@ namespace gbp
     if (tar->is_dirty_)
     {
       disk_manager_->WritePage(tar->GetPageId(), tar->GetData(),
-                               tar->GetFileHandler());
+        tar->GetFileHandler());
     }
 
     // 3
     page_tables_[tar->GetFileHandler()]->Remove(tar->GetPageId());
-    page_tables_[fd_gbp]->Insert(page_id, (tar - (Page *)pages_));
+    page_tables_[fd_gbp]->Insert(page_id, (tar - (Page*)pages_));
 
     // 4
     tar->page_id_ = page_id;
@@ -210,9 +210,9 @@ namespace gbp
     return tar;
   }
 
-  Page *BufferPoolInner::GetVictimPage()
+  Page* BufferPoolInner::GetVictimPage()
   {
-    Page *tar = nullptr;
+    Page* tar = nullptr;
     uint32_t page_idx_m;
 
     size_t st;
@@ -255,8 +255,8 @@ namespace gbp
     return tar;
   }
 
-  int BufferPoolInner::GetObject(char *buf, size_t file_offset,
-                                 size_t object_size, int fd_gbp)
+  int BufferPoolInner::GetObject(char* buf, size_t file_offset,
+    size_t object_size, int fd_gbp)
   {
     // std::lock_guard<std::mutex> lck(latch_);
     size_t page_id = file_offset / PAGE_SIZE_BUFFER_POOL;
@@ -294,8 +294,8 @@ namespace gbp
     return 0;
   }
 
-  int BufferPoolInner::SetObject(const char *buf, size_t file_offset,
-                                 size_t object_size, int fd_gbp)
+  int BufferPoolInner::SetObject(const char* buf, size_t file_offset,
+    size_t object_size, int fd_gbp)
   {
     // std::lock_guard<std::mutex> lck(latch_);
 
@@ -318,7 +318,7 @@ namespace gbp
   }
 
   BufferObject BufferPoolInner::GetObject(size_t file_offset, size_t object_size,
-                                          int fd_gbp)
+    int fd_gbp)
   {
     size_t page_offset = file_offset % PAGE_SIZE_BUFFER_POOL;
     size_t st;
@@ -338,7 +338,7 @@ namespace gbp
       st = GetSystemTime();
 #endif
       BufferObject ret(object_size, pd.GetPage()->GetData() + page_offset,
-                       pd.GetPage());
+        pd.GetPage());
 #ifdef DEBUG
       st = GetSystemTime() - st;
       if (debug::get_log_marker() == 1)
@@ -363,7 +363,7 @@ namespace gbp
   }
 
   int BufferPoolInner::SetObject(BufferObject buf, size_t file_offset,
-                                 size_t object_size, int fd_gbp)
+    size_t object_size, int fd_gbp)
   {
     return SetObject(buf.Data(), file_offset, object_size, fd_gbp);
   }
@@ -387,9 +387,9 @@ namespace gbp
 #ifdef DEBUG_t
     if (debug::get_log_marker() == 1)
       debug::get_counter_fetch().fetch_add(1);
-      // if (!debug::get_bitset(fd_gbp).test(page_id_f))
-      //   debug::get_counter_fetch_unique().fetch_add(1);
-      // debug::get_bitset(fd_gbp).set(page_id_f);
+    // if (!debug::get_bitset(fd_gbp).test(page_id_f))
+    //   debug::get_counter_fetch_unique().fetch_add(1);
+    // debug::get_bitset(fd_gbp).set(page_id_f);
 #endif
 
 #ifdef DEBUG_t
@@ -414,7 +414,7 @@ namespace gbp
 
     // size_t st;
     page_id page_id_m;
-    Page *tar = nullptr;
+    Page* tar = nullptr;
     assert(fd_gbp < page_tables_.size());
     assert(fd_gbp >= 0);
 #ifdef DEBUG_1
@@ -429,7 +429,7 @@ namespace gbp
           debug::get_counter_MAP_find().fetch_add(st);
       }
 #endif
-      tar = (Page *)pages_ + page_id_m;
+      tar = (Page*)pages_ + page_id_m;
       tar->pin_count_++;
       return tar;
     }
@@ -451,7 +451,7 @@ namespace gbp
     if (tar->is_dirty_)
     {
       disk_manager_->WritePage(tar->GetPageId(), tar->GetData(),
-                               tar->GetFileHandler());
+        tar->GetFileHandler());
     }
 
     // 3
@@ -463,7 +463,7 @@ namespace gbp
       }
 #endif
       page_tables_[tar->GetFileHandler()]->Remove(tar->GetPageId() /
-                                                  get_pool_num().load());
+        get_pool_num().load());
 #ifdef DEBUG_1
       {
         st = GetSystemTime() - st;
@@ -485,7 +485,7 @@ namespace gbp
         debug::get_counter_MAP_insert().fetch_add(st);
     }
 #endif
-// 4
+    // 4
 #ifdef DEBUG_1
     {
       st = GetSystemTime();
@@ -504,8 +504,8 @@ namespace gbp
     tar->page_id_ = page_id_f;
     tar->fd_gbp_ = fd_gbp;
     tar->buffer_pool_ = this;
-// 1. 换为32int
-// 2. 屏蔽map
+    // 1. 换为32int
+    // 2. 屏蔽map
 #ifdef DEBUG_1
     {
       st = GetSystemTime();

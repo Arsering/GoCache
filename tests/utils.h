@@ -1,3 +1,5 @@
+#pragma once
+
 #include <assert.h>
 #include <stdlib.h>
 #include <sys/time.h>
@@ -31,7 +33,7 @@ inline size_t GetMemoryUsage() {
     if (line.find("VmRSS") != std::string::npos) {
       std::vector<std::string> strs;
       boost::split(strs, line, boost::is_any_of("\t "),
-                   boost::token_compress_on);
+        boost::token_compress_on);
       std::stringstream ss(strs[1]);
       auto ret = std::stoull(strs[1]);
       return ret;
@@ -82,10 +84,10 @@ uint64_t readSSDIObytes() {
 
   uint64_t sum = 0;
   for (std::string line; std::getline(stat, line);) {
-    if (line.find("vdb") != std::string::npos) {
+    if (line.find("vdc") != std::string::npos) {
       std::vector<std::string> strs;
       boost::split(strs, line, boost::is_any_of("\t "),
-                   boost::token_compress_on);
+        boost::token_compress_on);
       // std::cout << std::stoull(strs[6]) << std::endl;
       sum += std::stoull(strs[6]) * 512;
     }
@@ -96,5 +98,5 @@ uint64_t readSSDIObytes() {
 double gettime() {
   struct timeval now_tv;
   gettimeofday(&now_tv, NULL);
-  return ((double) now_tv.tv_sec) + ((double) now_tv.tv_usec) / 1000000.0;
+  return ((double)now_tv.tv_sec) + ((double)now_tv.tv_usec) / 1000000.0;
 }
