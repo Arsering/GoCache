@@ -22,12 +22,14 @@ mkdir -p ${LOG_DIR}
 
 echo 1 > /proc/sys/vm/drop_caches
 
-export FILE_SIZE_GB=16
-export WORKER_NUM=10
-export POOL_NUM=100
+export FILE_SIZE_GB=32
+export WORKER_NUM=15
+export POOL_NUM=10
 export POOL_SIZE_GB=4
-./bin/graphscope_bufferpool ${FILE_SIZE_GB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_GB} > ${LOG_DIR}/log.log 
+export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD
+./bin/graphscope_bufferpool ${FILE_SIZE_GB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_GB} ${TEST_TYPE}> ${LOG_DIR}/log.log
 
+# > ${LOG_DIR}/log.log
 # ./bin/graphscope_bufferpool ${FILE_SIZE_GB} ${WORKER_NUM}
 # cgexec -g memory:yz_574M
 # ./bin/graphscope_bufferpool 

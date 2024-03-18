@@ -14,8 +14,10 @@
 #include <random>
 #include <string_view>
 
-#include "include/config.h"
+// #include <glog/logging.h>
+
 #include "include/buffer_pool_manager.h"
+#include "include/config.h"
 
 #include "include/orgin_mmap.h"
 #include "tests/tests.h"
@@ -44,10 +46,10 @@ int test_read(gbp::BufferPoolManager& bpm, size_t file_size) {
   std::cout << std::endl << "sum = " << sum;
 
   std::cout << std::endl
-    << "counter_fetch_unique = "
-    << gbp::debug::get_counter_fetch_unique()
-    << " | counter_fetch = " << gbp::debug::get_counter_fetch()
-    << std::endl;
+            << "counter_fetch_unique = "
+            << gbp::debug::get_counter_fetch_unique()
+            << " | counter_fetch = " << gbp::debug::get_counter_fetch()
+            << std::endl;
 }
 
 int test1() {
@@ -105,27 +107,27 @@ int test1() {
   }
 
   std::cout << "MAP_find = "
-    << gbp::debug::get_counter_MAP_find().load() / file_size
-    << std::endl;
+            << gbp::debug::get_counter_MAP_find().load() / file_size
+            << std::endl;
   std::cout << "FPL_get = "
-    << gbp::debug::get_counter_FPL_get().load() / file_size
-    << std::endl;
+            << gbp::debug::get_counter_FPL_get().load() / file_size
+            << std::endl;
   std::cout << "pread = " << gbp::debug::get_counter_pread().load() / file_size
-    << std::endl;
+            << std::endl;
   std::cout << "MAP_eviction = "
-    << gbp::debug::get_counter_MAP_eviction().load() / file_size
-    << std::endl;
+            << gbp::debug::get_counter_MAP_eviction().load() / file_size
+            << std::endl;
   std::cout << "ES_eviction = "
-    << gbp::debug::get_counter_ES_eviction().load() / file_size
-    << std::endl;
+            << gbp::debug::get_counter_ES_eviction().load() / file_size
+            << std::endl;
   std::cout << "MAP_insert = "
-    << gbp::debug::get_counter_MAP_insert().load() / file_size
-    << std::endl;
+            << gbp::debug::get_counter_MAP_insert().load() / file_size
+            << std::endl;
   std::cout << "ES_insert = "
-    << gbp::debug::get_counter_ES_insert().load() / file_size
-    << std::endl;
+            << gbp::debug::get_counter_ES_insert().load() / file_size
+            << std::endl;
   std::cout << "copy = " << gbp::debug::get_counter_copy().load() / file_size
-    << std::endl;
+            << std::endl;
   return 0;
 }
 int test3() {
@@ -137,10 +139,10 @@ int test3() {
   //     ::ftruncate(data_file, 2 * file_size * gbp::PAGE_SIZE_BUFFER_POOL);
 
   char* data_file_mmaped =
-    (char*) ::mmap(NULL, 3 * file_size * gbp::PAGE_SIZE_FILE,
-      PROT_READ | PROT_WRITE, MAP_SHARED, data_file, 0);
+      (char*) ::mmap(NULL, 3 * file_size * gbp::PAGE_SIZE_FILE,
+                     PROT_READ | PROT_WRITE, MAP_SHARED, data_file, 0);
   auto ret = ::madvise(data_file_mmaped, 3 * file_size * gbp::PAGE_SIZE_FILE,
-    MADV_RANDOM);  // Turn off readahead
+                       MADV_RANDOM);  // Turn off readahead
   volatile size_t sum = 0;
   volatile size_t st = 0;
   st = gbp::GetSystemTime();
@@ -210,7 +212,7 @@ class Student {
   int age_;
   double credit_;
 
-public:
+ public:
   Student() = default;
   Student(int age, double credit) : age_(age), credit_(credit) {}
 
@@ -243,13 +245,12 @@ void test_mmap_array() {
 }
 
 void generate_files() {
-  int degree[10] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+  int degree[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   std::ofstream outFile("degree", std::ios::binary);
   if (outFile.is_open()) {
     outFile.write(reinterpret_cast<char*>(degree), sizeof(int) * 10);
     outFile.close();
-  }
-  else {
+  } else {
     std::cerr << "failed to open the file for writing." << std::endl;
   }
 
@@ -261,10 +262,9 @@ void generate_files() {
   std::ofstream outFile2("student", std::ios::binary);
   if (outFile2.is_open()) {
     outFile2.write(reinterpret_cast<char*>(students.data()),
-      sizeof(Student) * 10);
+                   sizeof(Student) * 10);
     outFile2.close();
-  }
-  else {
+  } else {
     std::cerr << "failed to open the file for writing." << std::endl;
   }
   std::cout << "generate files success!" << std::endl;
@@ -292,7 +292,7 @@ void generate_string() {
     offset_list[i] = offset_list[i - 1] + length_list[i - 1];
     length_list[i] = 5 + i;
   }
-  char* data = (char*)malloc(sizeof(char) * (offset_list[9] + length_list[9]));
+  char* data = (char*) malloc(sizeof(char) * (offset_list[9] + length_list[9]));
   std::cout << "check point" << std::endl;
   for (int i = 0; i < 10; i++) {
     item_list[i].length = length_list[i];
@@ -306,19 +306,17 @@ void generate_string() {
   std::ofstream outFile3("test_string.items", std::ios::binary);
   if (outFile3.is_open()) {
     outFile3.write(reinterpret_cast<char*>(item_list),
-      sizeof(gs::string_item) * 10);
+                   sizeof(gs::string_item) * 10);
     outFile3.close();
-  }
-  else {
+  } else {
     std::cerr << "failed to open the file for writing." << std::endl;
   }
   std::ofstream outFile4("test_string.data", std::ios::binary);
   if (outFile4.is_open()) {
     outFile4.write(reinterpret_cast<char*>(data),
-      sizeof(char) * (offset_list[9] + length_list[9]));
+                   sizeof(char) * (offset_list[9] + length_list[9]));
     outFile4.close();
-  }
-  else {
+  } else {
     std::cerr << "failed to open the file for writing." << std::endl;
   }
   std::cout << "generate_string success!!!" << std::endl;
@@ -326,12 +324,12 @@ void generate_string() {
 
 int test_atomic() {
   class MutableNbr {
-  public:
+   public:
     MutableNbr() = default;
     MutableNbr(const MutableNbr& rhs)
-      : neighbor(rhs.neighbor),
-      timestamp(rhs.timestamp.load()),
-      data(rhs.data) {}
+        : neighbor(rhs.neighbor),
+          timestamp(rhs.timestamp.load()),
+          data(rhs.data) {}
     MutableNbr& operator=(const MutableNbr& rhs) {
       this->neighbor = rhs.neighbor;
       this->timestamp.store(rhs.timestamp.load());
@@ -345,16 +343,16 @@ int test_atomic() {
     }
     void print() const {
       std::cout << "neighbor: " << neighbor << " timestamp: " << timestamp
-        << " data: " << data << std::endl;
+                << " data: " << data << std::endl;
     }
     ~MutableNbr() = default;
 
-  private:
+   private:
     size_t neighbor;
     std::atomic<size_t> timestamp;
     size_t data;
   };
-  MutableNbr* buf = (MutableNbr*)malloc(sizeof(MutableNbr) * 10);
+  MutableNbr* buf = (MutableNbr*) malloc(sizeof(MutableNbr) * 10);
   MutableNbr item;
   item.init(14, 16, 10);
 
@@ -364,10 +362,10 @@ int test_atomic() {
 
 template <typename T>
 class Test {
-private:
+ private:
   T data_;
 
-public:
+ public:
   Test() = default;
   ~Test() = default;
   void set(T& data) { data_ = data; }
@@ -375,10 +373,10 @@ public:
 };
 template <>
 class Test<int> {
-private:
+ private:
   int data_;
 
-public:
+ public:
   Test() = default;
   Test(const Test& other) : data_(other.data_) {
     std::cout << "MyClass Copy Ctor!" << std::endl;
@@ -400,7 +398,7 @@ Test<int> returnaa() {
   return aa;
 }
 int test_shared() {
-  char* buf = (char*)malloc(1024LU * 1024LU * 1024LU * 10lU);
+  char* buf = (char*) malloc(1024LU * 1024LU * 1024LU * 10lU);
   {
     std::shared_ptr<Test<int>> test(reinterpret_cast<Test<int>*>(buf), free);
     int a = 10;
@@ -418,20 +416,22 @@ int test_aa(const std::string& file_path) {
   // 1. 初始化一个 io_uring 实例
   struct io_uring ring;
   auto QD = 64;
-  auto ret = io_uring_queue_init(QD,    // 队列长度
-    &ring, // io_uring 实例
-    0);    // flags，0 表示默认配置，例如使用中断驱动模式
+  auto ret =
+      io_uring_queue_init(QD,     // 队列长度
+                          &ring,  // io_uring 实例
+                          0);  // flags，0 表示默认配置，例如使用中断驱动模式
 
-  // 2. 打开输入文件，注意这里指定了 O_DIRECT flag，内核轮询模式需要这个 flag，见前面介绍
+  // 2. 打开输入文件，注意这里指定了 O_DIRECT flag，内核轮询模式需要这个
+  // flag，见前面介绍
   fd = open(file_path.c_str(), O_RDONLY | O_DIRECT);
   struct stat sb;
-  fstat(fd, &sb); // 获取文件信息，例如文件长度，后面会用到
+  fstat(fd, &sb);  // 获取文件信息，例如文件长度，后面会用到
 
   // 3. 初始化 4 个读缓冲区
-  ssize_t fsize = 0;             // 程序的最大读取长度
-  struct iovec* iovecs = (iovec*)::calloc(QD, sizeof(struct iovec));
+  ssize_t fsize = 0;  // 程序的最大读取长度
+  struct iovec* iovecs = (iovec*) ::calloc(QD, sizeof(struct iovec));
   for (i = 0; i < QD; i++) {
-    buf = (char*)aligned_alloc(gbp::PAGE_SIZE_FILE, 4096);
+    buf = (char*) aligned_alloc(gbp::PAGE_SIZE_FILE, 4096);
 
     // if (posix_memalign(&buf, 4096, 4096))
     //   return 1;
@@ -441,7 +441,7 @@ int test_aa(const std::string& file_path) {
   }
   std::cout << "sb.st_size" << sb.st_size << std::endl;
 
-  // 4. 依次准备 4 个 SQE 读请求，指定将随后读入的数据写入 iovecs 
+  // 4. 依次准备 4 个 SQE 读请求，指定将随后读入的数据写入 iovecs
   struct io_uring_sqe* sqe;
   auto offset = 0;
   i = 0;
@@ -449,27 +449,26 @@ int test_aa(const std::string& file_path) {
     // std::cout << "aaaa" << i << std::endl;
 
     sqe = io_uring_get_sqe(&ring);  // 获取可用 SQE
-    io_uring_prep_readv(sqe,        // 用这个 SQE 准备一个待提交的 read 操作
-      fd,         // 从 fd 打开的文件中读取数据
-      &iovecs[i], // iovec 地址，读到的数据写入 iovec 缓冲区
-      1,          // iovec 数量
-      offset);    // 读取操作的起始地址偏移量
+    io_uring_prep_readv(sqe,  // 用这个 SQE 准备一个待提交的 read 操作
+                        fd,  // 从 fd 打开的文件中读取数据
+                        &iovecs[i],  // iovec 地址，读到的数据写入 iovec 缓冲区
+                        1,        // iovec 数量
+                        offset);  // 读取操作的起始地址偏移量
     // io_uring_prep_read(sqe, fd, &iovecs[i].iov_base, gbp::PAGE_SIZE_MEMORY,
     //   offset);
-    offset += iovecs[i].iov_len;    // 更新偏移量，下次使用
+    offset += iovecs[i].iov_len;  // 更新偏移量，下次使用
     i++;
 
-    if (QD == i)        // 如果超出了文件大小，停止准备后面的 SQE
+    if (QD == i)  // 如果超出了文件大小，停止准备后面的 SQE
       break;
   } while (1);
 
   // 5. 提交 SQE 读请求
-  ret = io_uring_submit(&ring);       // 4 个 SQE 一次提交，返回提交成功的 SQE 数量
+  ret = io_uring_submit(&ring);  // 4 个 SQE 一次提交，返回提交成功的 SQE 数量
   if (ret < 0) {
     fprintf(stderr, "io_uring_submit: %s\n", strerror(-ret));
     return 1;
-  }
-  else if (ret != i) {
+  } else if (ret != i) {
     fprintf(stderr, "io_uring_submit submitted less %d\n", ret);
     return 1;
   }
@@ -488,13 +487,15 @@ int test_aa(const std::string& file_path) {
     }
 
     fsize += cqe->res;
-    io_uring_cqe_seen(&ring, cqe);   // 更新 io_uring 实例的完成队列
+    io_uring_cqe_seen(&ring, cqe);  // 更新 io_uring 实例的完成队列
   }
   for (i = 0; i < QD; i++) {
-    std::cout << *reinterpret_cast<gbp::fpage_id_type*>(iovecs[i].iov_base) << std::endl;
+    std::cout << *reinterpret_cast<gbp::fpage_id_type*>(iovecs[i].iov_base)
+              << std::endl;
   }
   // 7. 打印统计信息
-  printf("Submitted=%d, completed=%d, bytes=%lu\n", pending, done, (unsigned long)fsize);
+  printf("Submitted=%d, completed=%d, bytes=%lu\n", pending, done,
+         (unsigned long) fsize);
 
   // 8. 清理工作
   close(fd);

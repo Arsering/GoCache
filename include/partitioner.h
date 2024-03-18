@@ -13,35 +13,37 @@
 // limitations under the License.
 
 #pragma once
-#include <tuple>
 
+#include <tuple>
 #include "config.h"
 
 namespace gbp {
-class RoundRobinPartitioner {
- public:
-  RoundRobinPartitioner(partition_id_type _num_partitions,
-                        fpage_id_type _num_fpages)
-      : num_partitions(_num_partitions), num_vpages(_num_fpages) {}
+  class RoundRobinPartitioner {
+  public:
+    RoundRobinPartitioner(partition_id_type num_partitions,
+      fpage_id_type num_fpages)
+      : num_partitions_(num_partitions), num_vpages_(num_fpages) {}
 
-  std::tuple<partition_id_type, block_id_type> operator()(
-      fpage_id_type fpage_id) const {
-    return {fpage_id % num_partitions, fpage_id / num_partitions};
-  }
+    FORCE_INLINE std::tuple<partition_id_type, fpage_id_type> operator()(fpage_id_type fpage_id) const {
+      return { fpage_id % num_partitions_, fpage_id / num_partitions_ };
+    }
 
-  block_id_type num_blocks(partition_id_type partition_id) const {
-    return num_vpages / num_partitions +
-           (partition_id < num_vpages % num_partitions);
-  }
+    FORCE_INLINE partition_id_type GetPartitionId(fpage_id_type fpage_id) const {
+      return fpage_id % num_partitions_;
+    }
 
-  fpage_id_type operator()(partition_id_type partition_id,
-                           block_id_type block_id) const {
-    return block_id * num_partitions + partition_id;
-  }
+    FORCE_INLINE fpage_id_type GetFPageIdInPool(fpage_id_type fpage_id) const {
+      return fpage_id / num_partitions_;
+    }
 
- private:
-  const partition_id_type num_partitions;
-  const fpage_id_type num_vpages;
-};
+    FORCE_INLINE fpage_id_type NumFPage(partition_id_type partition_id) const {
+      assert(false);
+      return 100;
+    }
+
+  private:
+    const partition_id_type num_partitions_;
+    const fpage_id_type num_vpages_;
+  };
 
 }  // namespace gbp

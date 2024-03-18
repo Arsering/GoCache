@@ -112,7 +112,7 @@ namespace test {
     return false;
   }
 
-  void fiber_pread(const std::string& file_path, size_t file_size_inByte, size_t io_size, size_t thread_id) {
+  void fiber_pread(gbp::DiskManager* disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id) {
     boost::circular_buffer<std::optional<async_request_fiber_type>>
       async_requests(gbp::FIBER_CHANNEL_DEPTH);
     size_t num_async_fiber_processing = 0;
@@ -165,7 +165,7 @@ namespace test {
       0, gbp::ceil(file_size_inByte, io_size) - 1);
 
     size_t req_num = 1000, fpage_id;
-    gbp::IOURing io_backend(file_path);
+    gbp::IOURing io_backend(disk_manager);
     // for (size_t req_id = 1; req_id < req_num; req_id++) {
     while (true) {
       char* in_buf = (char*)aligned_alloc(gbp::PAGE_SIZE_FILE, io_size);
