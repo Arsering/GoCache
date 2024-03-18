@@ -20,6 +20,12 @@
 #define unlikely(x) __builtin_expect((x), 0)
 
 namespace gbp {
+    using fpage_id_type = uint32_t;
+    using mpage_id_type = uint32_t;
+    using GBPfile_handle_type = uint32_t;
+    using OSfile_handle_type = uint32_t;
+    using partition_id_type = uint32_t;
+
     constexpr uint32_t INVALID_PAGE_ID =
         std::numeric_limits<uint32_t>::max();  // representing an invalid page id
     constexpr uint16_t INVALID_FILE_HANDLE = std::numeric_limits<uint16_t>::max();
@@ -29,11 +35,18 @@ namespace gbp {
     constexpr static size_t IOURing_MAX_DEPTH = 128;
     constexpr static size_t FIBER_CHANNEL_DEPTH = 100;
 
-    constexpr bool USING_FIBER_ASYNC_RESPONSE = true;
+    constexpr bool USING_FIBER_ASYNC_RESPONSE = false;
+    constexpr int IO_BACKEND_TYPE = 1; // 1: pread; 2: IO_Uring 
+
     constexpr bool PURE_THREADING = true;
     constexpr size_t HYBRID_SPIN_THRESHOLD =
         PURE_THREADING ? (1lu << 0) : (1lu << 30);
     constexpr size_t FIBER_BATCH_SIZE = 128;
+
+    constexpr mpage_id_type INVALID_MPAGE_ID = std::numeric_limits<mpage_id_type>::max();
+    constexpr fpage_id_type INVALID_FPAGE_ID = std::numeric_limits<fpage_id_type>::max();
+
+
     class NonCopyable {
     protected:
         // NonCopyable(const NonCopyable &) = delete;
@@ -42,13 +55,6 @@ namespace gbp {
         NonCopyable() = default;
         ~NonCopyable() = default;
     };
-
-    using fpage_id_type = uint32_t;
-    using mpage_id_type = uint32_t;
-    using GBPfile_handle_type = uint32_t;
-    using OSfile_handle_type = uint32_t;
-    using block_id_type = uint64_t;
-    using partition_id_type = uint64_t;
 
     std::atomic<size_t>& get_pool_num();
 

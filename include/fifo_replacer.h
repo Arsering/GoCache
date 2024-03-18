@@ -22,38 +22,35 @@
 
 namespace gbp {
 
-class FIFOReplacer : public Replacer<mpage_id_type> {
-  struct ListNode {
-    ListNode(){};
-    ListNode(mpage_id_type val) : val(val){};
-    mpage_id_type val;
-    ListNode* prev;
-    ListNode* next;
+  class FIFOReplacer : public Replacer<mpage_id_type> {
+    struct ListNode {
+      ListNode() {};
+      ListNode(mpage_id_type val) : val(val) {};
+      mpage_id_type val;
+      ListNode* prev;
+      ListNode* next;
+    };
+
+  public:
+    // do not change public interface
+    FIFOReplacer(PageTable* pages_);
+    FIFOReplacer(const FIFOReplacer& other) = delete;
+    FIFOReplacer& operator=(const FIFOReplacer&) = delete;
+
+    ~FIFOReplacer();
+
+    void Insert(const mpage_id_type& value) override;
+    bool Victim(mpage_id_type& value) override;
+    bool Erase(const mpage_id_type& value) override;
+    size_t Size() const override;
+
+  private:
+    ListNode head_;
+    ListNode tail_;
+    std::unordered_map<mpage_id_type, ListNode*> map_;
+    mutable std::mutex latch_;
+    PageTable* page_table_;
+    // add your member variables here
   };
-
- public:
-  // do not change public interface
-  FIFOReplacer(PageTable* pages_);
-  FIFOReplacer(const FIFOReplacer& other) = delete;
-  FIFOReplacer& operator=(const FIFOReplacer&) = delete;
-
-  ~FIFOReplacer();
-
-  void Insert(const mpage_id_type& value) override;
-
-  bool Victim(mpage_id_type& value) override;
-
-  bool Erase(const mpage_id_type& value) override;
-
-  size_t Size() const override;
-
- private:
-  ListNode head_;
-  ListNode tail_;
-  std::unordered_map<mpage_id_type, ListNode*> map_;
-  mutable std::mutex latch_;
-  PageTable* pages_;
-  // add your member variables here
-};
 
 }  // namespace gbp

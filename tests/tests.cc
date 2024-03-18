@@ -68,23 +68,28 @@ namespace test {
     volatile size_t sum = 0;
     size_t st, io_id;
     while (true) {
-      // for (size_t io_id = 0; io_id < io_num; io_id++) {
-      //   curr_io_fileoffset = io_id * io_size;
+      // for (io_id = 0; io_id < io_num;io_id++) {
+      //  curr_io_fileoffset = io_id * io_size;
 
       while (true) {
         io_id = rnd(gen);
         curr_io_fileoffset = io_id * io_size;
 
         // st = gbp::GetSystemTime();
-        // std::cout << "a" << io_id << std::endl;
         auto ret = bpm.GetObject(curr_io_fileoffset, io_size);
+        // std::lock_guard lock(gbp::debug::get_file_lock());
+        // std::cout << io_id << std::endl;
+
         for (size_t i = 0; i < io_size; i += 4096) {
           sum += ret.Data()[i];
         }
 
         // st = gbp::GetSystemTime() - st;
+        // std::lock_guard lock(gbp::debug::get_file_lock());
+        // if (*reinterpret_cast<size_t*>(ret.Data()) != io_id)
+        //   std::cout << *reinterpret_cast<size_t*>(ret.Data()) << " | " << io_id << std::endl;
         assert(*reinterpret_cast<size_t*>(ret.Data()) == io_id);
-
+        // return;
         // std::string slice{ret.Data(), 10};
         // std::cout << "aa = " << slice << std::endl;
         // std::cout << "st = " << st << std::endl;
@@ -290,21 +295,22 @@ namespace test {
 
     size_t file_size_inByte = 1024LU * 1024LU * 1024LU * file_size_GB;
     int data_file = -1;
-    // data_file = ::open(file_path.c_str(), O_RDWR | O_CREAT | O_DIRECT);
-    // assert(data_file != -1);
+    data_file = ::open(file_path.c_str(), O_RDWR | O_CREAT | O_DIRECT);
+    assert(data_file != -1);
     // ::ftruncate(data_file, file_size_inByte);
 
     char* data_file_mmaped = nullptr;
+
     // data_file_mmaped = (char*) ::mmap(
-    //     NULL, file_size_inByte, PROT_READ | PROT_WRITE, MAP_SHARED,
-    //     data_file, 0);
+    //   NULL, file_size_inByte, PROT_READ | PROT_WRITE, MAP_SHARED,
+    //   data_file, 0);
     // assert(data_file_mmaped != nullptr);
     // ::madvise(data_file_mmaped, file_size_inByte,
-    //           MADV_RANDOM);  // Turn off readahead
+    //   MADV_RANDOM);  // Turn off readahead
 
 
     size_t pool_size = 1024LU * 1024LU / 4 * pool_size_GB / pool_num + 1;
-    // gbp::RWSysCall* disk_manager = new gbp::RWSysCall(file_name);
+    gbp::DiskManager* disk_manager = new gbp::DiskManager(file_path);
     auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
     bpm.init(pool_num, pool_size, file_path);
     bpm.Resize(0, file_size_inByte);
@@ -320,22 +326,22 @@ namespace test {
     IO_throughput().store(0);
     // worker_num = file_size_inByte / (1024LU * 1024LU * 1024LU * 1);
 
-    printf("file_size = %luGB\tio_size = %luBits\t#worker = %lu\n", file_size_GB,
-      io_size, worker_num);
+    printf("%s\tfile_size = %luGB\tio_size = %luBits\t#worker = %lu\t#pool_size = %lu\n", argv[5], file_size_GB,
+      io_size, worker_num, pool_size_GB);
 
     // warmup(data_file_mmaped, file_size_inByte, io_size);
     for (size_t i = 0; i < worker_num; i++) {
       // thread_pool.emplace_back(write_mmap, data_file_mmaped,
-      //                          (1024LU * 1024LU * 1024LU * 1), io_size,
-      //                          (1024LU * 1024LU * 1024LU * 1) * i, i);
-      // thread_pool.emplace_back(read_pread, data_file, file_size_inByte,
-      //   io_size, i);
-      // thread_pool.emplace_back(fiber_pread, file_path, file_size_inByte, io_size,
+      //   (1024LU * 1024LU * 1024LU * 1), io_size,
+      //   (1024LU * 1024LU * 1024LU * 1) * i, i);
+      thread_pool.emplace_back(read_pread, data_file, file_size_inByte,
+        io_size, i);
+      // thread_pool.emplace_back(fiber_pread, disk_manager, file_size_inByte, io_size,
       //   i);
       // thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
       //                          io_size, i);
-      thread_pool.emplace_back(read_bufferpool, data_file, file_size_inByte,
-        io_size, i);
+      // thread_pool.emplace_back(read_bufferpool, data_file, file_size_inByte,
+      //   io_size, i);
     }
     for (auto& thread : thread_pool) {
       thread.join();

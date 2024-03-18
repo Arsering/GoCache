@@ -1,43 +1,45 @@
 #include "../include/buffer_pool.h"
 
-#include <sys/mman.h>
-#include <utility>
-
 namespace gbp {
-
   /*
    * BufferPoolInner Constructor
    * When log_manager is nullptr, logging is disabled (for test purpose)
    * WARNING: Do Not Edit This Function
    */
   void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
-    IOBackend* disk_manager) {
+    DiskManager* disk_manager, RoundRobinPartitioner* partitioner) {
     pool_ID_ = pool_ID;
     pool_size_ = pool_size;
-    io_backend_ = disk_manager;
+
+    if constexpr (IO_BACKEND_TYPE == 1)
+      io_backend_ = new RWSysCall(disk_manager);
+    else if (IO_BACKEND_TYPE == 2)
+      io_backend_ = new IOURing(disk_manager);
+
+    partitioner_ = partitioner;
 
     // a consecutive memory space for buffer pool
     buffer_pool_ = new MemoryPool(pool_size);
     madvise(buffer_pool_, pool_size * PAGE_SIZE_MEMORY, MADV_RANDOM);
-    pages_ = new PageTable(buffer_pool_->FromPageId(0), pool_size);
+    page_table_ = new PageTable(pool_size);
 
     // page_table_ = new std::vector<ExtendibleHash<page_id_infile, PTE *>>();
-    replacer_ = new FIFOReplacer(pages_);
+    replacer_ = new FIFOReplacer(page_table_);
     free_list_.reset(new VectorSync<PTE*>(pool_size_));
 
-    for (auto fd_os : io_backend_->fd_oss_) {
+    for (auto fd_os : io_backend_->disk_manager_->fd_oss_) {
       uint32_t file_size_in_page =
         ceil(io_backend_->GetFileSize(fd_os.first), PAGE_SIZE_MEMORY);
-      auto* page_table = new WrappedVector<fpage_id_type, mpage_id_type>(
-        ceil(file_size_in_page, get_pool_num().load()));
-      page_tables_.push_back(page_table);
+      page_table_->RegisterFile(file_size_in_page);
     }
 
     // put all the pages into free list
     for (mpage_id_type i = 0; i < pool_size_; ++i) {
-      free_list_->GetData()[i] = pages_->FromPageId(i);
+      free_list_->GetData()[i] = page_table_->FromPageId(i);
     }
     free_list_->size_ = pool_size_;
+
+    io_server_ = new IOServer();
   }
 
   /*
@@ -45,19 +47,15 @@ namespace gbp {
    * WARNING: Do Not Edit This Function
    */
   BufferPool::~BufferPool() {
-    delete[] pages_;
+    delete page_table_;
 
     delete replacer_;
     delete buffer_pool_;
-
-    for (auto page_table : page_tables_)
-      delete page_table;
+    delete io_server_;
   }
 
   void BufferPool::RegisterFile(OSfile_handle_type fd) {
-    auto* page_table =
-      new WrappedVector<fpage_id_type, mpage_id_type>(io_backend_->GetFileSize(fd));
-    page_tables_.push_back(page_table);
+    page_table_->RegisterFile(ceil(io_backend_->GetFileSize(fd), PAGE_SIZE_FILE));
   }
 
   /*
@@ -70,11 +68,11 @@ namespace gbp {
     GBPfile_handle_type fd) {
     PTE* tar = nullptr;
 
-    auto [success, mpage_id] = page_tables_[fd]->Find(fpage_id);
+    auto [success, mpage_id] = page_table_->FindMapping(fd, fpage_id);
     if (!success) {
       return false;
     }
-    tar = pages_->FromPageId(mpage_id);
+    tar = page_table_->FromPageId(mpage_id);
 
     tar->dirty = is_dirty;
     if (tar->GetRefCount() <= 0) {
@@ -82,7 +80,7 @@ namespace gbp {
     };
 
     if (std::get<1>(tar->DecRefCount()) == 0) {
-      replacer_->Insert(pages_->ToPageId(tar));
+      replacer_->Insert(page_table_->ToPageId(tar));
     }
     return true;
   }
@@ -113,18 +111,18 @@ namespace gbp {
     // std::lock_guard<std::mutex> lck(latch_);
     PTE* tar = nullptr;
 
-    auto [success, mpage_id] = page_tables_[fd]->Find(fpage_id);
+    auto [success, mpage_id] = page_table_->FindMapping(fd, fpage_id);
     if (!success)
       return false;
-    tar = (PTE*)pages_ + mpage_id;
-    tar = pages_->FromPageId(mpage_id);
+    tar = (PTE*)page_table_ + mpage_id;
+    tar = page_table_->FromPageId(mpage_id);
     if (tar->fpage_id == INVALID_PAGE_ID) {
       return false;
     }
 
     if (tar->dirty) {
       io_backend_->Write(
-        fpage_id, (char*)buffer_pool_->FromPageId(pages_->ToPageId(tar)),
+        fpage_id, (char*)buffer_pool_->FromPageId(page_table_->ToPageId(tar)),
         tar->GetFileHandler());
       tar->dirty = false;
     }
@@ -207,7 +205,6 @@ namespace gbp {
 #ifdef DEBUG_1
     { st = GetSystemTime(); }
 #endif
-    tar = free_list_->GetItem();
 #ifdef DEBUG_1
     {
       st = GetSystemTime() - st;
@@ -215,24 +212,21 @@ namespace gbp {
         debug::get_counter_FPL_get().fetch_add(st);
     }
 #endif
-    if (tar == nullptr) {
-      if (replacer_->Size() == 0) {
-        return nullptr;
-      }
-#ifdef DEBUG_1
-      { st = GetSystemTime(); }
-#endif
-      replacer_->Victim(page_id);
-
-#ifdef DEBUG_1
-      {
-        st = GetSystemTime() - st;
-        if (debug::get_log_marker() == 1)
-          debug::get_counter_ES_eviction().fetch_add(st);
-      }
-#endif
-      tar = pages_->FromPageId(page_id);
+    if (replacer_->Size() == 0) {
+      return nullptr;
     }
+#ifdef DEBUG_1
+    { st = GetSystemTime(); }
+#endif
+    replacer_->Victim(page_id);
+#ifdef DEBUG_1
+    {
+      st = GetSystemTime() - st;
+      if (debug::get_log_marker() == 1)
+        debug::get_counter_ES_eviction().fetch_add(st);
+    }
+#endif
+    tar = page_table_->FromPageId(page_id);
     assert(tar->GetRefCount() == 0);
     return tar;
   }
@@ -251,9 +245,8 @@ namespace gbp {
    * This function must mark the Page as pinned and remove its entry from
    * LRUReplacer before it is returned to the caller.
    */
-  std::pair<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
-    GBPfile_handle_type fd) {
-#ifdef DEBUG_t
+  std::tuple<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id, GBPfile_handle_type fd) {
+#ifdef DEBUG
     if (debug::get_log_marker() == 1)
       debug::get_counter_fetch().fetch_add(1);
     // if (!debug::get_bitset(fd).test(fpage_id))
@@ -261,7 +254,7 @@ namespace gbp {
     // debug::get_bitset(fd).set(fpage_id);
 #endif
 
-#ifdef DEBUG_t
+#ifdef DEBUG
   // if (latch_.try_lock()) {
   //   latch_.unlock();
   // } else {
@@ -269,136 +262,95 @@ namespace gbp {
   //     debug::get_counter_contention().fetch_add(1);
   // }
     size_t st = gbp::GetSystemTime();
-
 #endif
-    std::lock_guard<std::mutex> lck(latch_);
-#ifdef DEBUG_t
-    st = gbp::GetSystemTime() - st;
-    if (debug::get_log_marker() == 1)
-      debug::get_counter_contention().fetch_add(st);
-#endif
+    // std::lock_guard<std::mutex> lck(latch_);
+    auto stat = context_type::Phase::Begin;
 
-    // assert(fpage_id % get_pool_num().load() == pool_ID_);
-    fpage_id_type page_id_inpool = fpage_id / get_pool_num().load();
-
-    // size_t st;
+    assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
+    fpage_id_type fpage_id_inpool = partitioner_->GetFPageIdInPool(fpage_id);
     PTE* tar = nullptr;
     char* fpage_data = nullptr;
 
-    assert(fd < page_tables_.size());
-#ifdef DEBUG
-    st = GetSystemTime();
-#endif
-    auto ret = Pin(fpage_id, fd);
-    if (std::get<0>(ret)) {  // 1.1
-#ifdef DEBUG
-      {
-        st = GetSystemTime() - st;
-        if (debug::get_log_marker() == 1)
-          debug::get_counter_MAP_find().fetch_add(st);
+    while (true) {
+      switch (stat) {
+      case context_type::Phase::Begin: {
+        auto ret = Pin(fpage_id_inpool, fd);
+        if (std::get<0>(ret)) {  // 1.1
+          stat = context_type::Phase::End;
+          return ret;
+        }
+        auto [locked, mpage_id_t] = page_table_->LockMapping(fd, fpage_id_inpool);
+        if (locked) {
+          stat = context_type::Phase::Initing;
+        }
+
+        break;
       }
-#endif
-      return ret;
-    }
-#ifdef DEBUG
-    {
-      st = GetSystemTime() - st;
-      if (debug::get_log_marker() == 1) {
-        debug::get_counter_MAP_find().fetch_add(st);
+      case context_type::Phase::Initing: { // 1.2
+        if (free_list_->GetItem(tar)) {
+          stat = context_type::Phase::Loading;
+        }
+        else {
+          tar = GetVictimPage();
+          if (tar == nullptr) {
+            return { tar, nullptr };
+          }
+          stat = context_type::Phase::Evicting;
+        }
+
+        fpage_data = (char*)buffer_pool_->FromPageId(page_table_->ToPageId(tar));
+        break;
+      }
+      case context_type::Phase::Evicting: { // 2
+        if (tar->dirty) {
+          io_backend_->Write(tar->GetFPageId(), fpage_data, tar->GetFileHandler());
+        }
+        if (tar->GetFileHandler() != INVALID_FILE_HANDLE) {
+          page_table_->DeleteMapping(fd, tar->GetFPageId());
+        }
+        stat = context_type::Phase::Loading;
+        break;
+      }
+      case context_type::Phase::Loading: { // 4
+        ::memset(fpage_data, 1, PAGE_SIZE_MEMORY);
+
+        if constexpr (USING_FIBER_ASYNC_RESPONSE) {
+          auto req = io_server_->SendRequest(fpage_id, 1, fpage_data, io_backend_);
+          size_t loops = 0;
+          while (!req.Inner().success) {
+            hybrid_spin(loops);
+          }
+        }
+        else {
+          io_backend_->Read(fpage_id, fpage_data, fd);
+        }
+        tar->Clean();
+        tar->ref_count = 1;
+        tar->fpage_id = fpage_id_inpool;
+        tar->fd = fd;
+        std::atomic_thread_fence(std::memory_order_release);
+
+        if (!page_table_->CreateMapping(fd, fpage_id_inpool, page_table_->ToPageId(tar)))
+          assert(false);
+        replacer_->Insert(page_table_->ToPageId(tar));
+        stat = context_type::Phase::End;
+      }
+      case context_type::Phase::End: {
+        return { tar, fpage_data };
+      }
       }
     }
-#endif
-    // 1.2
-    tar = GetVictimPage();
-    if (tar == nullptr)
-      return { tar, nullptr };
-
-    // 2
-    fpage_data = (char*)buffer_pool_->FromPageId(pages_->ToPageId(tar));
-    if (tar->dirty) {
-      io_backend_->Write(tar->GetFPageId(), fpage_data, tar->GetFileHandler());
-    }
-
-    // 3
-    if (tar->GetFileHandler() != INVALID_FILE_HANDLE) {
-#ifdef DEBUG
-      { st = GetSystemTime(); }
-#endif
-      page_tables_[tar->GetFileHandler()]->Remove(tar->GetFPageId() /
-        get_pool_num().load());
-
-#ifdef DEBUG
-      {
-        st = GetSystemTime() - st;
-        if (debug::get_log_marker() == 1)
-          debug::get_counter_MAP_eviction().fetch_add(st);
-      }
-#endif
-    }
-#ifdef DEBUG
-    { st = GetSystemTime(); }
-#endif
-    page_tables_[fd]->Insert(page_id_inpool, pages_->ToPageId(tar));
-#ifdef DEBUG
-    {
-      st = GetSystemTime() - st;
-      if (debug::get_log_marker() == 1)
-        debug::get_counter_MAP_insert().fetch_add(st);
-    }
-#endif
-    // 4
-#ifdef DEBUG
-    { st = GetSystemTime(); }
-#endif
-    io_backend_->Read(
-      fpage_id, (char*)buffer_pool_->FromPageId(pages_->ToPageId(tar)), fd);
-#ifdef DEBUG
-    {
-      st = GetSystemTime() - st;
-      if (debug::get_log_marker() == 1)
-        debug::get_counter_pread().fetch_add(st);
-    }
-#endif
-    tar->clean();
-    tar->ref_count = 1;
-    tar->dirty = false;
-    tar->fpage_id = fpage_id;
-    tar->fd = fd;
-
-    // 1. 换为32int
-    // 2. 屏蔽map
-#ifdef DEBUG
-    { st = GetSystemTime(); }
-#endif
-    replacer_->Insert(pages_->ToPageId(tar));
-#ifdef DEBUG
-    {
-      st = GetSystemTime() - st;
-      if (debug::get_log_marker() == 1)
-        debug::get_counter_ES_insert().fetch_add(st);
-    }
-#endif
     return { tar, fpage_data };
   }
 
-  std::pair<PTE*, char*> BufferPool::Pin(fpage_id_type fpage_id,
-    GBPfile_handle_type fd) {
-    fpage_id_type page_id_inpool = fpage_id / get_pool_num().load();
-
-    assert(fd < page_tables_.size());
-    assert(page_id_inpool < page_tables_[fd]->Size());
-
+  std::tuple<PTE*, char*> BufferPool::Pin(fpage_id_type fpage_id_inpool, GBPfile_handle_type fd) {
     // 1.1
-    auto [success, mpage_id] = page_tables_[fd]->Find(page_id_inpool);
+    auto [success, mpage_id] = page_table_->FindMapping(fd, fpage_id_inpool);
     if (success) {
-      auto tar = pages_->FromPageId(mpage_id);
-      auto [has_inc, pre_ref_count] = tar->IncRefCount();
-      if (has_inc && tar->fpage_id == fpage_id && tar->fd == fd)
+      auto tar = page_table_->FromPageId(mpage_id);
+      auto [has_inc, pre_ref_count] = tar->IncRefCount(fpage_id_inpool, fd);
+      if (has_inc)
         return { tar, (char*)buffer_pool_->FromPageId(mpage_id) };
-      else {
-        std::cout << "fuck" << tar->fpage_id << " | " << std::endl;
-        exit(-1);
-      }
 
       if (has_inc) {
         auto [has_dec, _] = tar->DecRefCount();
@@ -428,7 +380,7 @@ namespace gbp {
 #ifdef DEBUG
       st = GetSystemTime();
 #endif
-      object_size_t = PageTable::SetObject(buf, mpage, page_offset, object_size);
+      object_size_t = PageTableInner::SetObject(buf, mpage, page_offset, object_size);
 
 #ifdef DEBUG
       latency = GetSystemTime() - st;
@@ -451,7 +403,7 @@ namespace gbp {
 
     while (object_size > 0) {
       auto mpage = FetchPage(page_id, fd);
-      object_size_t = PageTable::SetObject(buf, mpage, page_offset, object_size);
+      object_size_t = PageTableInner::SetObject(buf, mpage, page_offset, object_size);
 
       object_size -= object_size_t;
       buf += object_size_t;
@@ -471,7 +423,7 @@ namespace gbp {
       st = GetSystemTime();
 #endif
       auto mpage = FetchPage(page_id, fd);
-      assert(mpage.second != nullptr);
+      assert(std::get<1>(mpage) != nullptr);
 #ifdef DEBUG
       st = GetSystemTime() - st;
       if (debug::get_log_marker() == 1)
@@ -480,8 +432,8 @@ namespace gbp {
 #ifdef DEBUG
       st = GetSystemTime();
 #endif
-      BufferObject ret(object_size, mpage.second + page_offset, mpage.first);
-      mpage.first->DecRefCount(false);
+      BufferObject ret(object_size, std::get<1>(mpage) + page_offset, std::get<0>(mpage));
+      std::get<0>(mpage)->DecRefCount(false);
 #ifdef DEBUG
       st = GetSystemTime() - st;
       if (debug::get_log_marker() == 1)

@@ -12,6 +12,6 @@ namespace test {
 
     int test_concurrency(int argc, char** argv);
 
-    void fiber_pread(const std::string& file_path, size_t file_size_inByte,
+    void fiber_pread(gbp::DiskManager* disk_manager, size_t file_size_inByte,
         size_t io_size, size_t thread_id);
 }  // namespace test

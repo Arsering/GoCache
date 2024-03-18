@@ -11,7 +11,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 project(graphscope_bufferpool)
 
-set(DEFAULT_BUILD_TYPE "Release")
+set(DEFAULT_BUILD_TYPE "Debug")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -O0")
 set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0")
 
@@ -21,6 +21,14 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0")
 #     message(FATAL_ERROR "glog not found, please install the glog library")
 # else ()
 #     include_directories(SYSTEM ${GLOG_INCLUDE_DIRS})
+# endif ()
+
+# # find gflags-------------------------------------------------------------------
+# include("cmake/FindGFlags.cmake")
+# if (NOT GFLAGS_FOUND)
+#     message(STATUS "gflags not found, build without gflags")
+# else ()
+#     include_directories(SYSTEM ${GFLAGS_INCLUDE_DIRS})
 # endif ()
 
 set(LIBRARY_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/lib)
@@ -43,4 +51,12 @@ find_package(Boost REQUIRED COMPONENTS system filesystem fiber
              # required by folly
              context program_options regex thread)
 target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} uring)
+
+find_package (GFlags REQUIRED)
+find_package(Glog REQUIRED) 
+target_link_libraries (${PROJECT_NAME}  ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+# find_package (glog REQUIRED)
+# target_link_libraries (${PROJECT_NAME} glog)
+# find_package (gflags REQUIRED)
+# target_link_libraries (${PROJECT_NAME} gflags)
 
