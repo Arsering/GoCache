@@ -15,19 +15,19 @@ fi
 
 cd ..
 
-# CUR_DIR=.
-# export time=$(date "+%Y-%m-%d-%H:%M:%S")
-# export LOG_DIR=${CUR_DIR}/logs/${time}
-# mkdir -p ${LOG_DIR}
+CUR_DIR=.
+export time=$(date "+%Y-%m-%d-%H:%M:%S")
+export LOG_DIR=${CUR_DIR}/logs/${time}
+mkdir -p ${LOG_DIR}
 
-# echo 1 > /proc/sys/vm/drop_caches
+echo 1 > /proc/sys/vm/drop_caches
 
-# export FILE_SIZE_GB=32
-# export WORKER_NUM=15
-# export POOL_NUM=10
-# export POOL_SIZE_GB=4
-# export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD
-# ./bin/graphscope_bufferpool ${FILE_SIZE_GB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_GB} ${TEST_TYPE}> ${LOG_DIR}/log.log
+export FILE_SIZE_GB=32
+export WORKER_NUM=20
+export POOL_NUM=3
+export POOL_SIZE_GB=4
+export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD
+./bin/graphscope_bufferpool ${FILE_SIZE_GB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_GB} ${TEST_TYPE}> ${LOG_DIR}/log.log
 
 # > ${LOG_DIR}/log.log
 # ./bin/graphscope_bufferpool ${FILE_SIZE_GB} ${WORKER_NUM}

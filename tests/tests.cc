@@ -334,14 +334,14 @@ namespace test {
       // thread_pool.emplace_back(write_mmap, data_file_mmaped,
       //   (1024LU * 1024LU * 1024LU * 1), io_size,
       //   (1024LU * 1024LU * 1024LU * 1) * i, i);
-      thread_pool.emplace_back(read_pread, data_file, file_size_inByte,
-        io_size, i);
+      // thread_pool.emplace_back(read_pread, data_file, file_size_inByte,
+      //   io_size, i);
       // thread_pool.emplace_back(fiber_pread, disk_manager, file_size_inByte, io_size,
       //   i);
       // thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
       //                          io_size, i);
-      // thread_pool.emplace_back(read_bufferpool, data_file, file_size_inByte,
-      //   io_size, i);
+      thread_pool.emplace_back(read_bufferpool, data_file, file_size_inByte,
+        io_size, i);
     }
     for (auto& thread : thread_pool) {
       thread.join();

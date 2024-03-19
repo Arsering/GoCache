@@ -35,8 +35,8 @@ namespace gbp {
     constexpr static size_t IOURing_MAX_DEPTH = 128;
     constexpr static size_t FIBER_CHANNEL_DEPTH = 100;
 
-    constexpr bool USING_FIBER_ASYNC_RESPONSE = false;
-    constexpr int IO_BACKEND_TYPE = 1; // 1: pread; 2: IO_Uring 
+    constexpr int IO_BACKEND_TYPE = 2; // 1: pread; 2: IO_Uring 
+    constexpr bool USING_FIBER_ASYNC_RESPONSE = true;
 
     constexpr bool PURE_THREADING = true;
     constexpr size_t HYBRID_SPIN_THRESHOLD =
