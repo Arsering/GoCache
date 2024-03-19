@@ -89,6 +89,7 @@ namespace gbp {
     size_t pool_size_;  // number of pages in buffer pool
     DiskManager* disk_manager_;
     RoundRobinPartitioner* partitioner_;
+    EvictionServer* eviction_server_;
     std::vector<BufferPool*> pools_;
 
     void RegisterFile(OSfile_handle_type fd);

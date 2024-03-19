@@ -209,6 +209,8 @@ namespace gbp {
     }
 
     PTE* FromPageId(mpage_id_type page_id) const {
+      if (page_id >= num_pages_)
+        std::cout << "aa" << page_id << " |  " << num_pages_ << std::endl;
       assert(page_id < num_pages_);
       return pool_ + page_id;
     }
@@ -391,6 +393,9 @@ namespace gbp {
     }
 
     FORCE_INLINE std::tuple<bool, mpage_id_type> LockMapping(GBPfile_handle_type fd, fpage_id_type fpage_id, bool for_create = true) {
+      if (fd >= mappings_.size()) {
+        std::cout << "aa " << fd << std::endl;
+      }
       assert(fd < mappings_.size());
       return mappings_[fd]->LockMapping(fpage_id, for_create);
     }

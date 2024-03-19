@@ -27,41 +27,10 @@
 #include <utility>
 #include "io_server.h"
 
+#include "eviction_server.h"
+
+
 namespace gbp {
-
-  template <typename T>
-  struct VectorSync {
-    std::vector<T> data_;
-    std::atomic<size_t> size_;
-    size_t capacity_;
-
-    VectorSync(size_t capacity) : size_(0), capacity_(capacity) {
-      data_.resize(capacity);
-    }
-    ~VectorSync() = default;
-
-    bool GetItem(T& ret) {
-      auto size_now = size_.load();
-      do {
-        if (size_now == 0)
-          return false;
-      } while (!size_.compare_exchange_weak(size_now, size_now - 1, std::memory_order_release,
-        std::memory_order_relaxed));
-      ret = data_[size_now - 1];
-
-      return true;
-    }
-
-    //FIXME: 此处请调用者确保空间足够
-    bool InsertItem(T& item) {
-      auto size_now = size_.fetch_add(1, std::memory_order_relaxed);
-      data_[size_now - 1] = item;
-    }
-
-    std::vector<T>& GetData() { return data_; }
-    bool Empty() const { return size_ == 0; }
-    size_t GetSize() const { return size_; }
-  };
 
   class BufferPool {
     friend class BufferPoolManager;
@@ -72,7 +41,7 @@ namespace gbp {
 
 
     void init(u_int32_t pool_ID, mpage_id_type pool_size,
-      DiskManager* disk_manager, RoundRobinPartitioner* partitioner);
+      DiskManager* disk_manager, RoundRobinPartitioner* partitioner, EvictionServer* eviction_server);
 
     bool UnpinPage(mpage_id_type page_id, bool is_dirty,
       GBPfile_handle_type fd = 0);
@@ -142,13 +111,13 @@ namespace gbp {
     IOBackend* io_backend_;
     IOServer* io_server_;
     RoundRobinPartitioner* partitioner_;
+    EvictionServer* eviction_server_;
 
     Replacer<mpage_id_type>*
       replacer_;  // to find an unpinned page for replacement
-    std::unique_ptr<VectorSync<PTE*>>
-      free_list_;     // to find a free page for replacement
+    VectorSync<mpage_id_type>* free_list_;     // to find a free page for replacement
     std::mutex latch_;  // to protect shared data structure
 
     PTE* GetVictimPage();
-    };
-  }  // namespace gbp
+  };
+}  // namespace gbp

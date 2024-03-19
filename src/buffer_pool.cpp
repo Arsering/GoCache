@@ -7,7 +7,7 @@ namespace gbp {
    * WARNING: Do Not Edit This Function
    */
   void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
-    DiskManager* disk_manager, RoundRobinPartitioner* partitioner) {
+    DiskManager* disk_manager, RoundRobinPartitioner* partitioner, EvictionServer* eviction_server) {
     pool_ID_ = pool_ID;
     pool_size_ = pool_size;
 
@@ -17,6 +17,7 @@ namespace gbp {
       io_backend_ = new IOURing(disk_manager);
 
     partitioner_ = partitioner;
+    eviction_server_ = eviction_server;
 
     // a consecutive memory space for buffer pool
     buffer_pool_ = new MemoryPool(pool_size);
@@ -25,7 +26,7 @@ namespace gbp {
 
     // page_table_ = new std::vector<ExtendibleHash<page_id_infile, PTE *>>();
     replacer_ = new FIFOReplacer(page_table_);
-    free_list_.reset(new VectorSync<PTE*>(pool_size_));
+    free_list_ = new VectorSync<mpage_id_type>(pool_size_);
 
     for (auto fd_os : io_backend_->disk_manager_->fd_oss_) {
       uint32_t file_size_in_page =
@@ -34,8 +35,10 @@ namespace gbp {
     }
 
     // put all the pages into free list
+    //FIXME: 无法保证线程安全
     for (mpage_id_type i = 0; i < pool_size_; ++i) {
-      free_list_->GetData()[i] = page_table_->FromPageId(i);
+      free_list_->GetData()[i] = i;
+      // free_list_->InsertItem(i);
     }
     free_list_->size_ = pool_size_;
 
@@ -52,6 +55,7 @@ namespace gbp {
     delete replacer_;
     delete buffer_pool_;
     delete io_server_;
+    delete free_list_;
   }
 
   void BufferPool::RegisterFile(OSfile_handle_type fd) {
@@ -199,7 +203,7 @@ namespace gbp {
 
   PTE* BufferPool::GetVictimPage() {
     PTE* tar = nullptr;
-    mpage_id_type page_id;
+    mpage_id_type mpage_id;
 
     size_t st;
 #ifdef DEBUG_1
@@ -218,7 +222,7 @@ namespace gbp {
 #ifdef DEBUG_1
     { st = GetSystemTime(); }
 #endif
-    replacer_->Victim(page_id);
+    if (!replacer_->Victim(mpage_id)) return nullptr;
 #ifdef DEBUG_1
     {
       st = GetSystemTime() - st;
@@ -226,7 +230,7 @@ namespace gbp {
         debug::get_counter_ES_eviction().fetch_add(st);
     }
 #endif
-    tar = page_table_->FromPageId(page_id);
+    tar = page_table_->FromPageId(mpage_id);
     assert(tar->GetRefCount() == 0);
     return tar;
   }
@@ -283,18 +287,28 @@ namespace gbp {
         if (locked) {
           stat = context_type::Phase::Initing;
         }
-
         break;
       }
       case context_type::Phase::Initing: { // 1.2
-        if (free_list_->GetItem(tar)) {
+        mpage_id_type mpage_id = 10;
+        if (free_list_->GetItem(mpage_id)) {
+          tar = page_table_->FromPageId(mpage_id);
           stat = context_type::Phase::Loading;
         }
         else {
           tar = GetVictimPage();
           if (tar == nullptr) {
-            return { tar, nullptr };
+            break;
           }
+          // std::lock_guard lock(gbp::debug::get_file_lock());
+          // free_list_->InsertItem(page_table_->ToPageId(tar));
+          // mpage_id = 345;
+
+          // std::cout << "a" << page_table_->ToPageId(tar) << " | " << mpage_id << std::endl;
+          // tar = page_table_->FromPageId(mpage_id);
+
+          // if (!eviction_server_->SendRequest(replacer_, free_list_, 16))
+          //   assert(false);
           stat = context_type::Phase::Evicting;
         }
 
@@ -306,7 +320,7 @@ namespace gbp {
           io_backend_->Write(tar->GetFPageId(), fpage_data, tar->GetFileHandler());
         }
         if (tar->GetFileHandler() != INVALID_FILE_HANDLE) {
-          page_table_->DeleteMapping(fd, tar->GetFPageId());
+          page_table_->DeleteMapping(tar->fd, tar->fpage_id);
         }
         stat = context_type::Phase::Loading;
         break;
@@ -315,7 +329,7 @@ namespace gbp {
         ::memset(fpage_data, 1, PAGE_SIZE_MEMORY);
 
         if constexpr (USING_FIBER_ASYNC_RESPONSE) {
-          auto req = io_server_->SendRequest(fpage_id, 1, fpage_data, io_backend_);
+          auto req = io_server_->SendRequest(fd, fpage_id, 1, fpage_data, io_backend_);
           size_t loops = 0;
           while (!req.Inner().success) {
             hybrid_spin(loops);

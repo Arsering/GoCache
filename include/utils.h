@@ -5,6 +5,7 @@
 #include <boost/fiber/operations.hpp>
 #include "config.h"
 
+
 namespace gbp {
   template <typename T>
   FORCE_INLINE std::atomic<T>& as_atomic(T& t) {
@@ -84,5 +85,60 @@ namespace gbp {
     }
     T* object_;
     bool need_delete_;
+  };
+
+  template <typename T>
+  struct VectorSync {
+    std::vector<T> data_;
+    std::atomic<size_t> size_;
+    size_t capacity_;
+    std::mutex latch_;
+
+    VectorSync(size_t capacity) : size_(0), capacity_(capacity) {
+      data_.resize(capacity);
+    }
+    ~VectorSync() = default;
+
+    bool GetItem(T& ret) {
+      std::lock_guard lock(latch_);
+      size_t size_now = size_.load();
+      // do {
+      //   if (size_now == 0)
+      //     return false;
+      // } while (!size_.compare_exchange_weak(size_now, size_now - 1, std::memory_order_release,
+      //   std::memory_order_relaxed));
+
+      if (size_now == 0)
+        return false;
+      ret = data_[size_now - 1];
+      size_--;
+
+      return true;
+    }
+
+    //FIXME: 此处请调用者确保空间足够
+    bool InsertItem(T item) {
+      std::lock_guard lock(latch_);
+      // size_t size_now = size_.load();
+      // data_[size_now] = item;
+      // size_++;
+      // std::atomic_thread_fence(std::memory_order_release);
+      // assert(data_[size_now] == item);
+
+      size_t size_now = size_.load();
+      do {
+        if (size_now >= capacity_)
+          return false;
+        data_[size_now] = item;
+
+      } while (!size_.compare_exchange_weak(size_now, size_now + 1, std::memory_order_release,
+        std::memory_order_relaxed));
+
+      return true;
+    }
+
+    std::vector<T>& GetData() { return data_; }
+    bool Empty() const { return size_ == 0; }
+    size_t GetSize() const { return size_; }
   };
 }  // namespace gbp

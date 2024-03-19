@@ -1,3 +1,5 @@
+#pragma once
+
 #include <numa.h>
 #include <pthread.h>
 #include <xmmintrin.h>
@@ -5,7 +7,7 @@
 #include <boost/fiber/all.hpp>
 #include <cstddef>
 #include <cstdint>
-#include <functional>
+// #include <functional>
 #include <mutex>
 #include <optional>
 #include <queue>
@@ -90,17 +92,17 @@ namespace gbp {
       return true;
     }
 
-    const PointerWrapper<async_request_fiber_type> SendRequest(fpage_id_type fpage_id_start, fpage_id_type page_num, char* buf, IOBackend* io_backend, bool blocked = true) {
+    const PointerWrapper<async_request_fiber_type> SendRequest(GBPfile_handle_type fd, fpage_id_type fpage_id_start, fpage_id_type page_num, char* buf, IOBackend* io_backend, bool blocked = true) {
       context_type context = context_type::GetRawObject(io_backend);
 
-      auto* req = new async_request_fiber_type(buf, PAGE_SIZE_FILE, fpage_id_start, 1, 0, context);
+      auto* req = new async_request_fiber_type(buf, PAGE_SIZE_FILE, fpage_id_start, 1, fd, context);
       SendRequest(req, blocked);
       return req;
     }
 
   private:
 
-    bool process_func(async_request_fiber_type& req) {
+    bool ProcessFunc(async_request_fiber_type& req) {
       switch (req.async_context.state) {
       case  context_type::State::Commit: { // 将read request提交至io_uring
         auto ret = req.async_context.io_backend->Read(
@@ -155,7 +157,7 @@ namespace gbp {
               for (auto& req : async_requests) {
                 if (!req.has_value())
                   continue;
-                if (process_func(*req.value())) {
+                if (ProcessFunc(*req.value())) {
                   req.value()->success.store(true);
                   req.reset();
                 }
@@ -169,6 +171,7 @@ namespace gbp {
               // boost::this_fiber::yield();
             }
           }
+          if (stop_) break;
           hybrid_spin(loops);
         }
           });

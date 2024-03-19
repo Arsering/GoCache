@@ -26,6 +26,7 @@ namespace gbp {
     struct ListNode {
       ListNode() {};
       ListNode(mpage_id_type val) : val(val) {};
+
       mpage_id_type val;
       ListNode* prev;
       ListNode* next;
@@ -41,6 +42,7 @@ namespace gbp {
 
     void Insert(const mpage_id_type& value) override;
     bool Victim(mpage_id_type& value) override;
+    bool Victim(std::vector<mpage_id_type>& value, mpage_id_type page_num)override;
     bool Erase(const mpage_id_type& value) override;
     size_t Size() const override;
 
