@@ -327,7 +327,7 @@ namespace test {
     // worker_num = file_size_inByte / (1024LU * 1024LU * 1024LU * 1);
 
     printf("%s\tfile_size = %luGB\tio_size = %luBits\t#worker = %lu\t#pool_size = %lu\n", argv[5], file_size_GB,
-      io_size, worker_num, pool_size_GB);
+      io_size, worker_num, pool_size);
 
     // warmup(data_file_mmaped, file_size_inByte, io_size);
     for (size_t i = 0; i < worker_num; i++) {

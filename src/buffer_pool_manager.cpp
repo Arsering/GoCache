@@ -15,10 +15,11 @@ namespace gbp {
     // io_backend_ = new RWSysCall(file_path);
     disk_manager_ = new DiskManager(file_path);
     partitioner_ = new RoundRobinPartitioner(pool_num, pool_size);
+    eviction_server_ = new EvictionServer();
 
     for (int idx = 0; idx < pool_num; idx++) {
       pools_.push_back(new BufferPool());
-      pools_[idx]->init(idx, pool_size, disk_manager_, partitioner_);
+      pools_[idx]->init(idx, pool_size, disk_manager_, partitioner_, eviction_server_);
     }
   }
 
@@ -95,7 +96,9 @@ namespace gbp {
       st = GetSystemTime();
 #endif
       BufferObject ret(object_size, std::get<1>(mpage) + fpage_offset, std::get<0>(mpage));
-
+      std::lock_guard lock(gbp::debug::get_file_lock());
+      if (*reinterpret_cast<size_t*>(ret.Data()) != fpage_id)
+        std::cout << *reinterpret_cast<size_t*>(ret.Data()) << " | " << fpage_id << " | " << std::get<0>(mpage)->fpage_id << std::endl;
 #ifdef DEBUG
       st = GetSystemTime() - st;
       if (debug::get_log_marker() == 1)
