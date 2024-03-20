@@ -3,6 +3,8 @@
 #include <atomic>
 #include <boost/fiber/context.hpp>
 #include <boost/fiber/operations.hpp>
+#include <boost/lockfree/queue.hpp>
+
 #include "config.h"
 
 
@@ -143,4 +145,29 @@ namespace gbp {
     bool Empty() const { return size_ == 0; }
     size_t GetSize() const { return size_; }
   };
+
+  template<typename T>
+  class lockfree_queue_type {
+  public:
+    lockfree_queue_type(size_t capacity) :queue_(capacity), size_(0) {}
+    ~lockfree_queue_type() = default;
+
+    bool Push(T& item) {
+      size_.fetch_add(1);
+      return queue_.push(item);
+    }
+    bool Poll(T& item) {
+      size_.fetch_sub(1);
+      return queue_.pop(item);
+    }
+
+    size_t Size() {
+      return size_;
+    }
+
+  private:
+    boost::lockfree::queue<T> queue_;
+    std::atomic<size_t> size_;
+  };
+  void Log_mine(std::string& content);
 }  // namespace gbp

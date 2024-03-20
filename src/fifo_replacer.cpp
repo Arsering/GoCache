@@ -69,10 +69,10 @@ namespace gbp
       auto pte_unpacked = pte->ToUnpacked();
 
       auto [locked, mpage_id] = page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id, false);
-      if (locked && pte->lock())
+      if (locked && pte->Lock())
         break;
 
-      pte->unlock();
+      pte->UnLock();
       page_table_->CreateMapping(pte->fd, pte->fpage_id, mpage_id);
       victim = victim->prev;
     }
@@ -89,7 +89,7 @@ namespace gbp
   {
     std::lock_guard<std::mutex> lck(latch_);
 
-    ListNode* victim = tail_.prev;
+    ListNode* victim;
     PTE* pte;
     while (page_num != 0)
     {
@@ -103,15 +103,15 @@ namespace gbp
         auto pte_unpacked = pte->ToUnpacked();
 
         auto [locked, mpage_id] = page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id, false);
-        if (locked && pte->lock())
+        if (locked && pte->Lock() && !pte->dirty)
           break;
-          
-        pte->unlock();
+
+        pte->UnLock();
         page_table_->CreateMapping(pte->fd, pte->fpage_id, mpage_id);
         victim = victim->prev;
       }
       page_table_->DeleteMapping(pte->fd, pte->fpage_id);
-      pte->Clean();
+      // pte->Clean();
       tail_.prev = victim->prev;
       victim->prev->next = &tail_;
 
@@ -121,41 +121,6 @@ namespace gbp
     }
     return true;
   }
-
-  //   // 一次性evicte多个页（跳过脏页）
-  //   bool FIFOReplacer::Victim(std::vector<mpage_id_type>& mpage_ids, mpage_id_type page_num) {
-  //     std::lock_guard<std::mutex> lck(latch_);
-  //     assert(tail_.prev != &head_);
-
-  //     ListNode* victim = tail_.prev, * prev;
-  //     while (page_num) {
-  //       if (victim == &head_)
-  //         return true;
-  //       assert(victim != &head_);
-  //       auto* pte = page_table_->FromPageId(victim->val);
-  //       auto pte_unpacked = pte->ToUnpacked();
-
-  //       auto [locked, mpage_id] = page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id, false);
-  //       if (locked && pte->ref_count == 0 && !pte->dirty) {
-  //         assert(page_table_->DeleteMapping(pte->fd, pte->fpage_id));
-
-  //         tail_.prev = victim->prev;
-  //         victim->prev->next = &tail_;
-  //         mpage_ids.push_back(victim->val);
-  //         map_.erase(victim->val);
-  //         prev = victim->prev;
-  //         delete victim;
-  //         victim = prev;
-  //         page_num--;
-  //       }
-  //       else {
-  //         page_table_->CreateMapping(pte->GetFileHandler(), pte->GetFPageId(), mpage_id);
-  //         victim = victim->prev;
-  //       }
-  //   }
-
-  //     return true;
-  // }
 
   /*
    * Remove value from LRU. If removal is successful, return true, otherwise

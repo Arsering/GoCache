@@ -23,7 +23,6 @@ namespace gbp {
 
     // page_table_ = new std::vector<ExtendibleHash<page_id_infile, PTE *>>();
     replacer_ = new FIFOReplacer(page_table_);
-    free_list_ = new VectorSync<mpage_id_type>(pool_size_);
 
     for (auto fd_os : disk_manager_->fd_oss_) {
       uint32_t file_size_in_page =
@@ -32,12 +31,27 @@ namespace gbp {
     }
 
     // put all the pages into free list
-    //FIXME: 无法保证线程安全
+    // //FIXME: 无法保证线程安全
+        // free_list_ = new VectorSync<mpage_id_type>(pool_size_);
+    // for (mpage_id_type i = 0; i < pool_size_; ++i) {
+    //   free_list_->GetData()[i] = i;
+    //   // free_list_->InsertItem(i);
+    // }
+    // free_list_->size_ = pool_size_;
+
+    free_list_ = new lockfree_queue_type<mpage_id_type>(pool_size_);
     for (mpage_id_type i = 0; i < pool_size_; ++i) {
-      free_list_->GetData()[i] = i;
-      // free_list_->InsertItem(i);
+      free_list_->Push(i);
     }
-    free_list_->size_ = pool_size_;
+    // for (mpage_id_type i = 0; i < 10; ++i) {
+    //   free_list1_->Push(i);
+    // }
+    // mpage_id_type aa = 0;
+    // for (mpage_id_type i = 0; i < 10; ++i) {
+    //   free_list1_->Poll(aa);
+    //   assert(aa == i);
+    // }
+
   }
 
   /*
@@ -286,15 +300,16 @@ namespace gbp {
       }
       case context_type::Phase::Initing: { // 1.2
         mpage_id_type mpage_id = 10;
-        if (free_list_->GetItem(mpage_id)) {
-          tar = page_table_->FromPageId(mpage_id);
+        if (free_list_->Poll(mpage_id)) {
+          // std::string tmp = "b " + std::to_string(mpage_id);
+          // Log_mine(tmp);
           stat = context_type::Phase::Loading;
         }
         else {
-          tar = GetVictimPage();
-          if (tar == nullptr) {
+          if (!replacer_->Victim(mpage_id)) {
             break;
           }
+
           // std::lock_guard lock(gbp::debug::get_file_lock());
           // free_list_->InsertItem(page_table_->ToPageId(tar));
           // mpage_id = 345;
@@ -303,13 +318,14 @@ namespace gbp {
           // std::cout << "a" << page_table_->ToPageId(tar) << " | " << mpage_id << std::endl;
           // assert(ret);
           // tar = page_table_->FromPageId(mpage_id);
-
-          // if (!eviction_server_->SendRequest(replacer_, free_list_, 16))
-          //   assert(false);
+          // if (!eviction_marker_)
+          //   if (!eviction_server_->SendRequest(replacer_, free_list_, 10, &eviction_marker_))
+          //     assert(false);
           stat = context_type::Phase::Evicting;
         }
-
-        fpage_data = (char*)buffer_pool_->FromPageId(page_table_->ToPageId(tar));
+        tar = page_table_->FromPageId(mpage_id);
+        assert(tar->ref_count == 0);
+        fpage_data = (char*)buffer_pool_->FromPageId(mpage_id);
         break;
       }
       case context_type::Phase::Evicting: { // 2
