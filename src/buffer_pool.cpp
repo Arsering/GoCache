@@ -7,15 +7,12 @@ namespace gbp {
    * WARNING: Do Not Edit This Function
    */
   void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
-    DiskManager* disk_manager, RoundRobinPartitioner* partitioner, EvictionServer* eviction_server) {
+    IOServer* io_server, RoundRobinPartitioner* partitioner, EvictionServer* eviction_server) {
     pool_ID_ = pool_ID;
     pool_size_ = pool_size;
 
-    if constexpr (IO_BACKEND_TYPE == 1)
-      io_backend_ = new RWSysCall(disk_manager);
-    else if (IO_BACKEND_TYPE == 2)
-      io_backend_ = new IOURing(disk_manager);
-
+    io_server_ = io_server;
+    disk_manager_ = io_server->io_backend_->disk_manager_;
     partitioner_ = partitioner;
     eviction_server_ = eviction_server;
 
@@ -28,9 +25,9 @@ namespace gbp {
     replacer_ = new FIFOReplacer(page_table_);
     free_list_ = new VectorSync<mpage_id_type>(pool_size_);
 
-    for (auto fd_os : io_backend_->disk_manager_->fd_oss_) {
+    for (auto fd_os : disk_manager_->fd_oss_) {
       uint32_t file_size_in_page =
-        ceil(io_backend_->GetFileSize(fd_os.first), PAGE_SIZE_MEMORY);
+        ceil(disk_manager_->GetFileSize(fd_os.first), PAGE_SIZE_MEMORY);
       page_table_->RegisterFile(file_size_in_page);
     }
 
@@ -41,8 +38,6 @@ namespace gbp {
       // free_list_->InsertItem(i);
     }
     free_list_->size_ = pool_size_;
-
-    io_server_ = new IOServer();
   }
 
   /*
@@ -59,7 +54,7 @@ namespace gbp {
   }
 
   void BufferPool::RegisterFile(OSfile_handle_type fd) {
-    page_table_->RegisterFile(ceil(io_backend_->GetFileSize(fd), PAGE_SIZE_FILE));
+    page_table_->RegisterFile(ceil(disk_manager_->GetFileSize(fd), PAGE_SIZE_FILE));
   }
 
   /*
@@ -125,7 +120,7 @@ namespace gbp {
     }
 
     if (tar->dirty) {
-      io_backend_->Write(
+      io_server_->io_backend_->Write(
         fpage_id, (char*)buffer_pool_->FromPageId(page_table_->ToPageId(tar)),
         tar->GetFileHandler());
       tar->dirty = false;
@@ -303,8 +298,10 @@ namespace gbp {
           // std::lock_guard lock(gbp::debug::get_file_lock());
           // free_list_->InsertItem(page_table_->ToPageId(tar));
           // mpage_id = 345;
+          // auto ret = free_list_->GetItem(mpage_id);
 
           // std::cout << "a" << page_table_->ToPageId(tar) << " | " << mpage_id << std::endl;
+          // assert(ret);
           // tar = page_table_->FromPageId(mpage_id);
 
           // if (!eviction_server_->SendRequest(replacer_, free_list_, 16))
@@ -317,7 +314,7 @@ namespace gbp {
       }
       case context_type::Phase::Evicting: { // 2
         if (tar->dirty) {
-          io_backend_->Write(tar->GetFPageId(), fpage_data, tar->GetFileHandler());
+          io_server_->io_backend_->Write(tar->GetFPageId(), fpage_data, tar->GetFileHandler());
         }
         if (tar->GetFileHandler() != INVALID_FILE_HANDLE) {
           page_table_->DeleteMapping(tar->fd, tar->fpage_id);
@@ -329,14 +326,14 @@ namespace gbp {
         ::memset(fpage_data, 1, PAGE_SIZE_MEMORY);
 
         if constexpr (USING_FIBER_ASYNC_RESPONSE) {
-          auto req = io_server_->SendRequest(fd, fpage_id, 1, fpage_data, io_backend_);
+          auto req = io_server_->SendRequest(fd, fpage_id, 1, fpage_data);
           size_t loops = 0;
           while (!req.Inner().success) {
             hybrid_spin(loops);
           }
         }
         else {
-          io_backend_->Read(fpage_id, fpage_data, fd);
+          io_server_->io_backend_->Read(fpage_id, fpage_data, fd);
         }
         tar->Clean();
         tar->ref_count = 1;

@@ -101,7 +101,6 @@ graphscope_bufferpool_EXTERNAL_OBJECTS =
 ../bin/graphscope_bufferpool: /usr/lib/x86_64-linux-gnu/libboost_program_options.so.1.71.0
 ../bin/graphscope_bufferpool: /usr/lib/x86_64-linux-gnu/libboost_regex.so.1.71.0
 ../bin/graphscope_bufferpool: /usr/lib/x86_64-linux-gnu/libboost_thread.so.1.71.0
-../bin/graphscope_bufferpool: /usr/lib/x86_64-linux-gnu/libgflags.so.2.2.2
 ../bin/graphscope_bufferpool: /usr/lib/x86_64-linux-gnu/libboost_filesystem.so.1.71.0
 ../bin/graphscope_bufferpool: /usr/lib/x86_64-linux-gnu/libboost_atomic.so.1.71.0
 ../bin/graphscope_bufferpool: CMakeFiles/graphscope_bufferpool.dir/link.txt

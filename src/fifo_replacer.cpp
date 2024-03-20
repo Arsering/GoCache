@@ -3,9 +3,11 @@
  */
 #include "../include/fifo_replacer.h"
 
-namespace gbp {
+namespace gbp
+{
 
-  FIFOReplacer::FIFOReplacer(PageTable* pages_) : page_table_(pages_) {
+  FIFOReplacer::FIFOReplacer(PageTable* pages_) : page_table_(pages_)
+  {
     head_ = ListNode();
     tail_ = ListNode();
     head_.next = &tail_;
@@ -19,17 +21,20 @@ namespace gbp {
   /*
    * Insert value into fifo
    */
-  void FIFOReplacer::Insert(const mpage_id_type& value) {
+  void FIFOReplacer::Insert(const mpage_id_type& value)
+  {
     std::lock_guard<std::mutex> lck(latch_);
     ListNode* cur;
-    if (map_.find(value) != map_.end()) {
+    if (map_.find(value) != map_.end())
+    {
       cur = map_[value];
       ListNode* prev = cur->prev;
       ListNode* succ = cur->next;
       prev->next = succ;
       succ->prev = prev;
     }
-    else {
+    else
+    {
       cur = new ListNode(value);
     }
 
@@ -45,7 +50,8 @@ namespace gbp {
   /* If LRU is non-empty, pop the head member from LRU to argument "value", and
    * return true. If LRU is empty, return false
    */
-  bool FIFOReplacer::Victim(mpage_id_type& mpage_id) {
+  bool FIFOReplacer::Victim(mpage_id_type& mpage_id)
+  {
     std::lock_guard<std::mutex> lck(latch_);
     // assert(tail_.prev != &head_);
 
@@ -54,15 +60,19 @@ namespace gbp {
 #endif
 
     ListNode* victim = tail_.prev;
-    while (true) {
-      if (victim == &head_) return false;
+    while (true)
+    {
+      if (victim == &head_)
+        return false;
       assert(victim != &head_);
       auto* pte = page_table_->FromPageId(victim->val);
       auto pte_unpacked = pte->ToUnpacked();
 
       auto [locked, mpage_id] = page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id, false);
-      if (locked && pte->ref_count == 0)
+      if (locked && pte->lock())
         break;
+
+      pte->unlock();
       page_table_->CreateMapping(pte->fd, pte->fpage_id, mpage_id);
       victim = victim->prev;
     }
@@ -75,22 +85,28 @@ namespace gbp {
     return true;
   }
 
-  bool FIFOReplacer::Victim(std::vector<mpage_id_type>& mpage_ids, mpage_id_type page_num) {
+  bool FIFOReplacer::Victim(std::vector<mpage_id_type>& mpage_ids, mpage_id_type page_num)
+  {
     std::lock_guard<std::mutex> lck(latch_);
 
     ListNode* victim = tail_.prev;
     PTE* pte;
-    while (page_num != 0) {
+    while (page_num != 0)
+    {
       victim = tail_.prev;
-      while (true) {
-        if (victim == &head_) return false;
+      while (true)
+      {
+        if (victim == &head_)
+          return false;
         assert(victim != &head_);
         pte = page_table_->FromPageId(victim->val);
         auto pte_unpacked = pte->ToUnpacked();
 
         auto [locked, mpage_id] = page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id, false);
-        if (locked && pte->ref_count == 0)
+        if (locked && pte->lock())
           break;
+          
+        pte->unlock();
         page_table_->CreateMapping(pte->fd, pte->fpage_id, mpage_id);
         victim = victim->prev;
       }
@@ -105,7 +121,6 @@ namespace gbp {
     }
     return true;
   }
-
 
   //   // 一次性evicte多个页（跳过脏页）
   //   bool FIFOReplacer::Victim(std::vector<mpage_id_type>& mpage_ids, mpage_id_type page_num) {
@@ -142,14 +157,15 @@ namespace gbp {
   //     return true;
   // }
 
-
-    /*
-     * Remove value from LRU. If removal is successful, return true, otherwise
-     * return false
-     */
-  bool FIFOReplacer::Erase(const mpage_id_type& value) {
+  /*
+   * Remove value from LRU. If removal is successful, return true, otherwise
+   * return false
+   */
+  bool FIFOReplacer::Erase(const mpage_id_type& value)
+  {
     std::lock_guard<std::mutex> lck(latch_);
-    if (map_.find(value) != map_.end()) {
+    if (map_.find(value) != map_.end())
+    {
       ListNode* cur = map_[value];
       cur->prev->next = cur->next;
       cur->next->prev = cur->prev;
@@ -157,18 +173,16 @@ namespace gbp {
       delete cur;
       return true;
     }
-    else {
+    else
+    {
       return false;
     }
   }
 
-  size_t FIFOReplacer::Size() const {
+  size_t FIFOReplacer::Size() const
+  {
     std::lock_guard<std::mutex> lck(latch_);
     return map_.size();
   }
 
-  // template class FIFOReplacer<Page*>;
-  // test only
-  // template class FIFOReplacer<uint32_t>;
-
-}  // namespace gbp
+} // namespace gbp

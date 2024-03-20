@@ -30,7 +30,8 @@ namespace gbp {
   class BufferPoolManager {
   public:
     BufferPoolManager() = default;
-    ~BufferPoolManager() = default;
+    ~BufferPoolManager();
+
     void init(uint16_t pool_num, size_t pool_size, const std::string& file_paths);
     bool FlushPage(mpage_id_type page_id, GBPfile_handle_type fd = 0);
 
@@ -89,6 +90,8 @@ namespace gbp {
     size_t pool_size_;  // number of pages in buffer pool
     DiskManager* disk_manager_;
     RoundRobinPartitioner* partitioner_;
+    std::vector<IOServer*> io_servers_;
+
     EvictionServer* eviction_server_;
     std::vector<BufferPool*> pools_;
 
