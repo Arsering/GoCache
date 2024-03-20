@@ -24,19 +24,22 @@
 #include "utils.h"
 #include "replacer.h"
 #include "page_table.h"
+#include  "utils.h"
 
 namespace gbp {
     using queue_lockfree_type = boost::lockfree::queue<mpage_id_type, boost::lockfree::fixed_sized<true>>;
 
     struct async_eviction_request_type {
         Replacer<mpage_id_type>* replacer;  // to find an unpinned page for replacement
-        VectorSync<mpage_id_type>* free_list;     // to find a free page for replacement
+        lockfree_queue_type<mpage_id_type>* free_list;     // to find a free page for replacement
         mpage_id_type page_num;
+        std::atomic<bool>* finish;
 
-        async_eviction_request_type(Replacer<mpage_id_type>* _replacer, VectorSync<mpage_id_type>* _free_list, mpage_id_type _page_num) {
+        async_eviction_request_type(Replacer<mpage_id_type>* _replacer, lockfree_queue_type<mpage_id_type>* _free_list, mpage_id_type _page_num, std::atomic<bool>* _finish) {
             replacer = _replacer;
             free_list = _free_list;
             page_num = _page_num;
+            finish = _finish;
         }
         ~async_eviction_request_type() = default;
     };
@@ -52,8 +55,8 @@ namespace gbp {
                 server_.join();
         }
 
-        bool SendRequest(Replacer<mpage_id_type>* replacer, VectorSync<mpage_id_type>* free_list, mpage_id_type page_num, bool blocked = true) {
-            auto* req = new async_eviction_request_type(replacer, free_list, page_num);
+        bool SendRequest(Replacer<mpage_id_type>* replacer, lockfree_queue_type<mpage_id_type>* free_list, mpage_id_type page_num, std::atomic<bool>* finish, bool blocked = true) {
+            auto* req = new async_eviction_request_type(replacer, free_list, page_num, finish);
 
             if (likely(blocked))
                 while (!request_channel_.push(req));
@@ -68,11 +71,14 @@ namespace gbp {
             std::vector<mpage_id_type> pages;
             req.replacer->Victim(pages, req.page_num);
             for (auto& page : pages) {
-                assert(req.free_list->InsertItem(page));
+                assert(req.free_list->Push(page));
+                std::string tmp = "a" + std::to_string(page);
+                // Log_mine(tmp);
             }
             req.page_num -= pages.size();
-            if (unlikely(req.page_num == 0))
+            if (unlikely(req.page_num == 0)) {
                 return true;
+            }
 
             return false;
         }
@@ -94,6 +100,7 @@ namespace gbp {
                             if (!req.has_value())
                                 continue;
                             if (ProcessFunc(*req.value())) {
+                                req.value()->finish->store(true);
                                 ::delete req.value();
                                 req.reset();
                             }

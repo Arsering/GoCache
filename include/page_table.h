@@ -130,7 +130,7 @@ namespace gbp
         return { true, old_ref_count };
       }
 
-      bool lock()
+      bool Lock()
       {
         std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
         uint64_t old_packed = atomic_packed.load(std::memory_order_acquire),
@@ -152,7 +152,7 @@ namespace gbp
         return true;
       }
 
-      bool unlock()
+      bool UnLock()
       {
         std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
         uint64_t old_packed = atomic_packed.load(std::memory_order_acquire), new_packed;

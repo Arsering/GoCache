@@ -73,7 +73,7 @@ namespace gbp {
       page_table_->ResizeFile(fd, ceil(new_size, PAGE_SIZE_FILE));
       return 0;
     }
-    size_t GetFreePageNum() { return free_list_->GetSize(); }
+    size_t GetFreePageNum() { return free_list_->Size(); }
 #ifdef DEBUG
     void ReinitBitMap() { disk_manager_->ReinitBitMap(); }
 #endif
@@ -115,8 +115,11 @@ namespace gbp {
 
     Replacer<mpage_id_type>*
       replacer_;  // to find an unpinned page for replacement
-    VectorSync<mpage_id_type>* free_list_;     // to find a free page for replacement
+    // VectorSync<mpage_id_type>* free_list_;     // to find a free page for replacement
     std::mutex latch_;  // to protect shared data structure
+
+    lockfree_queue_type<mpage_id_type>* free_list_;
+    std::atomic<bool> eviction_marker_ = false;
 
     PTE* GetVictimPage();
   };
