@@ -30,11 +30,10 @@ namespace gbp {
     enum class Phase { Begin, Initing, Evicting, Loading, End } phase;
     enum class State { Commit, Poll, End } state;
 
-    IOBackend* io_backend;
     bool finish = false;
 
-    FORCE_INLINE static context_type GetRawObject(IOBackend* io_backend) {
-      return  { Type::Pin, Phase::Begin, State::Commit, io_backend,
+    FORCE_INLINE static context_type GetRawObject() {
+      return  { Type::Pin, Phase::Begin, State::Commit,
                    false };
 
     }
@@ -72,7 +71,12 @@ namespace gbp {
 
   class IOServer {
   public:
-    IOServer() :request_channel_(), num_async_fiber_processing_(0), stop_(false) {
+    IOServer(DiskManager* disk_manager) :request_channel_(), num_async_fiber_processing_(0), stop_(false) {
+      if constexpr (IO_BACKEND_TYPE == 1)
+        io_backend_ = new RWSysCall(disk_manager);
+      else if (IO_BACKEND_TYPE == 2)
+        io_backend_ = new IOURing(disk_manager);
+
       server_ = std::thread([this]() { Run(); });
     }
     ~IOServer() {
@@ -80,6 +84,7 @@ namespace gbp {
       if (server_.joinable())
         server_.join();
     }
+    IOBackend* io_backend_;
 
     bool SendRequest(async_request_fiber_type* req, bool blocked = true) {
       if (unlikely(req == nullptr))
@@ -92,8 +97,8 @@ namespace gbp {
       return true;
     }
 
-    const PointerWrapper<async_request_fiber_type> SendRequest(GBPfile_handle_type fd, fpage_id_type fpage_id_start, fpage_id_type page_num, char* buf, IOBackend* io_backend, bool blocked = true) {
-      context_type context = context_type::GetRawObject(io_backend);
+    const PointerWrapper<async_request_fiber_type> SendRequest(GBPfile_handle_type fd, fpage_id_type fpage_id_start, fpage_id_type page_num, char* buf, bool blocked = true) {
+      context_type context = context_type::GetRawObject();
 
       auto* req = new async_request_fiber_type(buf, PAGE_SIZE_FILE, fpage_id_start, 1, fd, context);
       SendRequest(req, blocked);
@@ -105,16 +110,16 @@ namespace gbp {
     bool ProcessFunc(async_request_fiber_type& req) {
       switch (req.async_context.state) {
       case  context_type::State::Commit: { // 将read request提交至io_uring
-        auto ret = req.async_context.io_backend->Read(
+        auto ret = io_backend_->Read(
           req.fpage_id_start, req.io_vec.data(), req.fd, &req.async_context.finish);
         while (!ret) {
-          ret = req.async_context.io_backend->Read(
+          ret = io_backend_->Read(
             req.fpage_id_start, req.io_vec.data(), req.fd, &req.async_context.finish);// 不断尝试提交请求直至提交成功
         }
 
         if (!req.async_context.finish)
         {
-          req.async_context.io_backend->Progress();
+          io_backend_->Progress();
           req.async_context.state = context_type::State::Poll;
           return false;
         }
@@ -124,7 +129,7 @@ namespace gbp {
         }
       }
       case context_type::State::Poll: {
-        req.async_context.io_backend->Progress();
+        io_backend_->Progress();
         if (req.async_context.finish) {
           req.async_context.state = context_type::State::End;
           return true;

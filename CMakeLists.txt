@@ -52,9 +52,9 @@ find_package(Boost REQUIRED COMPONENTS system filesystem fiber
              context program_options regex thread)
 target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} uring)
 
-find_package (GFlags REQUIRED)
-find_package(Glog REQUIRED) 
-target_link_libraries (${PROJECT_NAME}  ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
+# find_package (GFlags REQUIRED)
+# find_package(Glog REQUIRED) 
+# target_link_libraries (${PROJECT_NAME}  ${GFLAGS_LIBRARIES} ${GLOG_LIBRARIES})
 # find_package (glog REQUIRED)
 # target_link_libraries (${PROJECT_NAME} glog)
 # find_package (gflags REQUIRED)

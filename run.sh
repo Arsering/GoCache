@@ -20,12 +20,14 @@ CUR_DIR=.
 export time=$(date "+%Y-%m-%d-%H:%M:%S")
 export LOG_DIR=${CUR_DIR}/logs/${time}
 mkdir -p ${LOG_DIR}
+cp -r ./$0 ${LOG_DIR}/run.sh
+
 
 echo 1 > /proc/sys/vm/drop_caches
 
 export FILE_SIZE_GB=32
-export WORKER_NUM=10
-export POOL_NUM=5
+export WORKER_NUM=200
+export POOL_NUM=30
 export POOL_SIZE_GB=1
 export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD
 ./bin/graphscope_bufferpool ${FILE_SIZE_GB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_GB} ${TEST_TYPE} > ${LOG_DIR}/log.log

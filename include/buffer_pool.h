@@ -41,7 +41,7 @@ namespace gbp {
 
 
     void init(u_int32_t pool_ID, mpage_id_type pool_size,
-      DiskManager* disk_manager, RoundRobinPartitioner* partitioner, EvictionServer* eviction_server);
+      IOServer* io_server, RoundRobinPartitioner* partitioner, EvictionServer* eviction_server);
 
     bool UnpinPage(mpage_id_type page_id, bool is_dirty,
       GBPfile_handle_type fd = 0);
@@ -55,7 +55,7 @@ namespace gbp {
     bool DeletePage(mpage_id_type page_id, GBPfile_handle_type fd = 0);
 
     inline int GetFileDescriptor(GBPfile_handle_type fd) {
-      return io_backend_->GetFileDescriptor(fd);
+      return disk_manager_->GetFileDescriptor(fd);
     }
 
     int GetObject(char* buf, size_t file_offset, size_t object_size,
@@ -80,11 +80,11 @@ namespace gbp {
 
     void WarmUp() {
       size_t free_page_num = GetFreePageNum();
-      for (int fd_gbp = 0; fd_gbp < io_backend_->disk_manager_->file_sizes_.size(); fd_gbp++) {
-        if (!io_backend_->disk_manager_->fd_oss_[fd_gbp].second)
+      for (int fd_gbp = 0; fd_gbp < disk_manager_->file_sizes_.size(); fd_gbp++) {
+        if (!disk_manager_->fd_oss_[fd_gbp].second)
           continue;
         size_t page_f_num =
-          ceil(io_backend_->disk_manager_->file_sizes_[fd_gbp], PAGE_SIZE_FILE);
+          ceil(disk_manager_->file_sizes_[fd_gbp], PAGE_SIZE_FILE);
         for (size_t page_idx_f = 0; page_idx_f < page_f_num; page_idx_f++) {
           auto mpage =
             FetchPage(page_idx_f, fd_gbp);
@@ -108,8 +108,8 @@ namespace gbp {
     mpage_id_type pool_size_;  // number of pages in buffer pool
     MemoryPool* buffer_pool_ = nullptr;
     PageTable* page_table_ = nullptr;  // array of pages
-    IOBackend* io_backend_;
     IOServer* io_server_;
+    DiskManager* disk_manager_;
     RoundRobinPartitioner* partitioner_;
     EvictionServer* eviction_server_;
 

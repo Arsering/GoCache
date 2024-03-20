@@ -119,20 +119,22 @@ namespace gbp {
     //FIXME: 此处请调用者确保空间足够
     bool InsertItem(T item) {
       std::lock_guard lock(latch_);
-      // size_t size_now = size_.load();
-      // data_[size_now] = item;
-      // size_++;
-      // std::atomic_thread_fence(std::memory_order_release);
-      // assert(data_[size_now] == item);
-
       size_t size_now = size_.load();
-      do {
-        if (size_now >= capacity_)
-          return false;
-        data_[size_now] = item;
+      if (size_now >= capacity_)
+        return false;
+      data_[size_now] = item;
+      size_++;
+      std::atomic_thread_fence(std::memory_order_release);
+      assert(data_[size_now] == item);
 
-      } while (!size_.compare_exchange_weak(size_now, size_now + 1, std::memory_order_release,
-        std::memory_order_relaxed));
+      // size_t size_now = size_.load();
+      // do {
+      //   if (size_now >= capacity_)
+      //     return false;
+      //   data_[size_now] = item;
+
+      // } while (!size_.compare_exchange_weak(size_now, size_now + 1, std::memory_order_release,
+      //   std::memory_order_relaxed));
 
       return true;
     }

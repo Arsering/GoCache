@@ -5,6 +5,17 @@
 
 namespace gbp {
 
+  BufferPoolManager::~BufferPoolManager() {
+    delete disk_manager_;
+    delete partitioner_;
+    delete eviction_server_;
+    for (auto io_server : io_servers_)
+      delete io_server;
+
+    for (auto pool : pools_)
+      delete pool;
+  }
+
   /*
    * BufferPoolManager Constructor
    */
@@ -18,8 +29,12 @@ namespace gbp {
     eviction_server_ = new EvictionServer();
 
     for (int idx = 0; idx < pool_num; idx++) {
+      io_servers_.push_back(new IOServer(disk_manager_));
+    }
+
+    for (int idx = 0; idx < pool_num; idx++) {
       pools_.push_back(new BufferPool());
-      pools_[idx]->init(idx, pool_size, disk_manager_, partitioner_, eviction_server_);
+      pools_[idx]->init(idx, pool_size, io_servers_[idx % pool_num], partitioner_, eviction_server_);
     }
   }
 
