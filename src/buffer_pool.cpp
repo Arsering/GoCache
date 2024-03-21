@@ -339,17 +339,17 @@ namespace gbp {
         break;
       }
       case context_type::Phase::Loading: { // 4
-        // if constexpr (USING_FIBER_ASYNC_RESPONSE) {
-        //   auto req = io_server_->SendRequest(fd, fpage_id, 1, fpage_data);
-        //   size_t loops = 0;
-        //   while (!req.Inner().success) {
-        //     // hybrid_spin(loops);
-        //     std::this_thread::yield();
-        //   }
-        // }
-        // else {
-        //   io_server_->io_backend_->Read(fpage_id, fpage_data, fd);
-        // }
+        if constexpr (USING_FIBER_ASYNC_RESPONSE) {
+          auto req = io_server_->SendRequest(fd, fpage_id, 1, fpage_data);
+          size_t loops = 0;
+          while (!req.Inner().success) {
+            // hybrid_spin(loops);
+            std::this_thread::yield();
+          }
+        }
+        else {
+          io_server_->io_backend_->Read(fpage_id, fpage_data, fd);
+        }
 
         tar->Clean();
         tar->ref_count = 1;

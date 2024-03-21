@@ -72,10 +72,9 @@ namespace gbp {
   class IOServer {
   public:
     IOServer(DiskManager* disk_manager) :request_channel_(), num_async_fiber_processing_(0), stop_(false) {
-      // if constexpr (IO_BACKEND_TYPE == 1)
-      //   io_backend_ = new RWSysCall(disk_manager);
-      // else 
-      if (IO_BACKEND_TYPE == 2)
+      if constexpr (IO_BACKEND_TYPE == 1)
+        io_backend_ = new RWSysCall(disk_manager);
+      else if (IO_BACKEND_TYPE == 2)
         io_backend_ = new IOURing(disk_manager);
       else
         assert(false);
