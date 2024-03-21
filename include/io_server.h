@@ -72,10 +72,13 @@ namespace gbp {
   class IOServer {
   public:
     IOServer(DiskManager* disk_manager) :request_channel_(), num_async_fiber_processing_(0), stop_(false) {
-      if constexpr (IO_BACKEND_TYPE == 1)
-        io_backend_ = new RWSysCall(disk_manager);
-      else if (IO_BACKEND_TYPE == 2)
+      // if constexpr (IO_BACKEND_TYPE == 1)
+      //   io_backend_ = new RWSysCall(disk_manager);
+      // else 
+      if (IO_BACKEND_TYPE == 2)
         io_backend_ = new IOURing(disk_manager);
+      else
+        assert(false);
 
       server_ = std::thread([this]() { Run(); });
     }
@@ -98,8 +101,8 @@ namespace gbp {
     }
 
     const PointerWrapper<async_request_fiber_type> SendRequest(GBPfile_handle_type fd, fpage_id_type fpage_id_start, fpage_id_type page_num, char* buf, bool blocked = true) {
+      assert(buf != nullptr);
       context_type context = context_type::GetRawObject();
-
       auto* req = new async_request_fiber_type(buf, PAGE_SIZE_FILE, fpage_id_start, 1, fd, context);
       SendRequest(req, blocked);
       return req;
@@ -146,41 +149,36 @@ namespace gbp {
 
     void Run() {
       size_t loops = 100;
-      auto async_fiber =
-        boost::fibers::fiber(boost::fibers::launch::dispatch, [&]() {
+      {
         boost::circular_buffer<std::optional<async_request_fiber_type*>>
-          async_requests(gbp::FIBER_CHANNEL_DEPTH);
+          async_requests(gbp::FIBER_BATCH_SIZE);
+        while (!async_requests.full())
+          async_requests.push_back(std::optional<async_request_fiber_type*>());
 
         async_request_fiber_type* async_request;
         while (true) {
-          while (true == request_channel_.pop(async_request)) {
-            async_requests.push_back(async_request);
-            while (!async_requests.empty()) {
-              while (!async_requests.full() && true == request_channel_.pop(async_request))
-                async_requests.push_back(async_request);
-
-              for (auto& req : async_requests) {
-                if (!req.has_value())
-                  continue;
-                if (ProcessFunc(*req.value())) {
-                  req.value()->success.store(true);
-                  req.reset();
-                }
+          for (auto& req : async_requests) {
+            if (!req.has_value())
+            {
+              if (request_channel_.pop(async_request))
+              {
+                req.emplace(async_request);
               }
-
-              while (!async_requests.empty() && !async_requests.front().has_value()) {
-                num_async_fiber_processing_--;
-                async_requests.pop_front();
+              else {
+                continue;
               }
-              // save_fence();
-              // boost::this_fiber::yield();
+            }
+            if (ProcessFunc(*req.value())) {
+              req.value()->success.store(true);
+              req.reset();
             }
           }
           if (stop_) break;
-          hybrid_spin(loops);
+          // hybrid_spin(loops);
         }
-          });
+      }
     }
+
 
     std::thread server_;
     boost::lockfree::queue<async_request_fiber_type*, boost::lockfree::capacity<FIBER_CHANNEL_DEPTH>> request_channel_;

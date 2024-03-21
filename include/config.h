@@ -32,8 +32,9 @@ namespace gbp {
     constexpr size_t PAGE_SIZE_MEMORY = 4096;  // size of a memory page in byte
     constexpr size_t PAGE_SIZE_FILE = 4096;
     constexpr size_t CACHELINE_SIZE = 64;
-    constexpr static size_t IOURing_MAX_DEPTH = 64;
-    constexpr static size_t FIBER_CHANNEL_DEPTH = 256;
+    constexpr static size_t IOURing_MAX_DEPTH = 64 * 2;
+    constexpr size_t FIBER_BATCH_SIZE = IOURing_MAX_DEPTH * 2;
+    constexpr static size_t FIBER_CHANNEL_DEPTH = FIBER_BATCH_SIZE * 2;
 
     constexpr int IO_BACKEND_TYPE = 2; // 1: pread; 2: IO_Uring 
     constexpr bool USING_FIBER_ASYNC_RESPONSE = true;
@@ -41,7 +42,7 @@ namespace gbp {
     constexpr bool PURE_THREADING = true;
     constexpr size_t HYBRID_SPIN_THRESHOLD =
         PURE_THREADING ? (1lu << 0) : (1lu << 30);
-    constexpr size_t FIBER_BATCH_SIZE = 256 * 2;
+
 
     constexpr mpage_id_type INVALID_MPAGE_ID = std::numeric_limits<mpage_id_type>::max();
     constexpr fpage_id_type INVALID_FPAGE_ID = std::numeric_limits<fpage_id_type>::max();

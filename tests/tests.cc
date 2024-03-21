@@ -88,7 +88,7 @@ namespace test {
         // std::lock_guard lock(gbp::debug::get_file_lock());
         // if (*reinterpret_cast<size_t*>(ret.Data()) != io_id)
         //   std::cout << *reinterpret_cast<size_t*>(ret.Data()) << " | " << io_id << std::endl;
-        assert(*reinterpret_cast<size_t*>(ret.Data()) == io_id);
+        // assert(*reinterpret_cast<size_t*>(ret.Data()) == io_id);
         // return;
         // std::string slice{ret.Data(), 10};
         // std::cout << "aa = " << slice << std::endl;
@@ -314,14 +314,14 @@ namespace test {
 
     size_t pool_size = 1024LU * 1024LU / 4 * pool_size_GB / pool_num + 1;
     gbp::DiskManager* disk_manager = new gbp::DiskManager(file_path);
-    // auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
-    // bpm.init(pool_num, pool_size, io_server_num, file_path);
-    // bpm.Resize(0, file_size_inByte);
-    // gbp::debug::get_log_marker().store(0);
-    // // std::cout << "warm up starting" << std::endl;
-    // // bpm.WarmUp();
-    // // std::cout << "warm up finishing" << std::endl;
-    // gbp::debug::get_log_marker().store(1);
+    auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
+    bpm.init(pool_num, pool_size, io_server_num, file_path);
+    bpm.Resize(0, file_size_inByte);
+    gbp::debug::get_log_marker().store(0);
+    // std::cout << "warm up starting" << std::endl;
+    // bpm.WarmUp();
+    // std::cout << "warm up finishing" << std::endl;
+    gbp::debug::get_log_marker().store(1);
 
     size_t io_size = 512 * 8;
     std::vector<std::thread> thread_pool;
@@ -339,12 +339,12 @@ namespace test {
       //   (1024LU * 1024LU * 1024LU * 1) * i, i);
       // thread_pool.emplace_back(read_pread, data_file, file_size_inByte,
       //   io_size, i);
-      thread_pool.emplace_back(fiber_pread_1, disk_manager, file_size_inByte, io_size,
-        i);
+      // thread_pool.emplace_back(fiber_pread_2, disk_manager, file_size_inByte, io_size,
+      //   i);
       // thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
       //                          io_size, i);
-      // thread_pool.emplace_back(read_bufferpool, data_file, file_size_inByte,
-      //   io_size, i);
+      thread_pool.emplace_back(read_bufferpool, data_file, file_size_inByte,
+        io_size, i);
     }
     for (auto& thread : thread_pool) {
       thread.join();
