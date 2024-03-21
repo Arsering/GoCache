@@ -53,8 +53,6 @@ namespace gbp
   bool FIFOReplacer::Victim(mpage_id_type& mpage_id)
   {
     std::lock_guard<std::mutex> lck(latch_);
-    // assert(tail_.prev != &head_);
-
 #ifdef DEBUG
     debug::get_counter_eviction().fetch_add(1);
 #endif
@@ -64,16 +62,17 @@ namespace gbp
     {
       if (victim == &head_)
         return false;
-      assert(victim != &head_);
+      // assert(victim != &head_);
       auto* pte = page_table_->FromPageId(victim->val);
       auto pte_unpacked = pte->ToUnpacked();
 
       auto [locked, mpage_id] = page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id, false);
       if (locked && pte->Lock())
         break;
-
       pte->UnLock();
       page_table_->CreateMapping(pte->fd, pte->fpage_id, mpage_id);
+
+
       victim = victim->prev;
     }
 

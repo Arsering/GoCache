@@ -19,7 +19,7 @@ namespace gbp {
   /*
    * BufferPoolManager Constructor
    */
-  void BufferPoolManager::init(uint16_t pool_num, size_t pool_size, const std::string& file_path = "test.db") {
+  void BufferPoolManager::init(uint16_t pool_num, size_t pool_size, uint16_t io_server_num, const std::string& file_path = "test.db") {
     pool_num_ = pool_num;
     get_pool_num().store(pool_num);
     pool_size_ = pool_size;
@@ -28,13 +28,13 @@ namespace gbp {
     partitioner_ = new RoundRobinPartitioner(pool_num, pool_size);
     eviction_server_ = new EvictionServer();
 
-    for (int idx = 0; idx < pool_num; idx++) {
+    for (int idx = 0; idx < io_server_num; idx++) {
       io_servers_.push_back(new IOServer(disk_manager_));
     }
 
     for (int idx = 0; idx < pool_num; idx++) {
       pools_.push_back(new BufferPool());
-      pools_[idx]->init(idx, pool_size, io_servers_[idx % pool_num], partitioner_, eviction_server_);
+      pools_[idx]->init(idx, pool_size, io_servers_[idx % io_server_num], partitioner_, eviction_server_);
     }
   }
 
