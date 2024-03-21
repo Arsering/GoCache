@@ -339,7 +339,7 @@ namespace test {
       //   (1024LU * 1024LU * 1024LU * 1) * i, i);
       // thread_pool.emplace_back(read_pread, data_file, file_size_inByte,
       //   io_size, i);
-      thread_pool.emplace_back(fiber_pread, disk_manager, file_size_inByte, io_size,
+      thread_pool.emplace_back(fiber_pread_1, disk_manager, file_size_inByte, io_size,
         i);
       // thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
       //                          io_size, i);

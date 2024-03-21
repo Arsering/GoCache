@@ -14,4 +14,5 @@ namespace test {
 
     void fiber_pread(gbp::DiskManager* disk_manager, size_t file_size_inByte,
         size_t io_size, size_t thread_id);
+    void fiber_pread_1(gbp::DiskManager* disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id);
 }  // namespace test

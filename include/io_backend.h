@@ -133,13 +133,6 @@ namespace gbp {
   //FIXME: no-Thread-safe
   class IOURing : public IOBackend {
   public:
-    // IOURing(const std::string& file_path)
-    //   : ring_(), cqes_(), num_preparing_(), num_processing_() {
-    //   OpenFile(file_path, O_RDWR | O_DIRECT);
-    //   auto ret = io_uring_queue_init(IOURing_MAX_DEPTH, &ring_,
-    //     0 /*IORING_SETUP_IOPOLL*/);
-    //   assert(ret == 0);
-    // }
 
     IOURing(DiskManager* disk_manager)
       : IOBackend(disk_manager), ring_(), cqes_(), num_preparing_(), num_processing_() {
