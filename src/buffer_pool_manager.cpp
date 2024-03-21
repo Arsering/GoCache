@@ -111,9 +111,9 @@ namespace gbp {
       st = GetSystemTime();
 #endif
       BufferObject ret(object_size, std::get<1>(mpage) + fpage_offset, std::get<0>(mpage));
-      std::lock_guard lock(gbp::debug::get_file_lock());
-      if (*reinterpret_cast<size_t*>(ret.Data()) != fpage_id)
-        std::cout << *reinterpret_cast<size_t*>(ret.Data()) << " | " << fpage_id << " | " << std::get<0>(mpage)->fpage_id << std::endl;
+      // std::lock_guard lock(gbp::debug::get_file_lock());
+      // if (*reinterpret_cast<size_t*>(ret.Data()) != fpage_id)
+      //   std::cout << *reinterpret_cast<size_t*>(ret.Data()) << " | " << fpage_id << " | " << std::get<0>(mpage)->fpage_id << std::endl;
 #ifdef DEBUG
       st = GetSystemTime() - st;
       if (debug::get_log_marker() == 1)

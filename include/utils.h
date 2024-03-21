@@ -83,7 +83,7 @@ namespace gbp {
       dst.need_delete_ = src.need_delete_;
 
       const_cast<PointerWrapper&>(src).need_delete_ = false;
-      const_cast<PointerWrapper&>(src).page_ = nullptr;
+      const_cast<PointerWrapper&>(src).object_ = nullptr;
     }
     T* object_;
     bool need_delete_;

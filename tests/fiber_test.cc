@@ -17,41 +17,61 @@
 
 #include "tests.h"
 
-namespace test {
+namespace test
+{
 
-  struct context_type {
+  struct context_type
+  {
 
-    enum class Type { Pin, UnPin } type;
-    enum class Phase { Begin, Initing, Evicting, Loading, End } phase;
-    enum class State { Commit, Poll, End } state;
+    enum class Type
+    {
+      Pin,
+      UnPin
+    } type;
+    enum class Phase
+    {
+      Begin,
+      Initing,
+      Evicting,
+      Loading,
+      End
+    } phase;
+    enum class State
+    {
+      Commit,
+      Poll,
+      End
+    } state;
 
     gbp::IOURing* io_backend;
     bool finish = false;
 
-    FORCE_INLINE static context_type GetRawObject(gbp::IOURing* io_backend) {
-      return  { Type::Pin, Phase::Begin, State::Commit, io_backend,
-                   false };
-
+    FORCE_INLINE static context_type GetRawObject(gbp::IOURing* io_backend)
+    {
+      return { Type::Pin, Phase::Begin, State::Commit, io_backend,
+              false };
     }
   };
 
-  struct async_request_fiber_type {
+  struct async_request_fiber_type
+  {
     async_request_fiber_type() = default;
     async_request_fiber_type(std::vector<::iovec>& _io_vec, gbp::fpage_id_type _fpage_id_start,
       gbp::fpage_id_type _page_num,
       gbp::GBPfile_handle_type _fd,
-      context_type& _async_context) : fpage_id_start(_fpage_id_start), page_num(_page_num), fd(_fd), async_context(_async_context) {
+      context_type& _async_context) : fpage_id_start(_fpage_id_start), page_num(_page_num), fd(_fd), async_context(_async_context)
+    {
       io_vec.swap(_io_vec);
     }
     async_request_fiber_type(char* buf, size_t buf_size, gbp::fpage_id_type _fpage_id_start,
       gbp::fpage_id_type _page_num,
       gbp::GBPfile_handle_type _fd,
-      context_type& _async_context) :io_vec_size(1), fpage_id_start(_fpage_id_start), page_num(_page_num), fd(_fd), async_context(_async_context) {
+      context_type& _async_context) : io_vec_size(1), fpage_id_start(_fpage_id_start), page_num(_page_num), fd(_fd), async_context(_async_context)
+    {
       // io_vec.emplace_back(buf, buf_size);
       io_vec.resize(1);
       io_vec[0].iov_base = buf;
       io_vec[0].iov_len = buf_size;
-
     }
 
     ~async_request_fiber_type() = default;
@@ -74,14 +94,18 @@ namespace test {
   //   return true;
   // }
 
-  bool process_func(async_request_fiber_type& req) {
-    switch (req.async_context.state) {
-    case  context_type::State::Commit: { // 将read request提交至io_uring
+  bool process_func(async_request_fiber_type& req)
+  {
+    switch (req.async_context.state)
+    {
+    case context_type::State::Commit:
+    { // 将read request提交至io_uring
       auto ret = req.async_context.io_backend->Read(
         req.fpage_id_start, req.io_vec.data(), req.fd, &req.async_context.finish);
-      while (!ret) {
+      while (!ret)
+      {
         ret = req.async_context.io_backend->Read(
-          req.fpage_id_start, req.io_vec.data(), req.fd, &req.async_context.finish);// 不断尝试提交请求直至提交成功
+          req.fpage_id_start, req.io_vec.data(), req.fd, &req.async_context.finish); // 不断尝试提交请求直至提交成功
       }
 
       if (!req.async_context.finish)
@@ -90,29 +114,34 @@ namespace test {
         req.async_context.state = context_type::State::Poll;
         return false;
       }
-      else {
+      else
+      {
         IO_throughput().fetch_add(req.page_num * gbp::PAGE_SIZE_FILE);
         req.async_context.state = context_type::State::End;
         return true;
       }
     }
-    case context_type::State::Poll: {
+    case context_type::State::Poll:
+    {
       req.async_context.io_backend->Progress();
-      if (req.async_context.finish) {
+      if (req.async_context.finish)
+      {
         IO_throughput().fetch_add(req.page_num * gbp::PAGE_SIZE_FILE);
         req.async_context.state = context_type::State::End;
         return true;
       }
       break;
     }
-    case context_type::State::End: {
+    case context_type::State::End:
+    {
       return true;
     }
     }
     return false;
   }
 
-  void fiber_pread_0(gbp::DiskManager* disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id) {
+  void fiber_pread_0(gbp::DiskManager* disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id)
+  {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<uint64_t> rnd(
@@ -129,7 +158,8 @@ namespace test {
     boost::fibers::buffered_channel<async_request_fiber_type> async_channel(gbp::FIBER_BATCH_SIZE);
 
     gbp::fpage_id_type fpage_id;
-    for (int idx = 0;idx < gbp::FIBER_BATCH_SIZE;idx++) {
+    for (int idx = 0; idx < gbp::FIBER_BATCH_SIZE; idx++)
+    {
       fpage_id = rnd(gen);
       char* in_buf = (char*)aligned_alloc(gbp::PAGE_SIZE_FILE, io_size);
       // ::memset(in_buf, 1, io_size);
@@ -137,56 +167,55 @@ namespace test {
       async_request_fiber_type req(in_buf, io_size, (gbp::fpage_id_type)fpage_id, 1, 0,
         context);
       async_channel.push(req);
-
     }
 
     auto async_fiber =
-      boost::fibers::fiber(boost::fibers::launch::dispatch, [&]() {
-      boost::circular_buffer<std::optional<async_request_fiber_type>>
-        async_requests(gbp::FIBER_CHANNEL_DEPTH);
-      async_request_fiber_type async_request;
-      while (boost::fibers::channel_op_status::success ==
-        async_channel.pop(async_request)) {
-        async_requests.push_back(async_request);
-        while (!async_requests.empty()) {
-          while (!async_requests.full() &&
-            boost::fibers::channel_op_status::success ==
-            async_channel.try_pop(async_request))
+      boost::fibers::fiber(boost::fibers::launch::dispatch, [&]()
+        {
+          boost::circular_buffer<std::optional<async_request_fiber_type>>
+            async_requests(gbp::FIBER_CHANNEL_DEPTH);
+          async_request_fiber_type async_request;
+          while (boost::fibers::channel_op_status::success ==
+            async_channel.pop(async_request)) {
             async_requests.push_back(async_request);
+            while (!async_requests.empty()) {
+              while (!async_requests.full() &&
+                boost::fibers::channel_op_status::success ==
+                async_channel.try_pop(async_request))
+                async_requests.push_back(async_request);
 
-          for (auto& req : async_requests) {
-            if (!req.has_value())
-              continue;
-            if (process_func(req.value())) {
-              // if (*reinterpret_cast<gbp::fpage_id_type*>(req.value().io_vec[0].iov_base) != req.value().fpage_id_start)
-              //   std::cout << *reinterpret_cast<gbp::fpage_id_type*>(req.value().io_vec[0].iov_base) << " | " << req.value().fpage_id_start << std::endl;
-              assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value().io_vec[0].iov_base) == req.value().fpage_id_start);
-              fpage_id = rnd(gen);
+              for (auto& req : async_requests) {
+                if (!req.has_value())
+                  continue;
+                if (process_func(req.value())) {
+                  // if (*reinterpret_cast<gbp::fpage_id_type*>(req.value().io_vec[0].iov_base) != req.value().fpage_id_start)
+                  //   std::cout << *reinterpret_cast<gbp::fpage_id_type*>(req.value().io_vec[0].iov_base) << " | " << req.value().fpage_id_start << std::endl;
+                  assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value().io_vec[0].iov_base) == req.value().fpage_id_start);
+                  fpage_id = rnd(gen);
 
-              context_type context = context_type::GetRawObject(&io_backend);
-              async_request_fiber_type req_new((char*)req.value().io_vec[0].iov_base, io_size, (gbp::fpage_id_type)fpage_id, 1, 0,
-                context);
-              // free(req.value().io_vec[0].iov_base);
-              req.reset();
-              req.emplace(req_new);
+                  context_type context = context_type::GetRawObject(&io_backend);
+                  async_request_fiber_type req_new((char*)req.value().io_vec[0].iov_base, io_size, (gbp::fpage_id_type)fpage_id, 1, 0,
+                    context);
+                  // free(req.value().io_vec[0].iov_base);
+                  req.reset();
+                  req.emplace(req_new);
+                }
+              }
+
+              while (!async_requests.empty() &&
+                !async_requests.front().has_value()) {
+                num_async_fiber_processing--;
+                async_requests.pop_front();
+              }
+
+              // save_fence();
+              boost::this_fiber::yield();
             }
-          }
-
-          while (!async_requests.empty() &&
-            !async_requests.front().has_value()) {
-            num_async_fiber_processing--;
-            async_requests.pop_front();
-          }
-
-          // save_fence();
-          boost::this_fiber::yield();
-        }
-      }
-        });
-
+          } });
 
     // for (size_t req_id = 1; req_id < req_num; req_id++) {
-    while (true) {
+    while (true)
+    {
       char* in_buf = (char*)aligned_alloc(gbp::PAGE_SIZE_FILE, io_size);
       ::memset(in_buf, 1, io_size);
       // fpage_id = rnd(gen);
@@ -194,14 +223,16 @@ namespace test {
       context_type context = context_type::GetRawObject(&io_backend);
       async_request_fiber_type req(in_buf, io_size, (gbp::fpage_id_type)fpage_id, 1, 0,
         context);
-      if constexpr (gbp::USING_FIBER_ASYNC_RESPONSE) {
+      if constexpr (gbp::USING_FIBER_ASYNC_RESPONSE)
+      {
         if (num_async_fiber_processing >= gbp::FIBER_BATCH_SIZE)
           boost::this_fiber::yield();
 
         num_async_fiber_processing++;
         async_channel.push(req);
       }
-      else {
+      else
+      {
         async_requests.push_back(req);
       }
 
@@ -212,8 +243,8 @@ namespace test {
     async_fiber.join();
   }
 
-
-  void fiber_pread_1(gbp::DiskManager* disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id) {
+  void fiber_pread_1(gbp::DiskManager* disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id)
+  {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<uint64_t> rnd(
@@ -222,62 +253,114 @@ namespace test {
 
     gbp::IOURing io_backend(disk_manager);
 
-    boost::fibers::buffered_channel<async_request_fiber_type> async_channel(gbp::FIBER_BATCH_SIZE);
+    boost::fibers::buffered_channel<async_request_fiber_type> async_channel(gbp::FIBER_CHANNEL_DEPTH);
 
     gbp::fpage_id_type fpage_id;
     boost::circular_buffer<std::optional<async_request_fiber_type>>
-      async_requests(gbp::FIBER_CHANNEL_DEPTH);
+      async_requests(gbp::FIBER_BATCH_SIZE);
     async_request_fiber_type async_request;
-    for (int idx = 0;idx < gbp::FIBER_CHANNEL_DEPTH;idx++) {
+    for (int idx = 0; idx < gbp::FIBER_CHANNEL_DEPTH; idx++)
+    {
       fpage_id = rnd(gen);
       char* in_buf = (char*)aligned_alloc(gbp::PAGE_SIZE_FILE, io_size);
       // ::memset(in_buf, 1, io_size);
       context_type context = context_type::GetRawObject(&io_backend);
       async_request_fiber_type req(in_buf, io_size, (gbp::fpage_id_type)fpage_id, 1, 0,
         context);
-      if (boost::fibers::channel_op_status::timeout == async_channel.try_push(req)) break;
-      // async_requests.push_back(req);
+      if (boost::fibers::channel_op_status::timeout == async_channel.try_push(req))
+        break;
     }
-    std::cout << "start" << std::endl;
+
     {
 
-      while (!async_requests.full()) {
-        if (boost::fibers::channel_op_status::success == async_channel.try_pop(async_request)) {
+      while (!async_requests.full())
+      {
+        if (boost::fibers::channel_op_status::success == async_channel.try_pop(async_request))
+        {
           async_requests.push_back(async_request);
         }
-        else {
+        else
+        {
           assert(false);
         }
       }
 
-      while (true) {
-        for (auto& req : async_requests) {
-          if (!req.has_value()) {
+      while (true)
+      {
+        for (auto& req : async_requests)
+        {
+          if (!req.has_value())
+          {
             if (boost::fibers::channel_op_status::success == async_channel.try_pop(async_request))
               req.emplace(async_request);
             else
               std::cout << "fuck" << std::endl;
             continue;
           }
-          if (process_func(req.value())) {
+          if (process_func(req.value()))
+          {
             assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value().io_vec[0].iov_base) == req.value().fpage_id_start);
 
             fpage_id = rnd(gen);
             context_type context = context_type::GetRawObject(&io_backend);
             async_request_fiber_type req_new((char*)req.value().io_vec[0].iov_base, io_size, (gbp::fpage_id_type)fpage_id, 1, 0, context);
-            async_channel.push(req_new);
 
+            async_channel.push(req_new);
             req.reset();
+            // async_channel.pop(async_request);
+            // req.emplace(async_request);
+            // req.emplace(req_new);
           }
         }
       }
     }
 
     async_channel.close();
-
   }
 
-  void fiber_pread(gbp::DiskManager* disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id) {
+
+  void fiber_pread_2(gbp::DiskManager* disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id)
+  {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<uint64_t> rnd(
+      0, gbp::ceil(file_size_inByte, io_size) - 1);
+
+    gbp::IOServer io_server(disk_manager);
+
+    boost::circular_buffer<std::optional<gbp::PointerWrapper<gbp::async_request_fiber_type>>>
+      async_requests(gbp::FIBER_BATCH_SIZE);
+
+
+    gbp::fpage_id_type fpage_id;
+    async_request_fiber_type async_request;
+    for (int idx = 0; idx < gbp::FIBER_CHANNEL_DEPTH; idx++)
+    {
+      fpage_id = rnd(gen);
+      char* in_buf = (char*)aligned_alloc(gbp::PAGE_SIZE_FILE, io_size);
+      assert(in_buf != nullptr);
+      auto req = io_server.SendRequest(0, fpage_id, 1, in_buf, false);
+      async_requests.push_back(req);
+    }
+
+    while (true) {
+      for (auto& req : async_requests)
+      {
+        if (req.value().Inner().success)
+        {
+          assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value().Inner().io_vec[0].iov_base) == req.value().Inner().fpage_id_start);
+          IO_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
+
+          fpage_id = rnd(gen);
+          auto req_new = io_server.SendRequest(0, fpage_id, 1, (char*)req.value().Inner().io_vec[0].iov_base, false);
+          req.emplace(req_new);
+        }
+      }
+    }
+  }
+
+  void fiber_pread(gbp::DiskManager* disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id)
+  {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<uint64_t> rnd(
@@ -286,37 +369,59 @@ namespace test {
 
     gbp::IOURing io_backend(disk_manager);
 
-    boost::circular_buffer<std::optional<async_request_fiber_type>>
-      async_requests(gbp::FIBER_CHANNEL_DEPTH);
+    boost::fibers::buffered_channel<async_request_fiber_type> async_channel(gbp::FIBER_CHANNEL_DEPTH);
 
     gbp::fpage_id_type fpage_id;
-    for (size_t idx = 0;idx < gbp::FIBER_CHANNEL_DEPTH;idx++) {
+    boost::circular_buffer<std::optional<async_request_fiber_type>>
+      async_requests(gbp::FIBER_BATCH_SIZE);
+    async_request_fiber_type async_request;
+    for (int idx = 0; idx < gbp::FIBER_CHANNEL_DEPTH; idx++)
+    {
       fpage_id = rnd(gen);
       char* in_buf = (char*)aligned_alloc(gbp::PAGE_SIZE_FILE, io_size);
-      // ::memset(in_buf, 1, io_size);
       context_type context = context_type::GetRawObject(&io_backend);
       async_request_fiber_type req(in_buf, io_size, (gbp::fpage_id_type)fpage_id, 1, 0,
         context);
-      async_requests.push_back(req);
+      if (boost::fibers::channel_op_status::timeout == async_channel.try_push(req))
+        break;
     }
 
-    while (true) {
-      for (auto& req : async_requests) {
-        if (!req.has_value()) {
-          continue;
-        }
-        if (process_func(req.value())) {
-          assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value().io_vec[0].iov_base) == req.value().fpage_id_start);
-          fpage_id = rnd(gen);
+    {
 
-          context_type context = context_type::GetRawObject(&io_backend);
-          async_request_fiber_type req_new((char*)req.value().io_vec[0].iov_base, io_size, (gbp::fpage_id_type)fpage_id, 1, 0,
-            context);
-          req.emplace(req_new);
+      while (!async_requests.full())
+      {
+        if (boost::fibers::channel_op_status::success == async_channel.try_pop(async_request))
+        {
+          async_requests.push_back(async_request);
+        }
+        else
+        {
+          assert(false);
+        }
+      }
+
+      while (true)
+      {
+        for (auto& req : async_requests)
+        {
+          if (!req.has_value())
+          {
+            continue;
+          }
+          if (process_func(req.value()))
+          {
+            assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value().io_vec[0].iov_base) == req.value().fpage_id_start);
+
+            fpage_id = rnd(gen);
+            context_type context = context_type::GetRawObject(&io_backend);
+            async_request_fiber_type req_new((char*)req.value().io_vec[0].iov_base, io_size, (gbp::fpage_id_type)fpage_id, 1, 0, context);
+
+            req.emplace(req_new);
+          }
         }
       }
     }
 
+    async_channel.close();
   }
-
-}  // namespace test
+} // namespace test
