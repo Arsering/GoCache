@@ -289,8 +289,11 @@ namespace test {
     size_t worker_num = std::stoull(argv[2]);
     size_t pool_num = std::stoull(argv[3]);
     size_t pool_size_GB = std::stoull(argv[4]);
+    size_t io_server_num = std::stoull(argv[5]);
 
     std::string file_path = "tests/db/test.db";
+    // std::string file_path = "/home/spdk/p4510/test.db";
+
     // std::string file_name = "/dev/vdb";
 
     size_t file_size_inByte = 1024LU * 1024LU * 1024LU * file_size_GB;
@@ -311,14 +314,14 @@ namespace test {
 
     size_t pool_size = 1024LU * 1024LU / 4 * pool_size_GB / pool_num + 1;
     gbp::DiskManager* disk_manager = new gbp::DiskManager(file_path);
-    auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
-    bpm.init(pool_num, pool_size, pool_num, file_path);
-    bpm.Resize(0, file_size_inByte);
-    gbp::debug::get_log_marker().store(0);
-    // std::cout << "warm up starting" << std::endl;
-    // bpm.WarmUp();
-    // std::cout << "warm up finishing" << std::endl;
-    gbp::debug::get_log_marker().store(1);
+    // auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
+    // bpm.init(pool_num, pool_size, io_server_num, file_path);
+    // bpm.Resize(0, file_size_inByte);
+    // gbp::debug::get_log_marker().store(0);
+    // // std::cout << "warm up starting" << std::endl;
+    // // bpm.WarmUp();
+    // // std::cout << "warm up finishing" << std::endl;
+    // gbp::debug::get_log_marker().store(1);
 
     size_t io_size = 512 * 8;
     std::vector<std::thread> thread_pool;
@@ -326,8 +329,8 @@ namespace test {
     IO_throughput().store(0);
     // worker_num = file_size_inByte / (1024LU * 1024LU * 1024LU * 1);
 
-    printf("%s\tfile_size = %luGB\tio_size = %luBits\t#worker = %lu\t#pool_size = %lu\n", argv[5], file_size_GB,
-      io_size, worker_num, pool_size);
+    printf("%s\tfile_size = %luGB\tio_size = %luBits\t#worker = %lu\t#pool_size = %lu\t#pool_size = %lu\n", argv[6], file_size_GB,
+      io_size, worker_num, pool_size, io_server_num);
 
     // warmup(data_file_mmaped, file_size_inByte, io_size);
     for (size_t i = 0; i < worker_num; i++) {
@@ -336,12 +339,12 @@ namespace test {
       //   (1024LU * 1024LU * 1024LU * 1) * i, i);
       // thread_pool.emplace_back(read_pread, data_file, file_size_inByte,
       //   io_size, i);
-      // thread_pool.emplace_back(fiber_pread, disk_manager, file_size_inByte, io_size,
-      //   i);
+      thread_pool.emplace_back(fiber_pread, disk_manager, file_size_inByte, io_size,
+        i);
       // thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
       //                          io_size, i);
-      thread_pool.emplace_back(read_bufferpool, data_file, file_size_inByte,
-        io_size, i);
+      // thread_pool.emplace_back(read_bufferpool, data_file, file_size_inByte,
+      //   io_size, i);
     }
     for (auto& thread : thread_pool) {
       thread.join();
