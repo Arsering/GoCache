@@ -32,7 +32,7 @@ namespace gbp {
     BufferPoolManager() = default;
     ~BufferPoolManager();
 
-    void init(uint16_t pool_num, size_t pool_size, const std::string& file_paths);
+    void init(uint16_t pool_num, size_t pool_size, uint16_t io_server_num, const std::string& file_paths);
     bool FlushPage(mpage_id_type page_id, GBPfile_handle_type fd = 0);
 
     static BufferPoolManager& GetGlobalInstance() {

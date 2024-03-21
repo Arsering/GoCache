@@ -312,7 +312,7 @@ namespace test {
     size_t pool_size = 1024LU * 1024LU / 4 * pool_size_GB / pool_num + 1;
     gbp::DiskManager* disk_manager = new gbp::DiskManager(file_path);
     auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
-    bpm.init(pool_num, pool_size, file_path);
+    bpm.init(pool_num, pool_size, pool_num, file_path);
     bpm.Resize(0, file_size_inByte);
     gbp::debug::get_log_marker().store(0);
     // std::cout << "warm up starting" << std::endl;
