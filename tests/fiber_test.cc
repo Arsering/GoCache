@@ -22,7 +22,6 @@ namespace test
 
   struct context_type
   {
-
     enum class Type
     {
       Pin,
@@ -43,30 +42,30 @@ namespace test
       End
     } state;
 
-    gbp::IOURing* io_backend;
+    gbp::IOURing *io_backend;
     bool finish = false;
 
-    FORCE_INLINE static context_type GetRawObject(gbp::IOURing* io_backend)
+    FORCE_INLINE static context_type GetRawObject(gbp::IOURing *io_backend)
     {
-      return { Type::Pin, Phase::Begin, State::Commit, io_backend,
-              false };
+      return {Type::Pin, Phase::Begin, State::Commit, io_backend,
+              false};
     }
   };
 
   struct async_request_fiber_type
   {
     async_request_fiber_type() = default;
-    async_request_fiber_type(std::vector<::iovec>& _io_vec, gbp::fpage_id_type _fpage_id_start,
-      gbp::fpage_id_type _page_num,
-      gbp::GBPfile_handle_type _fd,
-      context_type& _async_context) : fpage_id_start(_fpage_id_start), page_num(_page_num), fd(_fd), async_context(_async_context)
+    async_request_fiber_type(std::vector<::iovec> &_io_vec, gbp::fpage_id_type _fpage_id_start,
+                             gbp::fpage_id_type _page_num,
+                             gbp::GBPfile_handle_type _fd,
+                             context_type &_async_context) : fpage_id_start(_fpage_id_start), page_num(_page_num), fd(_fd), async_context(_async_context)
     {
       io_vec.swap(_io_vec);
     }
-    async_request_fiber_type(char* buf, size_t buf_size, gbp::fpage_id_type _fpage_id_start,
-      gbp::fpage_id_type _page_num,
-      gbp::GBPfile_handle_type _fd,
-      context_type& _async_context) : io_vec_size(1), fpage_id_start(_fpage_id_start), page_num(_page_num), fd(_fd), async_context(_async_context)
+    async_request_fiber_type(char *buf, size_t buf_size, gbp::fpage_id_type _fpage_id_start,
+                             gbp::fpage_id_type _page_num,
+                             gbp::GBPfile_handle_type _fd,
+                             context_type &_async_context) : io_vec_size(1), fpage_id_start(_fpage_id_start), page_num(_page_num), fd(_fd), async_context(_async_context)
     {
       // io_vec.emplace_back(buf, buf_size);
       io_vec.resize(1);
@@ -94,18 +93,18 @@ namespace test
   //   return true;
   // }
 
-  bool process_func(async_request_fiber_type& req)
+  bool process_func(async_request_fiber_type &req)
   {
     switch (req.async_context.state)
     {
     case context_type::State::Commit:
     { // 将read request提交至io_uring
       auto ret = req.async_context.io_backend->Read(
-        req.fpage_id_start, req.io_vec.data(), req.fd, &req.async_context.finish);
+          req.fpage_id_start, req.io_vec.data(), req.fd, &req.async_context.finish);
       while (!ret)
       {
         ret = req.async_context.io_backend->Read(
-          req.fpage_id_start, req.io_vec.data(), req.fd, &req.async_context.finish); // 不断尝试提交请求直至提交成功
+            req.fpage_id_start, req.io_vec.data(), req.fd, &req.async_context.finish); // 不断尝试提交请求直至提交成功
       }
 
       if (!req.async_context.finish)
@@ -140,19 +139,19 @@ namespace test
     return false;
   }
 
-  void fiber_pread_0(gbp::DiskManager* disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id)
+  void fiber_pread_0(gbp::DiskManager *disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id)
   {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<uint64_t> rnd(
-      0, gbp::ceil(file_size_inByte, io_size) - 1);
+        0, gbp::ceil(file_size_inByte, io_size) - 1);
     size_t io_num = file_size_inByte / io_size;
 
     size_t req_num = 1000;
     gbp::IOURing io_backend(disk_manager);
 
     boost::circular_buffer<std::optional<async_request_fiber_type>>
-      async_requests(gbp::FIBER_CHANNEL_DEPTH);
+        async_requests(gbp::FIBER_CHANNEL_DEPTH);
     size_t num_async_fiber_processing = 0;
 
     boost::fibers::buffered_channel<async_request_fiber_type> async_channel(gbp::FIBER_BATCH_SIZE);
@@ -161,17 +160,17 @@ namespace test
     for (int idx = 0; idx < gbp::FIBER_BATCH_SIZE; idx++)
     {
       fpage_id = rnd(gen);
-      char* in_buf = (char*)aligned_alloc(gbp::PAGE_SIZE_FILE, io_size);
+      char *in_buf = (char *)aligned_alloc(gbp::PAGE_SIZE_FILE, io_size);
       // ::memset(in_buf, 1, io_size);
       context_type context = context_type::GetRawObject(&io_backend);
       async_request_fiber_type req(in_buf, io_size, (gbp::fpage_id_type)fpage_id, 1, 0,
-        context);
+                                   context);
       async_channel.push(req);
     }
 
     auto async_fiber =
-      boost::fibers::fiber(boost::fibers::launch::dispatch, [&]()
-        {
+        boost::fibers::fiber(boost::fibers::launch::dispatch, [&]()
+                             {
           boost::circular_buffer<std::optional<async_request_fiber_type>>
             async_requests(gbp::FIBER_CHANNEL_DEPTH);
           async_request_fiber_type async_request;
@@ -216,13 +215,13 @@ namespace test
     // for (size_t req_id = 1; req_id < req_num; req_id++) {
     while (true)
     {
-      char* in_buf = (char*)aligned_alloc(gbp::PAGE_SIZE_FILE, io_size);
+      char *in_buf = (char *)aligned_alloc(gbp::PAGE_SIZE_FILE, io_size);
       ::memset(in_buf, 1, io_size);
       // fpage_id = rnd(gen);
       fpage_id = 10;
       context_type context = context_type::GetRawObject(&io_backend);
       async_request_fiber_type req(in_buf, io_size, (gbp::fpage_id_type)fpage_id, 1, 0,
-        context);
+                                   context);
       if constexpr (gbp::USING_FIBER_ASYNC_RESPONSE)
       {
         if (num_async_fiber_processing >= gbp::FIBER_BATCH_SIZE)
@@ -243,12 +242,12 @@ namespace test
     async_fiber.join();
   }
 
-  void fiber_pread_1(gbp::DiskManager* disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id)
+  void fiber_pread_1(gbp::DiskManager *disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id)
   {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<uint64_t> rnd(
-      0, gbp::ceil(file_size_inByte, io_size) - 1);
+        0, gbp::ceil(file_size_inByte, io_size) - 1);
     size_t io_num = file_size_inByte / io_size;
 
     gbp::IOURing io_backend(disk_manager);
@@ -257,16 +256,16 @@ namespace test
 
     gbp::fpage_id_type fpage_id;
     boost::circular_buffer<std::optional<async_request_fiber_type>>
-      async_requests(gbp::FIBER_BATCH_SIZE);
+        async_requests(gbp::FIBER_BATCH_SIZE);
     async_request_fiber_type async_request;
     for (int idx = 0; idx < gbp::FIBER_CHANNEL_DEPTH; idx++)
     {
       fpage_id = rnd(gen);
-      char* in_buf = (char*)aligned_alloc(gbp::PAGE_SIZE_FILE, io_size);
+      char *in_buf = (char *)aligned_alloc(gbp::PAGE_SIZE_FILE, io_size);
       // ::memset(in_buf, 1, io_size);
       context_type context = context_type::GetRawObject(&io_backend);
       async_request_fiber_type req(in_buf, io_size, (gbp::fpage_id_type)fpage_id, 1, 0,
-        context);
+                                   context);
       if (boost::fibers::channel_op_status::timeout == async_channel.try_push(req))
         break;
     }
@@ -287,7 +286,7 @@ namespace test
 
       while (true)
       {
-        for (auto& req : async_requests)
+        for (auto &req : async_requests)
         {
           if (!req.has_value())
           {
@@ -299,11 +298,11 @@ namespace test
           }
           if (process_func(req.value()))
           {
-            assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value().io_vec[0].iov_base) == req.value().fpage_id_start);
+            assert(*reinterpret_cast<gbp::fpage_id_type *>(req.value().io_vec[0].iov_base) == req.value().fpage_id_start);
 
             fpage_id = rnd(gen);
             context_type context = context_type::GetRawObject(&io_backend);
-            async_request_fiber_type req_new((char*)req.value().io_vec[0].iov_base, io_size, (gbp::fpage_id_type)fpage_id, 1, 0, context);
+            async_request_fiber_type req_new((char *)req.value().io_vec[0].iov_base, io_size, (gbp::fpage_id_type)fpage_id, 1, 0, context);
 
             async_channel.push(req_new);
             req.reset();
@@ -318,53 +317,134 @@ namespace test
     async_channel.close();
   }
 
-
-  void fiber_pread_2(gbp::DiskManager* disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id)
+  void fiber_pread_2(gbp::DiskManager *disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id)
   {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<uint64_t> rnd(
-      0, gbp::ceil(file_size_inByte, io_size) - 1);
+        0, gbp::ceil(file_size_inByte, io_size) - 1);
 
     gbp::IOServer io_server(disk_manager);
 
     boost::circular_buffer<std::optional<gbp::PointerWrapper<gbp::async_request_fiber_type>>>
-      async_requests(gbp::FIBER_BATCH_SIZE);
-
+        async_requests(gbp::FIBER_BATCH_SIZE);
 
     gbp::fpage_id_type fpage_id;
-    async_request_fiber_type async_request;
     for (int idx = 0; idx < gbp::FIBER_CHANNEL_DEPTH; idx++)
     {
       fpage_id = rnd(gen);
-      char* in_buf = (char*)aligned_alloc(gbp::PAGE_SIZE_FILE, io_size);
+      char *in_buf = (char *)aligned_alloc(gbp::PAGE_SIZE_FILE, io_size);
       assert(in_buf != nullptr);
-      auto req = io_server.SendRequest(0, fpage_id, 1, in_buf, false);
-      async_requests.push_back(req);
+      auto [success, req] = io_server.SendRequest(0, fpage_id, 1, in_buf);
+      if (success)
+        async_requests.push_back(req);
+      else
+        async_requests.push_back(std::nullopt);
     }
 
-    while (true) {
-      for (auto& req : async_requests)
+    while (true)
+    {
+      for (auto &req : async_requests)
       {
         if (req.value().Inner().success)
         {
-          assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value().Inner().io_vec[0].iov_base) == req.value().Inner().fpage_id_start);
+          assert(*reinterpret_cast<gbp::fpage_id_type *>(req.value().Inner().io_vec[0].iov_base) == req.value().Inner().fpage_id_start);
           IO_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
 
           fpage_id = rnd(gen);
-          auto req_new = io_server.SendRequest(0, fpage_id, 1, (char*)req.value().Inner().io_vec[0].iov_base, false);
+          auto [success, req_new] = io_server.SendRequest(0, fpage_id, 1, (char *)req.value().Inner().io_vec[0].iov_base, false);
           req.emplace(req_new);
         }
       }
     }
   }
 
-  void fiber_pread(gbp::DiskManager* disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id)
+  void fiber_pread_3(gbp::IOServer *io_server, size_t file_size_inByte, size_t io_size, size_t thread_id)
   {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<uint64_t> rnd(
-      0, gbp::ceil(file_size_inByte, io_size) - 1);
+        0, gbp::ceil(file_size_inByte, io_size) - 1);
+
+    boost::circular_buffer<std::optional<gbp::PointerWrapper<gbp::async_request_fiber_type>>>
+        async_requests(gbp::FIBER_BATCH_SIZE);
+
+    gbp::fpage_id_type fpage_id;
+    for (int idx = 0; idx < gbp::FIBER_CHANNEL_DEPTH; idx++)
+    {
+      fpage_id = rnd(gen);
+      char *in_buf = (char *)aligned_alloc(gbp::PAGE_SIZE_FILE, io_size);
+      assert(in_buf != nullptr);
+      auto [success, req] = io_server->SendRequest(0, fpage_id, 1, in_buf);
+      if (success)
+        async_requests.push_back(req);
+      else
+        assert(false);
+      // async_requests.push_back(std::nullopt);
+    }
+    std::vector<char *> buffer_pool;
+    char *buf;
+    while (true)
+    {
+      for (auto &req : async_requests)
+      {
+        if (!req.has_value())
+        {
+          fpage_id = rnd(gen);
+          assert(buffer_pool.size() >= 0);
+          buf = buffer_pool.front();
+          auto [success, req_new] = io_server->SendRequest(0, fpage_id, 1, buf, false);
+          if (success)
+          {
+            req.emplace(req_new);
+            buffer_pool.pop_back();
+          }
+        }
+        if (req.value().Inner().success)
+        {
+          assert(*reinterpret_cast<gbp::fpage_id_type *>(req.value().Inner().io_vec[0].iov_base) == req.value().Inner().fpage_id_start);
+          IO_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
+
+          buffer_pool.push_back((char *)req.value().Inner().io_vec[0].iov_base);
+          req.reset();
+        }
+      }
+    }
+  }
+
+  void fiber_pread_4(gbp::IOServer *io_server, size_t file_size_inByte, size_t io_size, size_t thread_id)
+  {
+    gbp::debug::get_thread_id() = thread_id;
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<uint64_t> rnd(
+        0, gbp::ceil(file_size_inByte, io_size) - 1);
+
+    boost::circular_buffer<std::optional<gbp::PointerWrapper<gbp::async_request_fiber_type>>>
+        async_requests(gbp::FIBER_BATCH_SIZE);
+
+    gbp::fpage_id_type fpage_id;
+    char *in_buf = (char *)aligned_alloc(gbp::PAGE_SIZE_FILE, io_size);
+    while (true)
+    {
+      fpage_id = rnd(gen);
+      auto [success, req] = io_server->SendRequest(0, fpage_id, 1, in_buf, true);
+      if (success)
+      {
+        while (!req.Inner().success)
+          ;
+        IO_throughput().fetch_add(io_size);
+      }
+    }
+  }
+
+  void fiber_pread(gbp::DiskManager *disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id)
+  {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<uint64_t> rnd(
+        0, gbp::ceil(file_size_inByte, io_size) - 1);
     size_t io_num = file_size_inByte / io_size;
 
     gbp::IOURing io_backend(disk_manager);
@@ -373,15 +453,15 @@ namespace test
 
     gbp::fpage_id_type fpage_id;
     boost::circular_buffer<std::optional<async_request_fiber_type>>
-      async_requests(gbp::FIBER_BATCH_SIZE);
+        async_requests(gbp::FIBER_BATCH_SIZE);
     async_request_fiber_type async_request;
     for (int idx = 0; idx < gbp::FIBER_CHANNEL_DEPTH; idx++)
     {
       fpage_id = rnd(gen);
-      char* in_buf = (char*)aligned_alloc(gbp::PAGE_SIZE_FILE, io_size);
+      char *in_buf = (char *)aligned_alloc(gbp::PAGE_SIZE_FILE, io_size);
       context_type context = context_type::GetRawObject(&io_backend);
       async_request_fiber_type req(in_buf, io_size, (gbp::fpage_id_type)fpage_id, 1, 0,
-        context);
+                                   context);
       if (boost::fibers::channel_op_status::timeout == async_channel.try_push(req))
         break;
     }
@@ -402,7 +482,7 @@ namespace test
 
       while (true)
       {
-        for (auto& req : async_requests)
+        for (auto &req : async_requests)
         {
           if (!req.has_value())
           {
@@ -410,11 +490,11 @@ namespace test
           }
           if (process_func(req.value()))
           {
-            assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value().io_vec[0].iov_base) == req.value().fpage_id_start);
+            assert(*reinterpret_cast<gbp::fpage_id_type *>(req.value().io_vec[0].iov_base) == req.value().fpage_id_start);
 
             fpage_id = rnd(gen);
             context_type context = context_type::GetRawObject(&io_backend);
-            async_request_fiber_type req_new((char*)req.value().io_vec[0].iov_base, io_size, (gbp::fpage_id_type)fpage_id, 1, 0, context);
+            async_request_fiber_type req_new((char *)req.value().io_vec[0].iov_base, io_size, (gbp::fpage_id_type)fpage_id, 1, 0, context);
 
             req.emplace(req_new);
           }

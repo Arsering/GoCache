@@ -18,8 +18,8 @@ cd ..
 CUR_DIR=.
 
 export FILE_SIZE_GB=32
-export WORKER_NUM=100
-export POOL_NUM=1
+export WORKER_NUM=150
+export POOL_NUM=10
 export IO_SERVER_NUM=4
 export POOL_SIZE_GB=16
 export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD

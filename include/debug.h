@@ -11,99 +11,110 @@
 #include "logger.h"
 #include "utils.h"
 
-namespace gbp {
-// #define DEBUG_1
+namespace gbp
+{
+  // #define DEBUG_1
 
-// #define DEBUG_t
+  // #define DEBUG_t
 
-namespace debug {
-class BitMap {
- public:
-  // noncopyable but movable.
-  BitMap(const BitMap&) = delete;
-  BitMap& operator=(const BitMap&) = delete;
-  BitMap(BitMap&&) noexcept = default;
+  namespace debug
+  {
+    class BitMap
+    {
+    public:
+      // noncopyable but movable.
+      BitMap(const BitMap &) = delete;
+      BitMap &operator=(const BitMap &) = delete;
+      BitMap(BitMap &&) noexcept = default;
 
-  BitMap() {
-    bit_size_ = 0;
-    one_num_ = 0;
-    // bits_ = nullptr;
-  }
-  BitMap(size_t bit_size) {
-    bit_size_ = 0;
-    Resize(bit_size);
-    one_num_ = 0;
-  }
+      BitMap()
+      {
+        bit_size_ = 0;
+        one_num_ = 0;
+        // bits_ = nullptr;
+      }
+      BitMap(size_t bit_size)
+      {
+        bit_size_ = 0;
+        Resize(bit_size);
+        one_num_ = 0;
+      }
 
-  ~BitMap() {
-    // if (bits_ != NULL) {
-    //   ::free(bits_);
-    // }
-  }
+      ~BitMap()
+      {
+        // if (bits_ != NULL) {
+        //   ::free(bits_);
+        // }
+      }
 
-  void set(size_t idx) {
-    assert(idx < bit_size_);
+      void set(size_t idx)
+      {
+        assert(idx < bit_size_);
 
-    size_t vector_idx = idx / 8;
-    size_t bit_idx = idx % 8;
-    bits_[vector_idx] |= (1 << bit_idx);
-  }
-  void reset(size_t idx) {
-    assert(idx < bit_size_);
+        size_t vector_idx = idx / 8;
+        size_t bit_idx = idx % 8;
+        bits_[vector_idx] |= (1 << bit_idx);
+      }
+      void reset(size_t idx)
+      {
+        assert(idx < bit_size_);
 
-    size_t vector_idx = idx / 8;
-    size_t bit_idx = idx % 8;
-    bits_[vector_idx] &= ~(1 << bit_idx);
-  }
-  void reset_all() { ::memset(bits_.data(), 0, ceil(bit_size_, 8)); }
-  bool test(size_t idx) {
-    if (idx >= bit_size_)
-      std::cout << idx << " | " << bit_size_ << std::endl;
-    assert(idx < bit_size_);
+        size_t vector_idx = idx / 8;
+        size_t bit_idx = idx % 8;
+        bits_[vector_idx] &= ~(1 << bit_idx);
+      }
+      void reset_all() { ::memset(bits_.data(), 0, ceil(bit_size_, 8)); }
+      bool test(size_t idx)
+      {
+        if (idx >= bit_size_)
+          std::cout << idx << " | " << bit_size_ << std::endl;
+        assert(idx < bit_size_);
 
-    size_t vector_idx = idx / 8;
-    size_t bit_idx = idx % 8;
-    return bits_[vector_idx] & (1 << bit_idx);
-  }
+        size_t vector_idx = idx / 8;
+        size_t bit_idx = idx % 8;
+        return bits_[vector_idx] & (1 << bit_idx);
+      }
 
-  void Resize(size_t bit_size_new) {
-    if (bit_size_ == 0 || bit_size_new / 8 > bit_size_ / 8) {
-      // LOG(INFO) << "cp" << bit_size_new;
-      // char* bits_tmp = (char*) malloc(cell(bit_size_new, 8));
-      // LOG(INFO) << "cp";
-      // memcpy(bits_tmp, bits_, cell(bit_size_, 8));
-      // LOG(INFO) << "cp";
-      // memset(bits_tmp + cell(bit_size_, 8), 0,
-      //        bit_size_new / 8 - bit_size_ / 8);
-      // LOG(INFO) << "cp" << (void*) bits_;
-      // if (bits_ != nullptr) {
-      //   ::free(bits_);
-      // }
-      // LOG(INFO) << "cp";
-      // bits_ = bits_tmp;
+      void Resize(size_t bit_size_new)
+      {
+        if (bit_size_ == 0 || bit_size_new / 8 > bit_size_ / 8)
+        {
+          // LOG(INFO) << "cp" << bit_size_new;
+          // char* bits_tmp = (char*) malloc(cell(bit_size_new, 8));
+          // LOG(INFO) << "cp";
+          // memcpy(bits_tmp, bits_, cell(bit_size_, 8));
+          // LOG(INFO) << "cp";
+          // memset(bits_tmp + cell(bit_size_, 8), 0,
+          //        bit_size_new / 8 - bit_size_ / 8);
+          // LOG(INFO) << "cp" << (void*) bits_;
+          // if (bits_ != nullptr) {
+          //   ::free(bits_);
+          // }
+          // LOG(INFO) << "cp";
+          // bits_ = bits_tmp;
 
-      bits_.resize(ceil(bit_size_new, 8));
-      ::memset(bits_.data() + ceil(bit_size_, 8), 0,
-               bit_size_new / 8 - bit_size_ / 8);
-    }
-    bit_size_ = bit_size_new;
-  }
+          bits_.resize(ceil(bit_size_new, 8));
+          ::memset(bits_.data() + ceil(bit_size_, 8), 0,
+                   bit_size_new / 8 - bit_size_ / 8);
+        }
+        bit_size_ = bit_size_new;
+      }
 
- private:
-  // char* bits_;
-  std::vector<char> bits_;
-  size_t bit_size_;
-  size_t one_num_;
-};
+    private:
+      // char* bits_;
+      std::vector<char> bits_;
+      size_t bit_size_;
+      size_t one_num_;
+    };
 
-std::atomic<size_t>& get_counter_read();
-std::atomic<size_t>& get_counter_fetch();
-std::atomic<size_t>& get_counter_fetch_unique();
-std::atomic<size_t>& get_counter();
+    std::atomic<size_t> &get_counter_read();
+    std::atomic<size_t> &get_counter_fetch();
+    std::atomic<size_t> &get_counter_fetch_unique();
+    std::atomic<size_t> &get_counter();
 
-BitMap& get_bitset(uint32_t file_id);
-std::vector<debug::BitMap>& get_bitmaps();
-void reinit_bit_maps(std::vector<size_t>& file_sizes);
+    BitMap &get_bitset(uint32_t file_id);
+    std::vector<debug::BitMap> &get_bitmaps();
+    void reinit_bit_maps(std::vector<size_t> &file_sizes);
 
 #define GET_LATENCY(target_fun, latency) \
   {                                      \
@@ -112,30 +123,30 @@ void reinit_bit_maps(std::vector<size_t>& file_sizes);
     latency = GetSystemTime();           \
   }
 
-std::atomic<size_t>& get_counter_MAP_find();
-std::atomic<size_t>& get_counter_FPL_get();
-std::atomic<size_t>& get_counter_pread();
-std::atomic<size_t>& get_counter_MAP_eviction();
-std::atomic<size_t>& get_counter_ES_eviction();
-std::atomic<size_t>& get_counter_MAP_insert();
-std::atomic<size_t>& get_counter_ES_insert();
-std::atomic<size_t>& get_counter_copy();
-std::atomic<size_t>& get_counter_malloc();
-std::atomic<size_t>& get_log_marker();
+    std::atomic<size_t> &get_counter_MAP_find();
+    std::atomic<size_t> &get_counter_FPL_get();
+    std::atomic<size_t> &get_counter_pread();
+    std::atomic<size_t> &get_counter_MAP_eviction();
+    std::atomic<size_t> &get_counter_ES_eviction();
+    std::atomic<size_t> &get_counter_MAP_insert();
+    std::atomic<size_t> &get_counter_ES_insert();
+    std::atomic<size_t> &get_counter_copy();
+    std::atomic<size_t> &get_counter_malloc();
+    std::atomic<size_t> &get_log_marker();
 
-std::atomic<size_t>& get_counter_bpm();
-std::atomic<size_t>& get_counter_any();
+    std::atomic<size_t> &get_counter_bpm();
+    std::atomic<size_t> &get_counter_any();
 
-std::atomic<size_t>& get_counter_CopyObj();
-std::atomic<size_t>& get_counter_RefObj();
+    std::atomic<size_t> &get_counter_CopyObj();
+    std::atomic<size_t> &get_counter_RefObj();
 
-std::ofstream& get_result_file(size_t file_id, std::string file_path = "");
-std::atomic<size_t>& get_query_id();
+    std::ofstream &get_result_file(size_t file_id, std::string file_path = "");
+    std::atomic<size_t> &get_query_id();
 
-std::mutex& get_file_lock();
+    std::mutex &get_file_lock();
 
-std::atomic<size_t>& get_counter_eviction();
-std::atomic<size_t>& get_counter_contention();
-
-}  // namespace debug
-}  // namespace gbp
+    std::atomic<size_t> &get_counter_eviction();
+    std::atomic<size_t> &get_counter_contention();
+    size_t &get_thread_id();
+  } // namespace debug
+} // namespace gbp
