@@ -41,7 +41,7 @@ namespace gbp {
 
 
     void init(u_int32_t pool_ID, mpage_id_type pool_size,
-      IOServer* io_server, RoundRobinPartitioner* partitioner, EvictionServer* eviction_server);
+      IOServer_old* io_server, RoundRobinPartitioner* partitioner, EvictionServer* eviction_server);
 
     bool UnpinPage(mpage_id_type page_id, bool is_dirty,
       GBPfile_handle_type fd = 0);
@@ -108,7 +108,7 @@ namespace gbp {
     mpage_id_type pool_size_;  // number of pages in buffer pool
     MemoryPool* buffer_pool_ = nullptr;
     PageTable* page_table_ = nullptr;  // array of pages
-    IOServer* io_server_;
+    IOServer_old* io_server_;
     DiskManager* disk_manager_;
     RoundRobinPartitioner* partitioner_;
     EvictionServer* eviction_server_;

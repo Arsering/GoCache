@@ -29,7 +29,7 @@ namespace gbp {
     eviction_server_ = new EvictionServer();
 
     for (int idx = 0; idx < io_server_num; idx++) {
-      io_servers_.push_back(new IOServer(disk_manager_));
+      io_servers_.push_back(new IOServer_old(disk_manager_));
     }
 
     for (int idx = 0; idx < pool_num; idx++) {

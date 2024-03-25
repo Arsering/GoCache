@@ -8,7 +8,7 @@ namespace gbp
    * WARNING: Do Not Edit This Function
    */
   void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
-                        IOServer *io_server, RoundRobinPartitioner *partitioner, EvictionServer *eviction_server)
+    IOServer_old* io_server, RoundRobinPartitioner* partitioner, EvictionServer* eviction_server)
   {
     pool_ID_ = pool_ID;
     pool_size_ = pool_size;
@@ -29,7 +29,7 @@ namespace gbp
     for (auto fd_os : disk_manager_->fd_oss_)
     {
       uint32_t file_size_in_page =
-          ceil(disk_manager_->GetFileSize(fd_os.first), PAGE_SIZE_MEMORY);
+        ceil(disk_manager_->GetFileSize(fd_os.first), PAGE_SIZE_MEMORY);
       page_table_->RegisterFile(file_size_in_page);
     }
 
@@ -83,9 +83,9 @@ namespace gbp
    * dirty flag of this PTE
    */
   bool BufferPool::UnpinPage(fpage_id_type fpage_id, bool is_dirty,
-                             GBPfile_handle_type fd)
+    GBPfile_handle_type fd)
   {
-    PTE *tar = nullptr;
+    PTE* tar = nullptr;
 
     auto [success, mpage_id] = page_table_->FindMapping(fd, fpage_id);
     if (!success)
@@ -113,7 +113,7 @@ namespace gbp
    * replacer if pin_count<=0 before this call, return false. is_dirty: set the
    * dirty flag of this PTE
    */
-  bool BufferPool::ReleasePage(PTE *tar)
+  bool BufferPool::ReleasePage(PTE* tar)
   {
     // std::lock_guard<std::mutex> lck(latch_);
     if (tar->GetRefCount() <= 0)
@@ -134,12 +134,12 @@ namespace gbp
   bool BufferPool::FlushPage(fpage_id_type fpage_id, GBPfile_handle_type fd)
   {
     // std::lock_guard<std::mutex> lck(latch_);
-    PTE *tar = nullptr;
+    PTE* tar = nullptr;
 
     auto [success, mpage_id] = page_table_->FindMapping(fd, fpage_id);
     if (!success)
       return false;
-    tar = (PTE *)page_table_ + mpage_id;
+    tar = (PTE*)page_table_ + mpage_id;
     tar = page_table_->FromPageId(mpage_id);
     if (tar->fpage_id == INVALID_PAGE_ID)
     {
@@ -149,8 +149,8 @@ namespace gbp
     if (tar->dirty)
     {
       io_server_->io_backend_->Write(
-          fpage_id, (char *)buffer_pool_->FromPageId(page_table_->ToPageId(tar)),
-          tar->GetFileHandler());
+        fpage_id, (char*)buffer_pool_->FromPageId(page_table_->ToPageId(tar)),
+        tar->GetFileHandler());
       tar->dirty = false;
     }
 
@@ -194,10 +194,10 @@ namespace gbp
    * update new page's metadata, zero out memory and add corresponding entry
    * into page table. return nullptr if all the pages in pool are pinned
    */
-  PTE *BufferPool::NewPage(mpage_id_type &page_id, GBPfile_handle_type fd)
+  PTE* BufferPool::NewPage(mpage_id_type& page_id, GBPfile_handle_type fd)
   {
     // std::lock_guard<std::mutex> lck(latch_);
-    PTE *tar = nullptr;
+    PTE* tar = nullptr;
 
     // tar = GetVictimPage();
     // if (tar == nullptr)
@@ -226,9 +226,9 @@ namespace gbp
     return tar;
   }
 
-  PTE *BufferPool::GetVictimPage()
+  PTE* BufferPool::GetVictimPage()
   {
-    PTE *tar = nullptr;
+    PTE* tar = nullptr;
     mpage_id_type mpage_id;
 
     size_t st;
@@ -281,14 +281,14 @@ namespace gbp
    * This function must mark the Page as pinned and remove its entry from
    * LRUReplacer before it is returned to the caller.
    */
-  std::tuple<PTE *, char *> BufferPool::FetchPage(fpage_id_type fpage_id, GBPfile_handle_type fd)
+  std::tuple<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id, GBPfile_handle_type fd)
   {
 #ifdef DEBUG
     if (debug::get_log_marker() == 1)
       debug::get_counter_fetch().fetch_add(1);
-      // if (!debug::get_bitset(fd).test(fpage_id))
-      //   debug::get_counter_fetch_unique().fetch_add(1);
-      // debug::get_bitset(fd).set(fpage_id);
+    // if (!debug::get_bitset(fd).test(fpage_id))
+    //   debug::get_counter_fetch_unique().fetch_add(1);
+    // debug::get_bitset(fd).set(fpage_id);
 #endif
 
 #ifdef DEBUG
@@ -305,8 +305,8 @@ namespace gbp
 
     assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
     fpage_id_type fpage_id_inpool = partitioner_->GetFPageIdInPool(fpage_id);
-    PTE *tar = nullptr;
-    char *fpage_data = nullptr;
+    PTE* tar = nullptr;
+    char* fpage_data = nullptr;
 
     while (true)
     {
@@ -358,7 +358,7 @@ namespace gbp
         }
         tar = page_table_->FromPageId(mpage_id);
         assert(tar->ref_count == 0);
-        fpage_data = (char *)buffer_pool_->FromPageId(mpage_id);
+        fpage_data = (char*)buffer_pool_->FromPageId(mpage_id);
         break;
       }
       case context_type::Phase::Evicting:
@@ -404,14 +404,14 @@ namespace gbp
       }
       case context_type::Phase::End:
       {
-        return {tar, fpage_data};
+        return { tar, fpage_data };
       }
       }
     }
-    return {tar, fpage_data};
+    return { tar, fpage_data };
   }
 
-  std::tuple<PTE *, char *> BufferPool::Pin(fpage_id_type fpage_id_inpool, GBPfile_handle_type fd)
+  std::tuple<PTE*, char*> BufferPool::Pin(fpage_id_type fpage_id_inpool, GBPfile_handle_type fd)
   {
     // 1.1
     auto [success, mpage_id] = page_table_->FindMapping(fd, fpage_id_inpool);
@@ -420,7 +420,7 @@ namespace gbp
       auto tar = page_table_->FromPageId(mpage_id);
       auto [has_inc, pre_ref_count] = tar->IncRefCount(fpage_id_inpool, fd);
       if (has_inc)
-        return {tar, (char *)buffer_pool_->FromPageId(mpage_id)};
+        return { tar, (char*)buffer_pool_->FromPageId(mpage_id) };
 
       if (has_inc)
       {
@@ -428,11 +428,11 @@ namespace gbp
         assert(has_dec == true);
       }
     }
-    return {nullptr, nullptr};
+    return { nullptr, nullptr };
   }
 
-  int BufferPool::GetObject(char *buf, size_t file_offset, size_t object_size,
-                            GBPfile_handle_type fd)
+  int BufferPool::GetObject(char* buf, size_t file_offset, size_t object_size,
+    GBPfile_handle_type fd)
   {
     fpage_id_type page_id = file_offset / PAGE_SIZE_MEMORY;
     size_t page_offset = file_offset % PAGE_SIZE_MEMORY;
@@ -468,8 +468,8 @@ namespace gbp
     return 0;
   }
 
-  int BufferPool::SetObject(const char *buf, size_t file_offset,
-                            size_t object_size, GBPfile_handle_type fd)
+  int BufferPool::SetObject(const char* buf, size_t file_offset,
+    size_t object_size, GBPfile_handle_type fd)
   {
     fpage_id_type page_id = file_offset / PAGE_SIZE_MEMORY;
     size_t page_offset = file_offset % PAGE_SIZE_MEMORY;
@@ -489,7 +489,7 @@ namespace gbp
   }
 
   BufferObject BufferPool::GetObject(size_t file_offset, size_t object_size,
-                                     GBPfile_handle_type fd)
+    GBPfile_handle_type fd)
   {
     size_t page_offset = file_offset % PAGE_SIZE_FILE;
     size_t st;
@@ -535,7 +535,7 @@ namespace gbp
   }
 
   int BufferPool::SetObject(BufferObject buf, size_t file_offset,
-                            size_t object_size, GBPfile_handle_type fd)
+    size_t object_size, GBPfile_handle_type fd)
   {
     return SetObject(buf.Data(), file_offset, object_size, fd);
   }

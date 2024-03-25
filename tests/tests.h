@@ -9,19 +9,21 @@ namespace test
     static bool log_thread_run = true;
     static std::mutex latch;
 
-    std::atomic<size_t> &IO_throughput();
+    std::atomic<size_t>& IO_throughput();
 
-    int test_concurrency(int argc, char **argv);
+    int test_concurrency(int argc, char** argv);
 
-    void fiber_pread_0(gbp::DiskManager *disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id);
+    void fiber_pread_0(gbp::DiskManager* disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id);
 
-    void fiber_pread_1(gbp::DiskManager *disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id);
+    void fiber_pread_1(gbp::DiskManager* disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id);
+    void fiber_pread_1_1(gbp::DiskManager* disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id);
+    void fiber_pread_1_2(gbp::DiskManager* disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id);
 
-    void fiber_pread_2(gbp::DiskManager *disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id);
+    void fiber_pread_2(gbp::DiskManager* disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id);
 
-    void fiber_pread_3(gbp::IOServer *io_server, size_t file_size_inByte, size_t io_size, size_t thread_id);
+    void fiber_pread_3(gbp::IOServer_old* io_server, size_t file_size_inByte, size_t io_size, size_t thread_id);
 
-    void fiber_pread_4(gbp::IOServer *io_server, size_t file_size_inByte, size_t io_size, size_t thread_id);
+    void fiber_pread_4(gbp::IOServer_old* io_server, size_t file_size_inByte, size_t io_size, size_t thread_id);
 
-    void fiber_pread(gbp::DiskManager *disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id);
+    void fiber_pread(gbp::DiskManager* disk_manager, size_t file_size_inByte, size_t io_size, size_t thread_id);
 } // namespace test
