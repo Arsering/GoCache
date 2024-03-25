@@ -1,6 +1,6 @@
 file(REMOVE_RECURSE
-  "/home/zhengyang/data/graphscope_bufferpool/bin/graphscope_bufferpool"
-  "/home/zhengyang/data/graphscope_bufferpool/bin/graphscope_bufferpool.pdb"
+  "../bin/graphscope_bufferpool"
+  "../bin/graphscope_bufferpool.pdb"
   "CMakeFiles/graphscope_bufferpool.dir/main.cpp.o"
   "CMakeFiles/graphscope_bufferpool.dir/main.cpp.o.d"
 )
