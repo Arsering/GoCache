@@ -127,15 +127,22 @@ namespace gbp
       return true;
     }
 
-    std::tuple<bool, PointerWrapper<async_request_fiber_type>> SendRequest(GBPfile_handle_type fd, fpage_id_type fpage_id_start, fpage_id_type page_num, char* buf, bool blocked = true)
+    // std::tuple<bool, PointerWrapper<async_request_fiber_type>> SendRequest(GBPfile_handle_type fd, fpage_id_type fpage_id_start, fpage_id_type page_num, char* buf, bool blocked = true)
+    // {
+    //   assert(buf != nullptr);
+    //   context_type context = context_type::GetRawObject();
+    //   auto* req = new async_request_fiber_type(buf, PAGE_SIZE_FILE, fpage_id_start, 1, fd, context);
+    //   SendRequest(req, blocked);
+    //   return { SendRequest(req, blocked), req };
+    // }
+
+    std::tuple<bool, std::shared_ptr<async_request_fiber_type>> SendRequest(GBPfile_handle_type fd, fpage_id_type fpage_id_start, fpage_id_type page_num, char* buf, bool blocked = true)
     {
       assert(buf != nullptr);
       context_type context = context_type::GetRawObject();
-      auto* req = new async_request_fiber_type(buf, PAGE_SIZE_FILE, fpage_id_start, 1, fd, context);
-      SendRequest(req, blocked);
-      return { SendRequest(req, blocked), req };
+      std::shared_ptr<async_request_fiber_type> req(new async_request_fiber_type(buf, PAGE_SIZE_FILE, fpage_id_start, 1, fd, context));
+      return { SendRequest(req.get(), blocked), req };
     }
-
   private:
     bool ProcessFunc(async_request_fiber_type& req)
     {

@@ -599,7 +599,7 @@ namespace test
 
     gbp::IOServer_old io_server(disk_manager);
 
-    boost::circular_buffer<std::optional<gbp::PointerWrapper<gbp::async_request_fiber_type>>>
+    boost::circular_buffer<std::optional<std::shared_ptr<gbp::async_request_fiber_type>>>
       async_requests(gbp::FIBER_CHANNEL_DEPTH);
 
     gbp::fpage_id_type fpage_id;
@@ -620,7 +620,7 @@ namespace test
       for (auto& req : async_requests)
       {
         if (!req.has_value()) {
-          auto [success, req_new] = io_server.SendRequest(0, fpage_id, 1, (char*)req.value().Inner().io_vec[0].iov_base, false);
+          auto [success, req_new] = io_server.SendRequest(0, fpage_id, 1, (char*)req.value()->io_vec[0].iov_base, false);
           if (success) {
             req.emplace(req_new);
           }
@@ -628,13 +628,13 @@ namespace test
             continue;
           }
         }
-        if (req.value().Inner().success)
+        if (req.value()->success)
         {
-          assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value().Inner().io_vec[0].iov_base) == req.value().Inner().fpage_id_start);
+          assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value()->io_vec[0].iov_base) == req.value()->fpage_id_start);
           IO_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
 
           fpage_id = rnd(gen);
-          auto [success, req_new] = io_server.SendRequest(0, fpage_id, 1, (char*)req.value().Inner().io_vec[0].iov_base);
+          auto [success, req_new] = io_server.SendRequest(0, fpage_id, 1, (char*)req.value()->io_vec[0].iov_base);
           req.emplace(req_new);
         }
       }
@@ -648,7 +648,7 @@ namespace test
     std::uniform_int_distribution<uint64_t> rnd(
       0, gbp::ceil(file_size_inByte, io_size) - 1);
 
-    boost::circular_buffer<std::optional<gbp::PointerWrapper<gbp::async_request_fiber_type>>>
+    boost::circular_buffer<std::optional<std::shared_ptr<gbp::async_request_fiber_type>>>
       async_requests(gbp::FIBER_BATCH_SIZE);
 
     gbp::fpage_id_type fpage_id;
@@ -682,12 +682,12 @@ namespace test
             buffer_pool.pop_back();
           }
         }
-        if (req.value().Inner().success)
+        if (req.value()->success)
         {
-          assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value().Inner().io_vec[0].iov_base) == req.value().Inner().fpage_id_start);
+          assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value()->io_vec[0].iov_base) == req.value()->fpage_id_start);
           IO_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
 
-          buffer_pool.push_back((char*)req.value().Inner().io_vec[0].iov_base);
+          buffer_pool.push_back((char*)req.value()->io_vec[0].iov_base);
           req.reset();
         }
       }
@@ -714,7 +714,7 @@ namespace test
       auto [success, req] = io_server->SendRequest(0, fpage_id, 1, in_buf, true);
       if (success)
       {
-        while (!req.Inner().success)
+        while (!req->success)
           ;
         IO_throughput().fetch_add(io_size);
       }

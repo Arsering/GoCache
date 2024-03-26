@@ -18,7 +18,7 @@ cd ..
 CUR_DIR=.
 
 export FILE_SIZE_GB=32
-export WORKER_NUM=1
+export WORKER_NUM=10
 export POOL_NUM=1
 export IO_SERVER_NUM=1
 export POOL_SIZE_GB=16

@@ -17,7 +17,6 @@
 #include <unordered_map>
 
 // #include "flex/storages/rt_mutable_graph/types.h"
-// #define GRAPHSCOPE
 
 #ifdef GRAPHSCOPE
 #include "glog/logging.h"
