@@ -378,13 +378,19 @@ namespace gbp
       { // 4
         if constexpr (USING_FIBER_ASYNC_RESPONSE)
         {
-          auto [success, req] = io_server_->SendRequest(fd, fpage_id, 1, fpage_data);
+          gbp::context_type context = gbp::context_type::GetRawObject();
+          gbp::async_request_fiber_type* req = new gbp::async_request_fiber_type(fpage_data, PAGE_SIZE_MEMORY, (gbp::fpage_id_type)fpage_id, 1, fd,
+            context);
+          assert(io_server_->SendRequest(req));
+
+          // auto [success, req] = io_server_->SendRequest(fd, fpage_id, 1, fpage_data);
           size_t loops = 0;
-          while (success && !req.Inner().success)
+          while (!req->success)
           {
             // hybrid_spin(loops);
             std::this_thread::yield();
           }
+          delete req;
         }
         else
         {
