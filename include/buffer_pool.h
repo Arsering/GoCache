@@ -49,7 +49,7 @@ namespace gbp {
     bool ReleasePage(PageTableInner::PTE* tar);
 
     bool FlushPage(mpage_id_type page_id, GBPfile_handle_type fd = 0);
-
+    bool BufferPool::FlushPage(PTE* pte);
     PageTableInner::PTE* NewPage(mpage_id_type& page_id, GBPfile_handle_type fd = 0);
 
     bool DeletePage(mpage_id_type page_id, GBPfile_handle_type fd = 0);

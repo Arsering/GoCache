@@ -107,6 +107,42 @@ namespace test
     // std::cout << thread_id << std::endl;
   }
 
+  void write_bufferpool(int fd_os, size_t file_size_inByte, size_t io_size,
+    size_t thread_id)
+  {
+    size_t io_num = gbp::ceil(file_size_inByte, io_size) - 1;
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<uint64_t> rnd(0, io_num);
+
+    auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
+    char* out_buf = (char*)aligned_alloc(512, io_size);
+
+    size_t curr_io_fileoffset, ret;
+    volatile size_t sum = 0;
+    size_t st, io_id;
+    while (true)
+    {
+      // for (io_id = 0; io_id < io_num;io_id++) {
+      //  curr_io_fileoffset = io_id * io_size;
+
+      while (true)
+      {
+        io_id = rnd(gen);
+        curr_io_fileoffset = io_id * io_size;
+        memcpy(out_buf, &io_id, sizeof(size_t));
+
+        auto ret = bpm.SetObject(out_buf, curr_io_fileoffset, io_size);
+
+        // if (*reinterpret_cast<size_t*>(ret.Data()) != io_id)
+        //   std::cout << *reinterpret_cast<size_t*>(ret.Data()) << " | " << io_id << std::endl;
+        IO_throughput().fetch_add(io_size);
+      }
+    }
+    // std::cout << thread_id << std::endl;
+  }
+
   void read_pread(int fd_os, size_t file_size_inByte, size_t io_size,
     size_t thread_id)
   {
