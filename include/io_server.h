@@ -63,14 +63,14 @@ namespace gbp
     async_request_fiber_type(std::vector<::iovec>& _io_vec, fpage_id_type _fpage_id_start,
       fpage_id_type _page_num,
       GBPfile_handle_type _fd,
-      context_type& _async_context) : fpage_id_start(_fpage_id_start), page_num(_page_num), fd(_fd), async_context(_async_context), success(false)
+      context_type& _async_context, bool _read = true) : fpage_id_start(_fpage_id_start), page_num(_page_num), fd(_fd), async_context(_async_context), success(false), read(_read)
     {
       io_vec.swap(_io_vec);
     }
     async_request_fiber_type(char* buf, size_t buf_size, fpage_id_type _fpage_id_start,
       fpage_id_type _page_num,
       GBPfile_handle_type _fd,
-      context_type& _async_context) : io_vec_size(1), fpage_id_start(_fpage_id_start), page_num(_page_num), fd(_fd), async_context(_async_context), success(false)
+      context_type& _async_context, bool _read = true) : io_vec_size(1), fpage_id_start(_fpage_id_start), page_num(_page_num), fd(_fd), async_context(_async_context), success(false), read(_read)
     {
       // io_vec.emplace_back(buf, buf_size);
       io_vec.resize(1);
@@ -85,6 +85,7 @@ namespace gbp
     gbp::fpage_id_type page_num;
     gbp::GBPfile_handle_type fd;
     context_type async_context;
+    bool read; // read = true || write = false
     std::atomic<bool> success;
   };
 
@@ -143,6 +144,7 @@ namespace gbp
       std::shared_ptr<async_request_fiber_type> req(new async_request_fiber_type(buf, PAGE_SIZE_FILE, fpage_id_start, 1, fd, context));
       return { SendRequest(req.get(), blocked), req };
     }
+
   private:
     bool ProcessFunc(async_request_fiber_type& req)
     {
@@ -150,12 +152,23 @@ namespace gbp
       {
       case context_type::State::Commit:
       { // 将read request提交至io_uring
-        auto ret = io_backend_->Read(
-          req.fpage_id_start, req.io_vec.data(), req.fd, &req.async_context.finish);
-        while (!ret)
-        {
-          ret = io_backend_->Read(
-            req.fpage_id_start, req.io_vec.data(), req.fd, &req.async_context.finish); // 不断尝试提交请求直至提交成功
+        if (req.read) {
+          auto ret = io_backend_->Read(
+            req.fpage_id_start, req.io_vec.data(), req.fd, &req.async_context.finish);
+          while (!ret)
+          {
+            ret = io_backend_->Read(
+              req.fpage_id_start, req.io_vec.data(), req.fd, &req.async_context.finish); // 不断尝试提交请求直至提交成功
+          }
+        }
+        else {
+          auto ret = io_backend_->Write(
+            req.fpage_id_start, req.io_vec.data(), req.fd, &req.async_context.finish);
+          while (!ret)
+          {
+            ret = io_backend_->Write(
+              req.fpage_id_start, req.io_vec.data(), req.fd, &req.async_context.finish); // 不断尝试提交请求直至提交成功
+          }
         }
 
         if (!req.async_context.finish)

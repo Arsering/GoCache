@@ -135,12 +135,17 @@ namespace gbp
   {
     // std::lock_guard<std::mutex> lck(latch_);
     PTE* tar = nullptr;
+    fpage_id_type fpage_id_inpool = partitioner_->GetFPageIdInPool(fpage_id);
+
 
     auto [success, mpage_id] = page_table_->FindMapping(fd, fpage_id);
+    auto [locked, mpage_id_t] = page_table_->LockMapping(fd, fpage_id_inpool);
+
     if (!success)
       return false;
-    tar = (PTE*)page_table_ + mpage_id;
     tar = page_table_->FromPageId(mpage_id);
+    if (tar->Lock())
+      return false;
     if (tar->fpage_id == INVALID_PAGE_ID)
     {
       return false;
@@ -155,6 +160,13 @@ namespace gbp
     }
 
     return true;
+  }
+
+  bool BufferPool::FlushPage(PTE* pte) {
+    if constexpr (USING_FIBER_ASYNC_RESPONSE)
+      return false;
+    else
+      return io_server_->io_backend_->Write(pte->fpage_id, buffer_pool_->FromPageId(page_table_->ToPageId(pte)), pte->fd);
   }
 
   /**
