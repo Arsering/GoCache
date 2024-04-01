@@ -44,11 +44,14 @@ namespace gbp {
   bool BufferPoolManager::FlushPage(fpage_id_type fpage_id,
     GBPfile_handle_type fd) {
     // return pools_[partitioner_->GetPartitionId(fpage_id)]->FlushPage(fpage_id, fd);
+    auto partition_id = partitioner_->GetPartitionId(fpage_id);
     auto mpage =
-      pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
+      pools_[partition_id]->FetchPage(fpage_id, fd);
     assert(std::get<0>(mpage) != nullptr && std::get<1>(mpage) != nullptr);
+    auto ret = pools_[partition_id]->FlushPage(std::get<0>(mpage));
+    std::get<0>(mpage)->DecRefCount();
 
-
+    return ret;
   }
 
   void BufferPoolManager::RegisterFile(OSfile_handle_type fd) {

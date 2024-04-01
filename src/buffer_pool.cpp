@@ -163,10 +163,16 @@ namespace gbp
   }
 
   bool BufferPool::FlushPage(PTE* pte) {
-    if constexpr (USING_FIBER_ASYNC_RESPONSE)
-      return false;
+    char* memory_page = (char*)buffer_pool_->FromPageId(page_table_->ToPageId(pte));
+
+    if constexpr (USING_FIBER_ASYNC_RESPONSE) {
+      gbp::context_type context = gbp::context_type::GetRawObject();
+      gbp::async_request_fiber_type* req = new gbp::async_request_fiber_type(memory_page, PAGE_SIZE_MEMORY, (fpage_id_type)pte->fpage_id, 1, pte->fd,
+        context);
+      return io_server_->SendRequest(req);
+    }
     else
-      return io_server_->io_backend_->Write(pte->fpage_id, buffer_pool_->FromPageId(page_table_->ToPageId(pte)), pte->fd);
+      return io_server_->io_backend_->Write(pte->fpage_id, memory_page, pte->fd);
   }
 
   /**
@@ -377,7 +383,7 @@ namespace gbp
       { // 2
         if (tar->dirty)
         {
-          io_server_->io_backend_->Write(tar->GetFPageId(), fpage_data, tar->GetFileHandler());
+          assert(FlushPage(tar));
         }
         if (tar->GetFileHandler() != INVALID_FILE_HANDLE)
         {
