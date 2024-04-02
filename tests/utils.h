@@ -85,12 +85,12 @@ uint64_t readIObytesOne()
   return 0;
 }
 
-uint64_t readSSDIObytes()
+std::tuple<size_t, size_t> SSD_io_bytes()
 {
   std::ifstream stat("/proc/diskstats");
   assert(!!stat);
 
-  uint64_t sum = 0;
+  uint64_t read = 0, write = 0;
   for (std::string line; std::getline(stat, line);)
   {
     if (line.find("vdc") != std::string::npos)
@@ -99,10 +99,12 @@ uint64_t readSSDIObytes()
       boost::split(strs, line, boost::is_any_of("\t "),
         boost::token_compress_on);
       // std::cout << std::stoull(strs[6]) << std::endl;
-      sum += std::stoull(strs[6]) * 512;
+      read += std::stoull(strs[6]) * 512;
+      write += std::stoull(strs[10]) * 512;
+
     }
   }
-  return sum;
+  return { read ,write };
 }
 
 double gettime()
