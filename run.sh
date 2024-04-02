@@ -21,7 +21,7 @@ export FILE_SIZE_GB=32
 export WORKER_NUM=100
 export POOL_NUM=1
 export IO_SERVER_NUM=1
-export POOL_SIZE_GB=16
+export POOL_SIZE_GB=1
 export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD
 
 

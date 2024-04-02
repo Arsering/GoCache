@@ -185,7 +185,7 @@ namespace gbp {
         ? PAGE_SIZE_FILE - page_offset
         : object_size;
       ::memcpy(std::get<1>(dst) + page_offset, buf, object_size);
-      std::get<0>(dst)->DecRefCount(true);
+
       return object_size;
     }
 
@@ -195,7 +195,6 @@ namespace gbp {
         ? PAGE_SIZE_FILE - page_offset
         : object_size;
       ::memcpy(buf, (char*)std::get<1>(src) + page_offset, object_size);
-      std::get<0>(src)->DecRefCount();
       return object_size;
     }
 

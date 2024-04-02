@@ -62,12 +62,12 @@ namespace gbp {
     int GetObject(char* buf, size_t file_offset, size_t object_size,
       GBPfile_handle_type fd = 0);
     int SetObject(const char* buf, size_t file_offset, size_t object_size,
-      GBPfile_handle_type fd = 0);
+      GBPfile_handle_type fd = 0, bool flush = false);
 
     BufferObject GetObject(size_t file_offset, size_t object_size,
       GBPfile_handle_type fd = 0);
     int SetObject(BufferObject buf, size_t file_offset, size_t object_size,
-      GBPfile_handle_type fd = 0);
+      GBPfile_handle_type fd = 0, bool flush = false);
 
     int Resize(GBPfile_handle_type fd, size_t new_size) {
       // std::lock_guard lock(latch_);
