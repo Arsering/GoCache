@@ -182,6 +182,34 @@ namespace test
     // std::cout << thread_id << std::endl;
   }
 
+  void write_prwrite(int fd_os, size_t file_size_inByte, size_t io_size,
+    size_t thread_id)
+  {
+    size_t io_num = gbp::ceil(file_size_inByte, io_size) - 1;
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<uint64_t> rnd(0, io_num);
+
+    char* out_buf = (char*)aligned_alloc(4096, io_size);
+    ::memset(out_buf, 1, io_size);
+
+    size_t curr_io_fileoffset, ret, page_id;
+
+    while (true)
+    {
+      curr_io_fileoffset = rnd(gen) * io_size;
+      page_id = curr_io_fileoffset / 4096;
+      memcpy(out_buf, &page_id, sizeof(size_t));
+
+      ret = ::pwrite(fd_os, out_buf, io_size, curr_io_fileoffset);
+      assert(ret == io_size);
+      // fsync(fd_os);
+      IO_throughput().fetch_add(io_size);
+    }
+    // std::cout << thread_id << std::endl;
+  }
+
   void read_mmap(char* data_file_mmaped, size_t file_size_inByte, size_t io_size,
     size_t thread_id)
   {
@@ -300,43 +328,45 @@ namespace test
 
   void logging()
   {
+    uint64_t shootdowns;
+    uint64_t SSD_read_bytes, SSD_write_bytes, last_SSD_read_bytes, last_SSD_write_bytes;
+    uint64_t cur_IO_throughput;
+
     const size_t B2GB = 1024.0 * 1024 * 1024;
     auto last_shootdowns = readTLBShootdownCount();
-    auto last_SSD_IO_bytes = readSSDIObytes();
+    std::tie(last_SSD_read_bytes, last_SSD_write_bytes) = SSD_io_bytes();
     auto last_IO_throughput = IO_throughput().load();
     auto last_eviction_operation_count =
       gbp::debug::get_counter_eviction().load();
     auto last_fetch_count = gbp::debug::get_counter_fetch().load();
     auto last_contention_count = gbp::debug::get_counter_contention().load();
 
-    uint64_t shootdowns;
-    uint64_t SSD_IO_bytes;
-    uint64_t cur_IO_throughput;
-
-    printf("%-20s%-20s%-20s%-20s%-20s\n", "IO_Throughput", "SSD_Throughput",
+    printf("%-25s%-25s%-25s%-25s%-25s%-25s\n", "IO_Throughput", "SSD_Read_Throughput", "SSD_write_Throughput",
       "TLB_shootdown", "Memory_usage", "Eviction_count");
 
     while (true)
     {
       sleep(1);
       shootdowns = readTLBShootdownCount();
-      SSD_IO_bytes = readSSDIObytes();
+      std::tie(SSD_read_bytes, SSD_write_bytes) = SSD_io_bytes();
       cur_IO_throughput = IO_throughput().load();
       auto cur_eviction_operation_count =
         gbp::debug::get_counter_eviction().load();
       auto cur_fetch_count = gbp::debug::get_counter_fetch().load();
       auto cur_contention_count = gbp::debug::get_counter_contention().load();
 
-      printf("%-20lf%-20lf%-20lu%-20lf\n",
+      printf("%-25lf%-25lf%-25lf%-25lu%-25lf\n",
         (cur_IO_throughput - last_IO_throughput) / (double)B2GB,
-        (SSD_IO_bytes - last_SSD_IO_bytes) / (double)B2GB,
+        (SSD_read_bytes - last_SSD_read_bytes) / (double)B2GB,
+        (SSD_write_bytes - last_SSD_write_bytes) / (double)B2GB,
         (shootdowns - last_shootdowns), GetMemoryUsage() / (1024.0 * 1024));
       // printf("%lu%-20lf%-20lu%-20lf%-20lu\n", cur_IO_throughput,
       // (SSD_IO_bytes
       // - last_SSD_IO_bytes) / 1, (shootdowns - last_shootdowns),
       // GetMemoryUsage() * 4 / 1024.0 / 1024, cur_IO_throughput);
       last_shootdowns = shootdowns;
-      last_SSD_IO_bytes = SSD_IO_bytes;
+      last_SSD_read_bytes = SSD_read_bytes;
+      last_SSD_write_bytes = SSD_write_bytes;
       last_IO_throughput = cur_IO_throughput;
       last_eviction_operation_count = cur_eviction_operation_count;
       last_fetch_count = cur_fetch_count;
@@ -354,10 +384,8 @@ namespace test
     size_t pool_size_GB = std::stoull(argv[4]);
     size_t io_server_num = std::stoull(argv[5]);
 
-    std::string file_path = "tests/db/test.db";
+    std::string file_path = "tests/db/test1.db";
     // std::string file_path = "/home/spdk/p4510/test.db";
-
-    // std::string file_name = "/dev/vdb";
 
     size_t file_size_inByte = 1024LU * 1024LU * 1024LU * file_size_GB;
     int data_file = -1;
@@ -375,15 +403,15 @@ namespace test
     //   MADV_RANDOM);  // Turn off readahead
 
     size_t pool_size = 1024LU * 1024LU / 4 * pool_size_GB / pool_num + 1;
-    gbp::DiskManager* disk_manager = new gbp::DiskManager(file_path);
-    auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
-    bpm.init(pool_num, pool_size, io_server_num, file_path);
-    bpm.Resize(0, file_size_inByte);
-    gbp::debug::get_log_marker().store(0);
-    // std::cout << "warm up starting" << std::endl;
-    // bpm.WarmUp();
-    // std::cout << "warm up finishing" << std::endl;
-    gbp::debug::get_log_marker().store(1);
+    // gbp::DiskManager* disk_manager = new gbp::DiskManager(file_path);
+    // auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
+    // bpm.init(pool_num, pool_size, io_server_num, file_path);
+    // bpm.Resize(0, file_size_inByte);
+    // gbp::debug::get_log_marker().store(0);
+    // // std::cout << "warm up starting" << std::endl;
+    // // bpm.WarmUp();
+    // // std::cout << "warm up finishing" << std::endl;
+    // gbp::debug::get_log_marker().store(1);
 
     size_t io_size = 512 * 8;
     std::vector<std::thread> thread_pool;
@@ -402,16 +430,19 @@ namespace test
       //   (1024LU * 1024LU * 1024LU * 1) * i, i);
       // thread_pool.emplace_back(read_pread, data_file, file_size_inByte,
       //   io_size, i);
+      thread_pool.emplace_back(write_prwrite, data_file, file_size_inByte,
+        io_size, i);
       // thread_pool.emplace_back(fiber_pread_1_2, disk_manager, file_size_inByte, io_size, i);
       // thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
       //                          io_size, i);
-      thread_pool.emplace_back(read_bufferpool, data_file, file_size_inByte,
-        io_size, i);
+      // thread_pool.emplace_back(read_bufferpool, data_file, file_size_inByte,
+      //   io_size, i);
     }
     for (auto& thread : thread_pool)
     {
       thread.join();
     }
+    // ::sleep(100);
     log_thread_run = false;
     if (log_thread.joinable())
       log_thread.join();
