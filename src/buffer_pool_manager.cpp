@@ -74,6 +74,7 @@ namespace gbp {
 
       object_size_t =
         PageTableInner::GetObject(mpage, buf, fpage_offset, object_size);
+      std::get<0>(mpage)->DecRefCount();
 
       object_size -= object_size_t;
       buf += object_size_t;
@@ -84,7 +85,7 @@ namespace gbp {
   }
 
   int BufferPoolManager::SetObject(const char* buf, size_t file_offset,
-    size_t object_size, GBPfile_handle_type fd) {
+    size_t object_size, GBPfile_handle_type fd, bool flush) {
     fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
     size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
     size_t object_size_t = 0;
@@ -96,6 +97,9 @@ namespace gbp {
 
       object_size_t =
         PageTableInner::SetObject(buf, mpage, fpage_offset, object_size);
+      if (flush)
+        pools_[partitioner_->GetPartitionId(fpage_id)]->FlushPage(std::get<0>(mpage));
+      std::get<0>(mpage)->DecRefCount(!flush);
 
       object_size -= object_size_t;
       buf += object_size_t;
@@ -158,8 +162,8 @@ namespace gbp {
   }
 
   int BufferPoolManager::SetObject(BufferObject buf, size_t file_offset,
-    size_t object_size, GBPfile_handle_type fd) {
-    return SetObject(buf.Data(), file_offset, object_size, fd);
+    size_t object_size, GBPfile_handle_type fd, bool flush) {
+    return SetObject(buf.Data(), file_offset, object_size, fd, flush);
   }
 
 }  // namespace gbp

@@ -67,7 +67,7 @@ namespace gbp
 
     delete replacer_;
     delete buffer_pool_;
-    delete io_server_;
+    // delete io_server_;
     delete free_list_;
   }
 
@@ -478,6 +478,7 @@ namespace gbp
       st = GetSystemTime();
 #endif
       object_size_t = PageTableInner::SetObject(buf, mpage, page_offset, object_size);
+      std::get<0>(mpage)->DecRefCount(true);
 
 #ifdef DEBUG
       latency = GetSystemTime() - st;
@@ -493,7 +494,7 @@ namespace gbp
   }
 
   int BufferPool::SetObject(const char* buf, size_t file_offset,
-    size_t object_size, GBPfile_handle_type fd)
+    size_t object_size, GBPfile_handle_type fd, bool flush)
   {
     fpage_id_type page_id = file_offset / PAGE_SIZE_MEMORY;
     size_t page_offset = file_offset % PAGE_SIZE_MEMORY;
@@ -503,6 +504,11 @@ namespace gbp
     {
       auto mpage = FetchPage(page_id, fd);
       object_size_t = PageTableInner::SetObject(buf, mpage, page_offset, object_size);
+      // std::get<0>(mpage)->DecRefCount(true);
+      if (flush)
+        FlushPage(std::get<0>(mpage));
+      std::get<0>(mpage)->DecRefCount(!flush);
+
 
       object_size -= object_size_t;
       buf += object_size_t;
@@ -559,9 +565,9 @@ namespace gbp
   }
 
   int BufferPool::SetObject(BufferObject buf, size_t file_offset,
-    size_t object_size, GBPfile_handle_type fd)
+    size_t object_size, GBPfile_handle_type fd, bool flush)
   {
-    return SetObject(buf.Data(), file_offset, object_size, fd);
+    return SetObject(buf.Data(), file_offset, object_size, fd, flush);
   }
 
 } // namespace gbp
