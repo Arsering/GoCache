@@ -3,9 +3,11 @@
 #include <sys/mman.h>
 #include <utility>
 
-namespace gbp {
+namespace gbp
+{
 
-  BufferPoolManager::~BufferPoolManager() {
+  BufferPoolManager::~BufferPoolManager()
+  {
     delete disk_manager_;
     delete partitioner_;
     delete eviction_server_;
@@ -20,8 +22,9 @@ namespace gbp {
    * BufferPoolManager Constructor
    */
   void BufferPoolManager::init(uint16_t pool_num, size_t pool_size,
-    uint16_t io_server_num,
-    const std::string& file_path) {
+                               uint16_t io_server_num,
+                               const std::string &file_path)
+  {
     pool_num_ = pool_num;
     get_pool_num().store(pool_num);
     pool_size_ = pool_size;
@@ -30,23 +33,26 @@ namespace gbp {
     partitioner_ = new RoundRobinPartitioner(pool_num, pool_size);
     eviction_server_ = new EvictionServer();
 
-    for (int idx = 0; idx < io_server_num; idx++) {
+    for (int idx = 0; idx < io_server_num; idx++)
+    {
       io_servers_.push_back(new IOServer_old(disk_manager_));
     }
 
-    for (int idx = 0; idx < pool_num; idx++) {
+    for (int idx = 0; idx < pool_num; idx++)
+    {
       pools_.push_back(new BufferPool());
       pools_[idx]->init(idx, pool_size, io_servers_[idx % io_server_num],
-        partitioner_, eviction_server_);
+                        partitioner_, eviction_server_);
     }
   }
 
   bool BufferPoolManager::FlushPage(fpage_id_type fpage_id,
-    GBPfile_handle_type fd) {
+                                    GBPfile_handle_type fd)
+  {
     // return pools_[partitioner_->GetPartitionId(fpage_id)]->FlushPage(fpage_id, fd);
     auto partition_id = partitioner_->GetPartitionId(fpage_id);
     auto mpage =
-      pools_[partition_id]->FetchPage(fpage_id, fd);
+        pools_[partition_id]->FetchPage(fpage_id, fd);
     assert(std::get<0>(mpage) != nullptr && std::get<1>(mpage) != nullptr);
     auto ret = pools_[partition_id]->FlushPage(std::get<0>(mpage));
     std::get<0>(mpage)->DecRefCount();
@@ -54,26 +60,30 @@ namespace gbp {
     return ret;
   }
 
-  void BufferPoolManager::RegisterFile(OSfile_handle_type fd) {
-    for (auto pool : pools_) {
+  void BufferPoolManager::RegisterFile(OSfile_handle_type fd)
+  {
+    for (auto pool : pools_)
+    {
       pool->RegisterFile(fd);
     }
   }
 
-  int BufferPoolManager::GetObject(char* buf, size_t file_offset,
-    size_t object_size, GBPfile_handle_type fd) {
+  int BufferPoolManager::GetObject(char *buf, size_t file_offset,
+                                   size_t object_size, GBPfile_handle_type fd)
+  {
     // std::lock_guard<std::mutex> lck(latch_);
     fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
     size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
     size_t object_size_t = 0;
     size_t st, latency;
-    while (object_size > 0) {
+    while (object_size > 0)
+    {
       auto mpage =
-        pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
+          pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
       assert(std::get<0>(mpage) != nullptr && std::get<1>(mpage) != nullptr);
 
       object_size_t =
-        PageTableInner::GetObject(mpage, buf, fpage_offset, object_size);
+          PageTableInner::GetObject(mpage, buf, fpage_offset, object_size);
       std::get<0>(mpage)->DecRefCount();
 
       object_size -= object_size_t;
@@ -84,19 +94,23 @@ namespace gbp {
     return 0;
   }
 
-  int BufferPoolManager::SetObject(const char* buf, size_t file_offset,
-    size_t object_size, GBPfile_handle_type fd, bool flush) {
+  int BufferPoolManager::SetObject(const char *buf, size_t file_offset,
+                                   size_t object_size, GBPfile_handle_type fd, bool flush)
+  {
     fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
     size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
     size_t object_size_t = 0;
+    // pools_[partitioner_->GetPartitionId(fpage_id)]->io_server_->io_backend_->Write(fpage_id, buf, 0);
+    // return object_size;
 
-    while (object_size > 0) {
+    while (object_size > 0)
+    {
       auto mpage =
-        pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
+          pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
       assert(std::get<0>(mpage) != nullptr && std::get<1>(mpage) != nullptr);
-
+      // return 0;
       object_size_t =
-        PageTableInner::SetObject(buf, mpage, fpage_offset, object_size);
+          PageTableInner::SetObject(buf, mpage, fpage_offset, object_size);
       if (flush)
         pools_[partitioner_->GetPartitionId(fpage_id)]->FlushPage(std::get<0>(mpage));
       std::get<0>(mpage)->DecRefCount(!flush);
@@ -106,22 +120,24 @@ namespace gbp {
       fpage_id++;
       fpage_offset = 0;
     }
-    return 0;
+    return object_size;
   }
 
   BufferObject BufferPoolManager::GetObject(size_t file_offset,
-    size_t object_size,
-    GBPfile_handle_type fd) {
+                                            size_t object_size,
+                                            GBPfile_handle_type fd)
+  {
     uint16_t fpage_offset = file_offset % PAGE_SIZE_FILE;
     size_t st;
 
-    if (PAGE_SIZE_FILE - fpage_offset >= object_size) {
+    if (PAGE_SIZE_FILE - fpage_offset >= object_size)
+    {
       fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
 #ifdef DEBUG
       st = GetSystemTime();
 #endif
       auto mpage =
-        pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
+          pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
       assert(std::get<0>(mpage) != nullptr && std::get<1>(mpage) != nullptr);
 
 #ifdef DEBUG
@@ -133,7 +149,7 @@ namespace gbp {
       st = GetSystemTime();
 #endif
       BufferObject ret(object_size, std::get<1>(mpage) + fpage_offset,
-        std::get<0>(mpage));
+                       std::get<0>(mpage));
       // std::lock_guard lock(gbp::debug::get_file_lock());
       // if (*reinterpret_cast<size_t*>(ret.Data()) != fpage_id)
       //   std::cout << *reinterpret_cast<size_t*>(ret.Data()) << " | " <<
@@ -145,7 +161,8 @@ namespace gbp {
 #endif
       return ret;
     }
-    else {
+    else
+    {
       assert(false);
 #ifdef DEBUG
       size_t st = GetSystemTime();
@@ -162,8 +179,9 @@ namespace gbp {
   }
 
   int BufferPoolManager::SetObject(BufferObject buf, size_t file_offset,
-    size_t object_size, GBPfile_handle_type fd, bool flush) {
+                                   size_t object_size, GBPfile_handle_type fd, bool flush)
+  {
     return SetObject(buf.Data(), file_offset, object_size, fd, flush);
   }
 
-}  // namespace gbp
+} // namespace gbp
