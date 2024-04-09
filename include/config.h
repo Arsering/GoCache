@@ -8,7 +8,6 @@
 
  // #define GRAPHSCOPE
 
-
 #ifdef GRAPHSCOPE
 
 #include <glog/logging.h>
@@ -22,6 +21,8 @@
 #define FORCE_INLINE __attribute__((always_inline))
 #define likely(x) __builtin_expect((x), 1)
 #define unlikely(x) __builtin_expect((x), 0)
+
+// #define GRAPHSCOPE
 
 namespace gbp {
     using fpage_id_type = uint32_t;
