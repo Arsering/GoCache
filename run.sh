@@ -34,7 +34,7 @@ cp -r ./$0 ${LOG_DIR}/run.sh
 
 # echo 1 > /proc/sys/vm/drop_caches
 
-sudo ./bin/graphscope_bufferpool ${FILE_SIZE_GB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_GB} ${IO_SERVER_NUM} ${IO_SIZE} ${TEST_TYPE} > ${LOG_DIR}/log.log
+# sudo ./bin/graphscope_bufferpool ${FILE_SIZE_GB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_GB} ${IO_SERVER_NUM} ${IO_SIZE} ${TEST_TYPE} > ${LOG_DIR}/log.log
 
 
 # done
