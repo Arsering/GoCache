@@ -418,7 +418,7 @@ namespace test
           if (process_func(req.value()))
           {
             assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value()->io_vec[0].iov_base) == req.value()->fpage_id_start);
-            IO_throughput().fetch_add(req.value()->page_num * gbp::PAGE_SIZE_FILE);
+            Client_Read_throughput().fetch_add(req.value()->page_num * gbp::PAGE_SIZE_FILE);
 
             fpage_id = rnd(gen);
             context_type context = context_type::GetRawObject(&io_backend);
@@ -520,7 +520,7 @@ namespace test
         if (req.value()->success)
         {
           assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value()->io_vec[0].iov_base) == req.value()->fpage_id_start);
-          IO_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
+          Client_Read_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
           fpage_id = rnd(gen);
           context_type context = context_type::GetRawObject(&io_backend);
           async_request_fiber_type* req_new = new async_request_fiber_type((char*)req.value()->io_vec[0].iov_base, io_size, (gbp::fpage_id_type)fpage_id, 1, 0, context);
@@ -578,7 +578,7 @@ namespace test
         if (req.value()->success)
         {
           assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value()->io_vec[0].iov_base) == req.value()->fpage_id_start);
-          IO_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
+          Client_Read_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
           fpage_id = rnd(gen);
           gbp::context_type context = gbp::context_type::GetRawObject();
           gbp::async_request_fiber_type* req_new = new gbp::async_request_fiber_type((char*)req.value()->io_vec[0].iov_base, io_size, (gbp::fpage_id_type)fpage_id, 1, 0, context);
@@ -631,7 +631,7 @@ namespace test
         if (req.value()->success)
         {
           assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value()->io_vec[0].iov_base) == req.value()->fpage_id_start);
-          IO_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
+          Client_Read_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
 
           fpage_id = rnd(gen);
           auto [success, req_new] = io_server.SendRequest(0, fpage_id, 1, (char*)req.value()->io_vec[0].iov_base);
@@ -685,7 +685,7 @@ namespace test
         if (req.value()->success)
         {
           assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value()->io_vec[0].iov_base) == req.value()->fpage_id_start);
-          IO_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
+          Client_Read_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
 
           buffer_pool.push_back((char*)req.value()->io_vec[0].iov_base);
           req.reset();
@@ -716,7 +716,7 @@ namespace test
       {
         while (!req->success)
           ;
-        IO_throughput().fetch_add(io_size);
+        Client_Read_throughput().fetch_add(io_size);
       }
     }
   }

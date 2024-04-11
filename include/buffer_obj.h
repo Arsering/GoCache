@@ -578,6 +578,7 @@ namespace gbp {
       size_ = s;
     }
   };
+
   class BufferObjectImp2 {
   private:
     char* data_ = nullptr;
@@ -611,6 +612,7 @@ namespace gbp {
       need_delete_ = false;
       type_ = ObjectType::gbpClass;
     }
+
 #ifdef GRAPHSCOPE
     BufferObjectImp2(const gs::Any& value) {
       type_ = ObjectType::gbpAny;
@@ -733,9 +735,63 @@ namespace gbp {
     }
     char* Data() const { return data_; }
     size_t Size() const { return size_; }
+
+    template <typename T>
+    static T& Decode(BufferObjectImp2& obj) {
+      assert(sizeof(T) == obj.Size());
+      return *reinterpret_cast<T*>(obj.Data());
+    }
+
+    template <typename T>
+    static const T& Decode(const BufferObjectImp2& obj) {
+      assert(sizeof(T) == obj.Size());
+
+      return *reinterpret_cast<const T*>(obj.Data());
+    }
+
+    template <typename T>
+    static const T& Decode(const BufferObjectImp2& obj, size_t idx) {
+      assert(sizeof(T) * (idx + 1) <= obj.Size());
+      return *reinterpret_cast<const T*>(obj.Data() + idx * sizeof(T));
+    }
   };
 
   class BufferObjectImp5 {
+    template<typename T>
+    class iterator {
+    public:
+      iterator(const T* ptr, const T* end)
+        : ptr_(ptr), end_(end) {
+        while (ptr_ != end) {
+          ++ptr_;
+        }
+      }
+
+      const T& operator*() const { return *ptr_; }
+
+      const T* operator->() const { return ptr_; }
+
+      iterator& operator++() {
+        ++ptr_;
+        while (ptr_ != end_) {
+          ++ptr_;
+        }
+        return *this;
+      }
+
+      bool operator==(const iterator& rhs) const {
+        return (ptr_ == rhs.ptr_);
+      }
+
+      bool operator!=(const iterator& rhs) const {
+        return (ptr_ != rhs.ptr_);
+      }
+    private:
+      const T* ptr_;
+      const T* end_;
+    };
+
+
   public:
     BufferObjectImp5() {
       data_ = nullptr;
@@ -744,41 +800,62 @@ namespace gbp {
       type_ = ObjectType::gbpClass;
     }
 
-    BufferObjectImp5(size_t page_num) :page_num_(page_num) {
+    BufferObjectImp5(size_t size, size_t page_num)
+      : page_num_(page_num), size_(size) {
       data_ = (char**)malloc(page_num_ * sizeof(char*));
       ptes_ = (PTE**)malloc(page_num_ * sizeof(PTE*));
+      assert(data_ != nullptr);
+      assert(ptes_ != nullptr);
+      type_ = ObjectType::gbpClass;
+    }
+
+    BufferObjectImp5(size_t size, char* data) : size_(size) {
+      data_ = (char**)malloc(1 * sizeof(char*));
+      ptes_ = nullptr;
+      assert(data_ != nullptr);
+      data_[0] = (char*)malloc(size_);
+      memcpy(data_[0], data, size_);
+      type_ = ObjectType::gbpClass;
+    }
+
+    BufferObjectImp5(size_t size) : size_(size) {
+      data_ = (char**)malloc(1 * sizeof(char*));
+      ptes_ = nullptr;
+      assert(data_ != nullptr);
+      data_[0] = (char*)malloc(size);
       type_ = ObjectType::gbpClass;
     }
 
 #ifdef GRAPHSCOPE
     BufferObjectImp5(const gs::Any& value) {
       type_ = ObjectType::gbpAny;
+
       if (value.type == gs::PropertyType::kInt32) {
         Malloc(sizeof(int32_t));
-        memcpy(data_, &value.value.i, sizeof(int32_t));
+        memcpy(data_[0], &value.value.i, sizeof(int32_t));
       }
       else if (value.type == gs::PropertyType::kInt64) {
         Malloc(sizeof(int64_t));
-        memcpy(data_, &value.value.l, sizeof(int64_t));
+        memcpy(data_[0], &value.value.l, sizeof(int64_t));
       }
       else if (value.type == gs::PropertyType::kString) {
         Malloc(sizeof(std::string_view));
-        memcpy(data_, &value.value.s, sizeof(std::string_view));
+        memcpy(data_[0], &value.value.s, sizeof(std::string_view));
         //      return value.s.to_string();
       }
       else if (value.type == gs::PropertyType::kDate) {
         Malloc(sizeof(gs::Date));
-        memcpy(data_, &value.value.d, sizeof(gs::Date));
+        memcpy(data_[0], &value.value.d, sizeof(gs::Date));
       }
       else if (value.type == gs::PropertyType::kEmpty) {
         data_ = nullptr;
         size_ = 0;
-        page_ = nullptr;
-        need_delete_ = false;
+        ptes_ = nullptr;
+        page_num_ = 0;
       }
       else if (value.type == gs::PropertyType::kDouble) {
         Malloc(sizeof(double));
-        memcpy(data_, &value.value.db, sizeof(double));
+        memcpy(data_[0], &value.value.db, sizeof(double));
       }
       else {
         LOG(FATAL) << "Unexpected property type: "
@@ -786,6 +863,7 @@ namespace gbp {
       }
     }
 #endif
+
     BufferObjectImp5(const BufferObjectImp5& src) { Move(src, *this); }
     // BufferObjectImp5& operator=(const BufferObjectImp5&) = delete;
     BufferObjectImp5& operator=(const BufferObjectImp5& src) {
@@ -793,9 +871,7 @@ namespace gbp {
       return *this;
     }
 
-    BufferObjectImp5(BufferObjectImp5&& src) noexcept {
-      Move(src, *this);
-    }
+    BufferObjectImp5(BufferObjectImp5&& src) noexcept { Move(src, *this); }
 
     BufferObjectImp5& operator=(BufferObjectImp5&& src) noexcept {
       Move(src, *this);
@@ -803,21 +879,34 @@ namespace gbp {
     }
 
     ~BufferObjectImp5() {
-      // 如果ptes不为空，则free
-      if (page_num_ != 0) {
-        while (page_num_ != 0) {
-          ptes_[--page_num_]->DecRefCount();
-        }
-        LBFree(ptes_);
-        LBFree(data_);
-      }
+      free();
     }
 
-    // static BufferObjectImp5 Copy(const BufferObjectImp5& rhs) {
-    //   BufferObjectImp5 ret(rhs.Size());
-    //   memcpy(ret.Data(), rhs.Data(), rhs.Size());
-    //   return ret;
-    // }
+    void InsertPage(size_t idx, char* data, PTE* pte) {
+      assert(idx < page_num_);
+      data_[idx] = data;
+      ptes_[idx] = pte;
+    }
+
+    static BufferObjectImp5 Copy(const BufferObjectImp5& rhs) {
+      BufferObjectImp5 ret(rhs.size_);
+      assert(ret.data_ != nullptr);
+
+      if (rhs.ptes_ == nullptr)
+        memcpy(ret.data_[0], rhs.data_[0], rhs.size_);
+      else {
+        size_t size_new = 0, size_old = rhs.size_, slice_len, loc_inpage;
+        for (size_t i = 0; i < rhs.page_num_; i++) {
+          loc_inpage =
+            PAGE_SIZE_MEMORY - (uintptr_t)rhs.data_[i] % PAGE_SIZE_MEMORY;
+          slice_len = loc_inpage < size_old ? loc_inpage : size_old;
+          memcpy((char*)ret.data_[0] + size_new, rhs.data_[i], slice_len);
+          size_new += slice_len;
+          size_old -= slice_len;
+        }
+      }
+      return ret;
+    }
 
     static void Move(const BufferObjectImp5& src, BufferObjectImp5& dst) {
       dst.data_ = src.data_;
@@ -826,7 +915,8 @@ namespace gbp {
       dst.type_ = src.type_;
       dst.size_ = src.size_;
 
-      const_cast<BufferObjectImp5&>(src).page_num_ = 0;
+      const_cast<BufferObjectImp5&>(src).data_ = nullptr;
+      const_cast<BufferObjectImp5&>(src).ptes_ = nullptr;
     }
 
     template <typename INNER_T>
@@ -838,19 +928,86 @@ namespace gbp {
       return *reinterpret_cast<INNER_T*>(data_[0]);
     }
 
+    void free() {
+      // 如果ptes不为空，则free
+      if (data_ != nullptr) {
+        if (ptes_ != nullptr) {
+          while (page_num_ != 0) {
+            ptes_[--page_num_]->DecRefCount();
+          }
+          LBFree(ptes_);
+        }
+        else {
+          LBFree(data_[0]);
+        }
+        LBFree(data_);
+      }
+      data_ = nullptr;
+      ptes_ = nullptr;
+    }
 #ifdef GRAPHSCOPE
     std::string to_string() const {
-      if (type_ != ObjectType::gbpAny)
-        LOG(FATAL) << "Can't convert current type to std::string!!";
-      auto value = reinterpret_cast<const gs::Any*>(Data());
-      return value->to_string();
+      // if (type_ != ObjectType::gbpAny)
+      //   LOG(FATAL) << "Can't convert current type to std::string!!";
+      // auto value = reinterpret_cast<const gs::Any*>(Data());
+      // return value->to_string();
+      assert(false);
+      return "aaa";
     }
 #endif
 
-    char* Data() const { return data_[0]; }
+    template <typename T>
+    FORCE_INLINE static T& Decode(const BufferObjectImp5& obj, size_t idx = 0) {
+      return *obj.Decode1<T>(idx);
+    }
+
+    template <class T>
+    FORCE_INLINE T* Decode1(size_t idx = 0) const {
+      // static_assert(PAGE_SIZE_MEMORY % sizeof(T) == 0);
+      constexpr size_t OBJ_NUM = PAGE_SIZE_MEMORY / sizeof(T);
+      assert(data_ != nullptr);
+      assert(sizeof(T) * (idx + 1) <= size_);
+
+      char* ret = nullptr;
+
+      if (ptes_ == nullptr)
+      {
+        ret = data_[0] + idx * sizeof(T);
+      }
+      else {
+        auto obj_num_firstpage = (PAGE_SIZE_MEMORY - ((uintptr_t)data_[0] % PAGE_SIZE_MEMORY)) / sizeof(T);
+
+        if (obj_num_firstpage > idx) {
+          ret = data_[0] + idx * sizeof(T);
+        }
+        else {
+          idx -= obj_num_firstpage;
+          ret = data_[idx / OBJ_NUM + 1] + (idx % OBJ_NUM) * sizeof(T);
+        }
+      }
+
+      assert(ret != nullptr);
+      return reinterpret_cast<T*>(ret);
+    }
+
+    template <class T>
+    FORCE_INLINE T& Decode(size_t idx = 0) const {
+      return *Decode1<T>(idx);
+    }
+
+    char* Data() const { return  data_[0]; }
     size_t Size() const { return size_; }
 
   private:
+    void Malloc(size_t size) {
+      data_ = (char**)LBMalloc(sizeof(char*));
+      assert(data_ != NULL);
+      data_[0] = (char*)LBMalloc(sizeof(char) * size);
+      size_ = size;
+      page_num_ = 0;
+      ptes_ = nullptr;
+    }
+
     char** data_ = nullptr;
     PTE** ptes_ = nullptr;
     size_t size_;
@@ -858,7 +1015,6 @@ namespace gbp {
     u_int16_t page_num_ = 0;
     ObjectType type_;
   };
-
 
   class BufferObjectImp3 {
   private:
@@ -963,43 +1119,8 @@ namespace gbp {
 #endif
   };
 
-  using BufferObject = BufferObjectImp2;
+  using BufferObject = BufferObjectImp5;
 
-  template <typename T>
-  T& Decode(BufferObject& obj) {
-    assert(sizeof(T) == obj.Size());
-    // if (sizeof(T) != obj.Size())    {
-    // LOG(INFO) << "sizeof T = " << sizeof(T);
-    // LOG(INFO) << "sizeof obj = " << obj.Size();
-    // LOG(FATAL) << "Decode size mismatch!!!";}
-
-    return *reinterpret_cast<T*>(obj.Data());
-  }
-
-  template <typename T>
-  const T& Decode(const BufferObject& obj) {
-    // if (sizeof(T) != obj.Size())
-    // {
-    //   LOG(INFO) << "sizeof T = " << sizeof(T);
-    //   LOG(INFO) << "sizeof obj = " << obj.Size();
-    //   LOG(FATAL) << "Decode size mismatch!!!";
-    // }
-    assert(sizeof(T) == obj.Size());
-
-    return *reinterpret_cast<const T*>(obj.Data());
-      }
-
-  template <typename T>
-  const T& Decode(const BufferObject& obj, size_t idx) {
-    assert(sizeof(T) * (idx + 1) <= obj.Size());
-    // if (sizeof(T) * (idx + 1) > obj.Size()) {
-    //   LOG(INFO) << "sizeof T = " << sizeof(T);
-    //   LOG(INFO) << "sizeof obj = " << obj.Size();
-    //   LOG(FATAL) << "Decode size mismatch!!!";
-    // }
-
-    return *reinterpret_cast<const T*>(obj.Data() + idx * sizeof(T));
-  }
 #endif
 
-    }  // namespace gbp
+}  // namespace gbp

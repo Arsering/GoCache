@@ -20,9 +20,8 @@
 namespace gbp {
   class RoundRobinPartitioner {
   public:
-    RoundRobinPartitioner(partition_id_type num_partitions,
-      fpage_id_type num_fpages)
-      : num_partitions_(num_partitions), num_vpages_(num_fpages) {}
+    RoundRobinPartitioner(partition_id_type num_partitions)
+      : num_partitions_(num_partitions) {}
 
     FORCE_INLINE std::tuple<partition_id_type, fpage_id_type> operator()(fpage_id_type fpage_id) const {
       return { fpage_id % num_partitions_, fpage_id / num_partitions_ };
@@ -43,7 +42,7 @@ namespace gbp {
 
   private:
     const partition_id_type num_partitions_;
-    const fpage_id_type num_vpages_;
+
   };
 
 }  // namespace gbp

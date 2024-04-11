@@ -4,7 +4,7 @@ cd build
 
 rm -rf ./*
 cmake ..
-make 
+make -j
 
 if [ $? -ne 0 ]; then
     echo -e "\033[41;36m Compile failed \033[0m"
@@ -17,12 +17,12 @@ cd ..
 
 CUR_DIR=.
 
-export FILE_SIZE_GB=32
-export WORKER_NUM=100
+export FILE_SIZE_MB=$((1024*30))
+export WORKER_NUM=10
 export POOL_NUM=10
 export IO_SERVER_NUM=1
-export POOL_SIZE_GB=16
-export IO_SIZE=$((4096*16))
+export POOL_SIZE_MB=$((1024*1))
+export IO_SIZE=$((4096*101))
 export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD
 
 # for WORKER_NUM in 1 8 16 32 64 128 256 512
@@ -34,7 +34,7 @@ cp -r ./$0 ${LOG_DIR}/run.sh
 
 # echo 1 > /proc/sys/vm/drop_caches
 
-# sudo ./bin/graphscope_bufferpool ${FILE_SIZE_GB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_GB} ${IO_SERVER_NUM} ${IO_SIZE} ${TEST_TYPE} > ${LOG_DIR}/log.log
+sudo ./bin/graphscope_bufferpool ${FILE_SIZE_MB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_MB} ${IO_SERVER_NUM} ${IO_SIZE} ${TEST_TYPE} > ${LOG_DIR}/log.log
 
 
 # done
