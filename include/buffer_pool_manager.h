@@ -28,7 +28,7 @@ namespace gbp {
 
   // template<typename IOBackendType>
 
-  //FIXME: 未实现读写的并发
+  // FIXME: 未实现读写的并发
   class BufferPoolManager {
   public:
     BufferPoolManager() = default;
@@ -90,7 +90,7 @@ namespace gbp {
 
   private:
     uint16_t pool_num_;
-    size_t pool_size_;  // number of pages in buffer pool
+    size_t pool_size_;  // number of pages in buffer pool (Byte)
     DiskManager* disk_manager_;
     RoundRobinPartitioner* partitioner_;
     std::vector<IOServer_old*> io_servers_;

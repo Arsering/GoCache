@@ -13,22 +13,21 @@
 #include <vector>
 
 #include <math.h>
+#include <sys/mman.h>
+#include <utility>
 #include "buffer_obj.h"
 #include "config.h"
 #include "debug.h"
 #include "extendible_hash.h"
 #include "fifo_replacer.h"
 #include "io_backend.h"
+#include "io_server.h"
 #include "logger.h"
 #include "memory_pool.h"
 #include "page_table.h"
 #include "rw_lock.h"
-#include <sys/mman.h>
-#include <utility>
-#include "io_server.h"
 
 #include "eviction_server.h"
-
 
 namespace gbp {
 
@@ -39,9 +38,9 @@ namespace gbp {
     BufferPool() = default;
     ~BufferPool();
 
-
-    void init(u_int32_t pool_ID, mpage_id_type pool_size,
-      IOServer_old* io_server, RoundRobinPartitioner* partitioner, EvictionServer* eviction_server);
+    void init(u_int32_t pool_ID, mpage_id_type pool_size, IOServer_old* io_server,
+      RoundRobinPartitioner* partitioner,
+      EvictionServer* eviction_server);
 
     bool UnpinPage(mpage_id_type page_id, bool is_dirty,
       GBPfile_handle_type fd = 0);
@@ -51,7 +50,8 @@ namespace gbp {
     bool FlushPage(mpage_id_type page_id, GBPfile_handle_type fd = 0);
     bool FlushPage(PTE* pte);
 
-    PageTableInner::PTE* NewPage(mpage_id_type& page_id, GBPfile_handle_type fd = 0);
+    PageTableInner::PTE* NewPage(mpage_id_type& page_id,
+      GBPfile_handle_type fd = 0);
 
     bool DeletePage(mpage_id_type page_id, GBPfile_handle_type fd = 0);
 
@@ -87,8 +87,7 @@ namespace gbp {
         size_t page_f_num =
           ceil(disk_manager_->file_sizes_[fd_gbp], PAGE_SIZE_FILE);
         for (size_t page_idx_f = 0; page_idx_f < page_f_num; page_idx_f++) {
-          auto mpage =
-            FetchPage(page_idx_f, fd_gbp);
+          auto mpage = FetchPage(page_idx_f, fd_gbp);
           std::get<0>(mpage)->DecRefCount();
 
           if (--free_page_num == 0) {
@@ -116,7 +115,8 @@ namespace gbp {
 
     Replacer<mpage_id_type>*
       replacer_;  // to find an unpinned page for replacement
-    // VectorSync<mpage_id_type>* free_list_;     // to find a free page for replacement
+    // VectorSync<mpage_id_type>* free_list_;     // to find a free page for
+    // replacement
     std::mutex latch_;  // to protect shared data structure
 
     lockfree_queue_type<mpage_id_type>* free_list_;
