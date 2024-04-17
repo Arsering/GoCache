@@ -1,5 +1,6 @@
 #pragma once
 
+#include <execinfo.h>
 #include <atomic>
 #include <boost/fiber/context.hpp>
 #include <boost/fiber/operations.hpp>
@@ -170,4 +171,23 @@ class lockfree_queue_type {
 void Log_mine(std::string& content);
 
 class string_view {};
+
+std::string get_stack_trace();
+
+template <typename T>
+std::tuple<bool, T> atomic_add(std::atomic<T>& data, T add_data,
+                               T upper_bound = std::numeric_limits<T>::max()) {
+  T old_value = data.load(), new_value;
+
+  do {
+    new_value = old_value;
+    new_value += add_data;
+    if (new_value > upper_bound)
+      return {false, 0};
+  } while (!data.compare_exchange_weak(old_value, new_value,
+                                       std::memory_order_release,
+                                       std::memory_order_relaxed));
+  return {true, old_value};
+}
+
 }  // namespace gbp

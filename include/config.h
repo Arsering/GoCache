@@ -6,7 +6,7 @@
 
 #pragma once
 
- // #define GRAPHSCOPE
+#define GRAPHSCOPE
 
 #ifdef GRAPHSCOPE
 
@@ -34,8 +34,8 @@ namespace gbp {
     constexpr uint32_t INVALID_PAGE_ID =
         std::numeric_limits<uint32_t>::max();  // representing an invalid page id
     constexpr uint16_t INVALID_FILE_HANDLE = std::numeric_limits<uint16_t>::max();
-    constexpr size_t PAGE_SIZE_MEMORY = 4096 * 16;  // size of a memory page in byte
-    constexpr size_t PAGE_SIZE_FILE = 4096 * 16;
+    constexpr size_t PAGE_SIZE_MEMORY = 4096;  // size of a memory page in byte
+    constexpr size_t PAGE_SIZE_FILE = 4096;
     constexpr size_t CACHELINE_SIZE = 64;
     constexpr static size_t IOURing_MAX_DEPTH = 64 * 2;
     constexpr size_t FIBER_BATCH_SIZE = IOURing_MAX_DEPTH * 2;
