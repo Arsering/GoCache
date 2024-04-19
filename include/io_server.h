@@ -52,25 +52,26 @@ namespace gbp
 
     FORCE_INLINE static context_type GetRawObject()
     {
-      return {Type::Pin, Phase::Begin, State::Commit,
-              false};
+      return { Type::Pin, Phase::Begin, State::Commit,
+              false };
     }
   };
 
   struct async_request_fiber_type
   {
     async_request_fiber_type() = default;
-    async_request_fiber_type(std::vector<::iovec> &_io_vec, fpage_id_type _fpage_id_start,
-                             fpage_id_type _page_num,
-                             GBPfile_handle_type _fd,
-                             context_type &_async_context, bool _read = true) : fpage_id_start(_fpage_id_start), page_num(_page_num), fd(_fd), async_context(_async_context), success(false), read(_read)
+    async_request_fiber_type(std::vector<::iovec>& _io_vec, size_t _offset,
+      size_t _file_size,
+      GBPfile_handle_type _fd,
+      context_type& _async_context, bool _read = true) : file_offset(_offset), file_size(_file_size), fd(_fd), async_context(_async_context), success(false), read(_read)
     {
       io_vec.swap(_io_vec);
     }
-    async_request_fiber_type(char *buf, size_t buf_size, fpage_id_type _fpage_id_start,
-                             fpage_id_type _page_num,
-                             GBPfile_handle_type _fd,
-                             context_type &_async_context, bool _read = true) : io_vec_size(1), fpage_id_start(_fpage_id_start), page_num(_page_num), fd(_fd), async_context(_async_context), success(false), read(_read)
+
+    async_request_fiber_type(char* buf, size_t buf_size, size_t _offset,
+      size_t _file_size,
+      GBPfile_handle_type _fd,
+      context_type& _async_context, bool _read = true) : io_vec_size(1), file_offset(_offset), file_size(_file_size), fd(_fd), async_context(_async_context), success(false), read(_read)
     {
       // io_vec.emplace_back(buf, buf_size);
       io_vec.resize(1);
@@ -81,8 +82,8 @@ namespace gbp
 
     std::vector<::iovec> io_vec;
     size_t io_vec_size;
-    gbp::fpage_id_type fpage_id_start;
-    gbp::fpage_id_type page_num;
+    size_t file_offset;
+    size_t file_size;
     gbp::GBPfile_handle_type fd;
     context_type async_context;
     bool read; // read = true || write = false
@@ -92,7 +93,7 @@ namespace gbp
   class IOServer_old
   {
   public:
-    IOServer_old(DiskManager *disk_manager) : request_channel_(), num_async_fiber_processing_(0), stop_(false)
+    IOServer_old(DiskManager* disk_manager) : request_channel_(), num_async_fiber_processing_(0), stop_(false)
     {
       if constexpr (IO_BACKEND_TYPE == 1)
         io_backend_ = new RWSysCall(disk_manager);
@@ -102,7 +103,7 @@ namespace gbp
         assert(false);
 
       server_ = std::thread([this]()
-                            { Run(); });
+        { Run(); });
     }
     ~IOServer_old()
     {
@@ -110,9 +111,9 @@ namespace gbp
       if (server_.joinable())
         server_.join();
     }
-    IOBackend *io_backend_;
+    IOBackend* io_backend_;
 
-    bool SendRequest(async_request_fiber_type *req, bool blocked = true)
+    bool SendRequest(async_request_fiber_type* req, bool blocked = true)
     {
       if (unlikely(req == nullptr))
         return false;
@@ -137,16 +138,17 @@ namespace gbp
     //   return { SendRequest(req, blocked), req };
     // }
 
-    std::tuple<bool, std::shared_ptr<async_request_fiber_type>> SendRequest(GBPfile_handle_type fd, fpage_id_type fpage_id_start, fpage_id_type page_num, char *buf, bool blocked = true)
+    std::tuple<bool, std::shared_ptr<async_request_fiber_type>> SendRequest(GBPfile_handle_type fd, size_t offset,
+      size_t size, char* buf, bool blocked = true)
     {
       assert(buf != nullptr);
       context_type context = context_type::GetRawObject();
-      std::shared_ptr<async_request_fiber_type> req(new async_request_fiber_type(buf, PAGE_SIZE_FILE, fpage_id_start, 1, fd, context));
-      return {SendRequest(req.get(), blocked), req};
+      std::shared_ptr<async_request_fiber_type> req(new async_request_fiber_type(buf, PAGE_SIZE_FILE, offset, size, fd, context));
+      return { SendRequest(req.get(), blocked), req };
     }
 
   private:
-    bool ProcessFunc(async_request_fiber_type &req)
+    bool ProcessFunc(async_request_fiber_type& req)
     {
       switch (req.async_context.state)
       {
@@ -155,21 +157,21 @@ namespace gbp
         if (req.read)
         {
           auto ret = io_backend_->Read(
-              req.fpage_id_start, req.io_vec.data(), req.fd, &req.async_context.finish);
+            req.file_offset, req.io_vec.data(), req.fd, &req.async_context.finish);
           while (!ret)
           {
             ret = io_backend_->Read(
-                req.fpage_id_start, req.io_vec.data(), req.fd, &req.async_context.finish); // 不断尝试提交请求直至提交成功
+              req.file_offset, req.io_vec.data(), req.fd, &req.async_context.finish); // 不断尝试提交请求直至提交成功
           }
         }
         else
         {
           auto ret = io_backend_->Write(
-              req.fpage_id_start, req.io_vec.data(), req.fd, &req.async_context.finish);
+            req.file_offset, req.io_vec.data(), req.fd, &req.async_context.finish);
           while (!ret)
           {
             ret = io_backend_->Write(
-                req.fpage_id_start, req.io_vec.data(), req.fd, &req.async_context.finish); // 不断尝试提交请求直至提交成功
+              req.file_offset, req.io_vec.data(), req.fd, &req.async_context.finish); // 不断尝试提交请求直至提交成功
           }
         }
 
@@ -207,15 +209,15 @@ namespace gbp
     {
       size_t loops = 100;
       {
-        boost::circular_buffer<std::optional<async_request_fiber_type *>>
-            async_requests(gbp::FIBER_BATCH_SIZE);
+        boost::circular_buffer<std::optional<async_request_fiber_type*>>
+          async_requests(gbp::FIBER_BATCH_SIZE);
         while (!async_requests.full())
           async_requests.push_back(std::nullopt);
 
-        async_request_fiber_type *async_request;
+        async_request_fiber_type* async_request;
         while (true)
         {
-          for (auto &req : async_requests)
+          for (auto& req : async_requests)
           {
             if (!req.has_value())
             {
@@ -247,7 +249,7 @@ namespace gbp
     }
 
     std::thread server_;
-    boost::lockfree::queue<async_request_fiber_type *, boost::lockfree::capacity<FIBER_CHANNEL_DEPTH>> request_channel_;
+    boost::lockfree::queue<async_request_fiber_type*, boost::lockfree::capacity<FIBER_CHANNEL_DEPTH>> request_channel_;
     size_t num_async_fiber_processing_;
     bool stop_;
   };
@@ -255,7 +257,7 @@ namespace gbp
   class IOServer
   {
   public:
-    IOServer(gbp::DiskManager *disk_manager) : stop_(false)
+    IOServer(gbp::DiskManager* disk_manager) : stop_(false)
     {
       if constexpr (gbp::IO_BACKEND_TYPE == 1)
         io_backend_ = new gbp::RWSysCall(disk_manager);
@@ -265,7 +267,7 @@ namespace gbp
         assert(false);
 
       server_ = std::thread([this]()
-                            { Run(); });
+        { Run(); });
     }
 
     ~IOServer()
@@ -275,7 +277,7 @@ namespace gbp
         server_.join();
     }
 
-    bool SendRequest(async_request_fiber_type *req, bool blocked = true)
+    bool SendRequest(async_request_fiber_type* req, bool blocked = true)
     {
       if (unlikely(req == nullptr))
         return false;
@@ -292,18 +294,18 @@ namespace gbp
     }
 
   private:
-    bool process_func(async_request_fiber_type *req)
+    bool process_func(async_request_fiber_type* req)
     {
       switch (req->async_context.state)
       {
       case context_type::State::Commit:
       { // 将read request提交至io_uring
         auto ret = io_backend_->Read(
-            req->fpage_id_start, req->io_vec.data(), req->fd, &req->async_context.finish);
+          req->file_offset, req->io_vec.data(), req->fd, &req->async_context.finish);
         while (!ret)
         {
           ret = io_backend_->Read(
-              req->fpage_id_start, req->io_vec.data(), req->fd, &req->async_context.finish); // 不断尝试提交请求直至提交成功
+            req->file_offset, req->io_vec.data(), req->fd, &req->async_context.finish); // 不断尝试提交请求直至提交成功
         }
 
         if (!req->async_context.finish)
@@ -338,9 +340,9 @@ namespace gbp
 
     void Run()
     {
-      boost::circular_buffer<std::optional<async_request_fiber_type *>>
-          async_requests(gbp::FIBER_BATCH_SIZE);
-      async_request_fiber_type *async_request;
+      boost::circular_buffer<std::optional<async_request_fiber_type*>>
+        async_requests(gbp::FIBER_BATCH_SIZE);
+      async_request_fiber_type* async_request;
       while (!async_requests.full())
       {
         if (async_channel_.pop(async_request))
@@ -351,7 +353,7 @@ namespace gbp
 
       while (true)
       {
-        for (auto &req : async_requests)
+        for (auto& req : async_requests)
         {
           if (!req.has_value())
           {
@@ -374,10 +376,10 @@ namespace gbp
       }
     }
 
-    boost::lockfree::queue<async_request_fiber_type *, boost::lockfree::capacity<gbp::FIBER_CHANNEL_DEPTH>> async_channel_;
+    boost::lockfree::queue<async_request_fiber_type*, boost::lockfree::capacity<gbp::FIBER_CHANNEL_DEPTH>> async_channel_;
     bool stop_ = false;
     std::thread server_;
-    gbp::IOBackend *io_backend_;
+    gbp::IOBackend* io_backend_;
   };
 
 } // namespace gbp

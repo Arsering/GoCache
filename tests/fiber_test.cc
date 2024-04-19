@@ -97,11 +97,11 @@ namespace test
     case context_type::State::Commit:
     { // 将read request提交至io_uring
       auto ret = req->async_context.io_backend->Read(
-        req->fpage_id_start, req->io_vec.data(), req->fd, &req->async_context.finish);
+        req->fpage_id_start * gbp::PAGE_SIZE_FILE, req->io_vec.data(), req->fd, &req->async_context.finish);
       while (!ret)
       {
         ret = req->async_context.io_backend->Read(
-          req->fpage_id_start, req->io_vec.data(), req->fd, &req->async_context.finish); // 不断尝试提交请求直至提交成功
+          req->fpage_id_start * gbp::PAGE_SIZE_FILE, req->io_vec.data(), req->fd, &req->async_context.finish); // 不断尝试提交请求直至提交成功
       }
 
       if (!req->async_context.finish)
@@ -577,7 +577,7 @@ namespace test
         }
         if (req.value()->success)
         {
-          assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value()->io_vec[0].iov_base) == req.value()->fpage_id_start);
+          assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value()->io_vec[0].iov_base) == req.value()->file_offset / 4096);
           Client_Read_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
           fpage_id = rnd(gen);
           gbp::context_type context = gbp::context_type::GetRawObject();
@@ -630,7 +630,7 @@ namespace test
         }
         if (req.value()->success)
         {
-          assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value()->io_vec[0].iov_base) == req.value()->fpage_id_start);
+          assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value()->io_vec[0].iov_base) == req.value()->file_offset / 4096);
           Client_Read_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
 
           fpage_id = rnd(gen);
@@ -684,7 +684,7 @@ namespace test
         }
         if (req.value()->success)
         {
-          assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value()->io_vec[0].iov_base) == req.value()->fpage_id_start);
+          assert(*reinterpret_cast<gbp::fpage_id_type*>(req.value()->io_vec[0].iov_base) == req.value()->file_offset / 4096);
           Client_Read_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
 
           buffer_pool.push_back((char*)req.value()->io_vec[0].iov_base);

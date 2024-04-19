@@ -17,12 +17,12 @@ cd ..
 
 CUR_DIR=.
 
-export FILE_SIZE_MB=$((1024*3))
-export WORKER_NUM=1
-export POOL_NUM=10
+export FILE_SIZE_MB=$((200))
+export WORKER_NUM=10
+export POOL_NUM=20
 export IO_SERVER_NUM=1
-export POOL_SIZE_MB=$((1024*1))
-export IO_SIZE=$((4096+1000))
+export POOL_SIZE_MB=$((1))
+export IO_SIZE=$((4096))
 export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD
 
 # for WORKER_NUM in 1 8 16 32 64 128 256 512

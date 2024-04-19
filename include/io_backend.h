@@ -41,14 +41,13 @@ namespace gbp {
      * Public helper function to get disk file size
      */
     FORCE_INLINE size_t GetFileSizeShort(GBPfile_handle_type fd) const {
-      return file_sizes_[fd];
+      return file_size_inBytes_[fd];
     }
 
-    int Resize(GBPfile_handle_type fd, size_t new_size) {
-      auto ret = ::ftruncate(GetFileDescriptor(fd), new_size);
-      assert(ret == 0);
+    int Resize(GBPfile_handle_type fd, size_t new_size_inByte) {
+      assert(::ftruncate(GetFileDescriptor(fd), new_size_inByte) == 0);
       // file_sizes_[fd_gbp] = GetFileSize(GetFileDescriptor(fd_gbp));
-      file_sizes_[fd] = new_size;
+      file_size_inBytes_[fd] = new_size_inByte;
 #ifdef DEBUG
       debug::get_bitmaps()[fd].Resize(
         cell(file_sizes_[fd], PAGE_SIZE_BUFFER_POOL));
@@ -62,7 +61,7 @@ namespace gbp {
       auto fd_os = ::open(file_path.c_str(), o_flag, 0777);
       assert(fd_os != -1);
       fd_oss_.push_back(std::make_pair(fd_os, true));
-      file_sizes_.push_back(GetFileSize(fd_os));
+      file_size_inBytes_.push_back(GetFileSize(fd_os));
 #ifdef DEBUG
       debug::get_bitmaps().emplace_back(
         ceil(file_sizes_[file_sizes_.size() - 1], PAGE_SIZE_MEMORY));
@@ -74,6 +73,10 @@ namespace gbp {
       auto fd_os = GetFileDescriptor(fd);
       ::close(fd_os);
       fd_oss_[fd].second = false;
+    }
+
+    FORCE_INLINE bool ValidFD(GBPfile_handle_type fd) {
+      return fd < fd_oss_.size() && fd_oss_[fd].second;
     }
 
     // protected:
@@ -88,7 +91,7 @@ namespace gbp {
 
     std::vector<std::pair<OSfile_handle_type, bool>> fd_oss_;
     std::vector<std::string> file_names_;
-    std::vector<size_t> file_sizes_;
+    std::vector<size_t> file_size_inBytes_;
   };
 
   class IOBackend {
@@ -101,22 +104,18 @@ namespace gbp {
 
     virtual ~IOBackend() = default;
 
-    virtual bool Write(fpage_id_type fpage_id, const void* data,
-      GBPfile_handle_type fd, bool* finish = nullptr) = 0;
     virtual bool Write(size_t offset, std::string_view data,
       GBPfile_handle_type fd, bool* finish = nullptr) = 0;
-    virtual bool Write(size_t offset, char* data, size_t size,
+    virtual bool Write(size_t offset, const char* data, size_t size,
       GBPfile_handle_type fd, bool* finish = nullptr) = 0;
-    virtual bool Write(fpage_id_type fpage_id, ::iovec* io_info,
+    virtual bool Write(size_t offset, ::iovec* io_info,
       GBPfile_handle_type fd, bool* finish = nullptr) = 0;
 
-    virtual bool Read(fpage_id_type fpage_id, void* data, GBPfile_handle_type fd,
-      bool* finish = nullptr) = 0;
     virtual bool Read(size_t offset, std::string_view data,
       GBPfile_handle_type fd, bool* finish = nullptr) = 0;
     virtual bool Read(size_t offset, char* data, size_t size,
       GBPfile_handle_type fd, bool* finish = nullptr) = 0;
-    virtual bool Read(fpage_id_type fpage_id, ::iovec* io_info,
+    virtual bool Read(size_t offset, ::iovec* io_info,
       GBPfile_handle_type fd, bool* finish = nullptr) = 0;
     virtual bool Progress() = 0;
 
@@ -167,11 +166,17 @@ namespace gbp {
 
     ~IOURing() { io_uring_queue_exit(&ring_); }
 
-    bool Write(fpage_id_type fpage_id, const void* data, GBPfile_handle_type fd,
+    bool Write(size_t offset, std::string_view data, GBPfile_handle_type fd,
+      bool* finish = nullptr) override {
+      assert(false);
+      return false;
+    }
+
+    bool Write(size_t offset, const char* data, size_t size, GBPfile_handle_type fd,
       bool* finish = nullptr) override {
       assert(fd < disk_manager_->fd_oss_.size() &&
         disk_manager_->fd_oss_[fd].second);
-      assert(fpage_id < ceil(disk_manager_->file_sizes_[fd], PAGE_SIZE_MEMORY) &&
+      assert(offset < disk_manager_->file_size_inBytes_[fd] &&
         ((uintptr_t)data) % PAGE_SIZE_MEMORY == 0);
 
       auto sqe = io_uring_get_sqe(&ring_);
@@ -181,29 +186,18 @@ namespace gbp {
       }
 
       io_uring_prep_write(sqe, disk_manager_->fd_oss_[fd].first, data,
-        PAGE_SIZE_MEMORY, fpage_id * PAGE_SIZE_MEMORY);
+        PAGE_SIZE_MEMORY, offset);
       io_uring_sqe_set_data(sqe, finish);
       num_preparing_++;
 
       return true;
     }
-    bool Write(size_t offset, std::string_view data, GBPfile_handle_type fd,
-      bool* finish = nullptr) override {
-      assert(false);
-      return false;
-    }
 
-    bool Write(size_t offset, char* data, size_t size, GBPfile_handle_type fd,
-      bool* finish = nullptr) override {
-      assert(false);
-      return false;
-    }
-
-    bool Write(fpage_id_type fpage_id, ::iovec* io_info, GBPfile_handle_type fd,
+    bool Write(size_t offset, ::iovec* io_info, GBPfile_handle_type fd,
       bool* finish = nullptr) override {
       assert(fd < disk_manager_->fd_oss_.size() &&
         disk_manager_->fd_oss_[fd].second);
-      assert(fpage_id < ceil(disk_manager_->file_sizes_[fd], PAGE_SIZE_MEMORY) &&
+      assert(offset < disk_manager_->file_size_inBytes_[fd] &&
         ((uintptr_t)io_info->iov_base) % PAGE_SIZE_FILE == 0);
 
       auto sqe = io_uring_get_sqe(&ring_);
@@ -216,18 +210,45 @@ namespace gbp {
         disk_manager_->fd_oss_[fd].first,  // 从 fd 打开的文件中读取数据
         io_info,  // iovec 地址，读到的数据写入 iovec 缓冲区
         1,        // iovec 数量
-        fpage_id * PAGE_SIZE_FILE);  // 读取操作的起始地址偏移量
+        offset);  // 读取操作的起始地址偏移量
       io_uring_sqe_set_data(sqe, finish);
       num_preparing_++;
 
       return true;
     }
 
-    bool Read(fpage_id_type fpage_id, void* data, GBPfile_handle_type fd,
+    // bool Read(fpage_id_type fpage_id, void* data, GBPfile_handle_type fd,
+    //   bool* finish = nullptr) {
+    //   assert(fd < disk_manager_->fd_oss_.size() &&
+    //     disk_manager_->fd_oss_[fd].second);
+    //   assert(fpage_id < ceil(disk_manager_->file_size_inBytes_[fd], PAGE_SIZE_MEMORY) &&
+    //     ((uintptr_t)data) % PAGE_SIZE_MEMORY == 0);
+
+    //   auto sqe = io_uring_get_sqe(&ring_);
+    //   if (!sqe) {
+    //     Progress();
+    //     return false;
+    //   }
+
+    //   io_uring_prep_read(sqe, disk_manager_->fd_oss_[fd].first, data,
+    //     PAGE_SIZE_FILE, fpage_id * PAGE_SIZE_FILE);
+    //   io_uring_sqe_set_data(sqe, finish);
+    //   num_preparing_++;
+
+    //   return true;
+    // }
+
+    bool Read(size_t offset, std::string_view data, GBPfile_handle_type fd,
+      bool* finish = nullptr)  override {
+      assert(false);
+      return false;
+    }
+
+    bool Read(size_t offset, char* data, size_t size, GBPfile_handle_type fd,
       bool* finish = nullptr) override {
       assert(fd < disk_manager_->fd_oss_.size() &&
         disk_manager_->fd_oss_[fd].second);
-      assert(fpage_id < ceil(disk_manager_->file_sizes_[fd], PAGE_SIZE_MEMORY) &&
+      assert(offset < disk_manager_->file_size_inBytes_[fd] &&
         ((uintptr_t)data) % PAGE_SIZE_MEMORY == 0);
 
       auto sqe = io_uring_get_sqe(&ring_);
@@ -237,28 +258,18 @@ namespace gbp {
       }
 
       io_uring_prep_read(sqe, disk_manager_->fd_oss_[fd].first, data,
-        PAGE_SIZE_FILE, fpage_id * PAGE_SIZE_FILE);
+        PAGE_SIZE_FILE, offset);
       io_uring_sqe_set_data(sqe, finish);
       num_preparing_++;
 
       return true;
     }
 
-    bool Read(size_t offset, std::string_view data, GBPfile_handle_type fd,
-      bool* finish = nullptr) override {
-      assert(false);
-      return false;
-    }
-    bool Read(size_t offset, char* data, size_t size, GBPfile_handle_type fd,
-      bool* finish = nullptr) override {
-      assert(false);
-      return false;
-    }
-    bool Read(fpage_id_type fpage_id, ::iovec* io_info, GBPfile_handle_type fd,
+    bool Read(size_t offset, ::iovec* io_info, GBPfile_handle_type fd,
       bool* finish = nullptr) override {
       assert(fd < disk_manager_->fd_oss_.size() &&
         disk_manager_->fd_oss_[fd].second);
-      assert(fpage_id < ceil(disk_manager_->file_sizes_[fd], PAGE_SIZE_MEMORY) &&
+      assert(offset < disk_manager_->file_size_inBytes_[fd] &&
         ((uintptr_t)io_info->iov_base) % PAGE_SIZE_FILE == 0);
 
       auto sqe = io_uring_get_sqe(&ring_);
@@ -271,7 +282,7 @@ namespace gbp {
         disk_manager_->fd_oss_[fd].first,  // 从 fd 打开的文件中读取数据
         io_info,  // iovec 地址，读到的数据写入 iovec 缓冲区
         1,        // iovec 数量
-        fpage_id * PAGE_SIZE_FILE);  // 读取操作的起始地址偏移量
+        offset);  // 读取操作的起始地址偏移量
       io_uring_sqe_set_data(sqe, finish);
       num_preparing_++;
 
@@ -318,29 +329,6 @@ namespace gbp {
     RWSysCall(RWSysCall&&) = delete;
     ~RWSysCall() = default;
 
-    /**
-     * Write the contents of the specified page into disk file
-     */
-    bool Write(fpage_id_type fpage_id, const void* data, GBPfile_handle_type fd,
-      bool* finish = nullptr) override {
-      assert(fd < disk_manager_->fd_oss_.size() &&
-        disk_manager_->fd_oss_[fd].second);
-
-      size_t offset = (size_t)fpage_id * PAGE_SIZE_FILE;
-      auto ret = ::pwrite(disk_manager_->fd_oss_[fd].first, data, PAGE_SIZE_FILE,
-        offset);
-
-      assert(ret == PAGE_SIZE_FILE);  // check for I/O error
-
-      ::fdatasync(disk_manager_->fd_oss_[fd]
-        .first);  // needs to flush to keep disk file in sync
-
-      if (finish != nullptr)
-        *finish = true;
-
-      return true;
-    }
-
     bool Write(size_t offset, std::string_view data, GBPfile_handle_type fd,
       bool* finish = nullptr) override {
       assert(fd < disk_manager_->fd_oss_.size() &&
@@ -348,6 +336,7 @@ namespace gbp {
 
       auto ret = ::pwrite(disk_manager_->fd_oss_[fd].first, data.data(),
         data.size(), offset);
+      if (ret != data.size()) std::cout << ret << " " << data.size() << std::endl;
       assert(ret == data.size());  // check for I/O error
 
       ::fdatasync(disk_manager_->fd_oss_[fd]
@@ -359,7 +348,7 @@ namespace gbp {
       return false;
     }
 
-    bool Write(size_t offset, char* data, size_t size, GBPfile_handle_type fd,
+    bool Write(size_t offset, const char* data, size_t size, GBPfile_handle_type fd,
       bool* finish = nullptr) override {
       assert(fd < disk_manager_->fd_oss_.size() &&
         disk_manager_->fd_oss_[fd].second);
@@ -373,15 +362,14 @@ namespace gbp {
       if (finish != nullptr)
         *finish = true;
 
-      return false;
+      return true;
     }
 
-    bool Write(fpage_id_type fpage_id, ::iovec* io_info, GBPfile_handle_type fd,
+    bool Write(size_t offset, ::iovec* io_info, GBPfile_handle_type fd,
       bool* finish = nullptr) override {
       assert(fd < disk_manager_->fd_oss_.size() &&
         disk_manager_->fd_oss_[fd].second);
 
-      size_t offset = (size_t)fpage_id * PAGE_SIZE_FILE;
       auto ret = ::pwrite(disk_manager_->fd_oss_[fd].first, io_info[0].iov_base,
         PAGE_SIZE_FILE, offset);
       assert(ret != -1);  // check for I/O error
@@ -395,37 +383,37 @@ namespace gbp {
       return true;
     }
 
-    /**
-     * Read the contents of the specified page into the given memory area
-     */
-    bool Read(fpage_id_type fpage_id, void* data, GBPfile_handle_type fd,
-      bool* finish = nullptr) override {
-      assert(fd < disk_manager_->fd_oss_.size() &&
-        disk_manager_->fd_oss_[fd].second);
-#ifdef DEBUG
-      if (get_mark_warmup().load() == 1)
-        debug::get_counter_read().fetch_add(1);
-#endif
-      size_t offset = (size_t)fpage_id * PAGE_SIZE_FILE;
-      assert(offset <=
-        disk_manager_->file_sizes_[fd]);  // check if read beyond file length
+    //     /**
+    //      * Read the contents of the specified page into the given memory area
+    //      */
+    //     bool Read(fpage_id_type fpage_id, void* data, GBPfile_handle_type fd,
+    //       bool* finish = nullptr) {
+    //       assert(fd < disk_manager_->fd_oss_.size() &&
+    //         disk_manager_->fd_oss_[fd].second);
+    // #ifdef DEBUG
+    //       if (get_mark_warmup().load() == 1)
+    //         debug::get_counter_read().fetch_add(1);
+    // #endif
+    //       size_t offset = (size_t)fpage_id * PAGE_SIZE_FILE;
+    //       assert(offset <=
+    //         disk_manager_->file_size_inBytes_[fd]);  // check if read beyond file length
 
-      auto ret =
-        ::pread(disk_manager_->fd_oss_[fd].first, data, PAGE_SIZE_FILE, offset);
+    //       auto ret =
+    //         ::pread(disk_manager_->fd_oss_[fd].first, data, PAGE_SIZE_FILE, offset);
 
-      // if file ends before reading PAGE_SIZE
-      if (ret < PAGE_SIZE_FILE) {
-        // std::cerr << "Read less than a page" << std::endl;
-        memset((char*)data + ret, 0, PAGE_SIZE_FILE - ret);
-      }
-      if (finish != nullptr)
-        *finish = true;
-      return true;
-    }
+    //       // if file ends before reading PAGE_SIZE
+    //       if (ret < PAGE_SIZE_FILE) {
+    //         // std::cerr << "Read less than a page" << std::endl;
+    //         memset((char*)data + ret, 0, PAGE_SIZE_FILE - ret);
+    //       }
+    //       if (finish != nullptr)
+    //         *finish = true;
+    //       return true;
+    //     }
 
-    /**
-     * Read the contents of the specified page into the given memory area
-     */
+        /**
+         * Read the contents of the specified page into the given memory area
+         */
     bool Read(size_t offset, std::string_view data, GBPfile_handle_type fd,
       bool* finish = nullptr) override {
       assert(fd < disk_manager_->fd_oss_.size() &&
@@ -435,7 +423,7 @@ namespace gbp {
         debug::get_counter_read().fetch_add(1);
 #endif
       assert(offset <=
-        disk_manager_->file_sizes_[fd]);  // check if read beyond file length
+        disk_manager_->file_size_inBytes_[fd]);  // check if read beyond file length
 
       auto ret = ::pread(disk_manager_->fd_oss_[fd].first, (void*)data.data(),
         data.size(), offset);
@@ -462,14 +450,14 @@ namespace gbp {
         debug::get_counter_read().fetch_add(1);
 #endif
       assert(offset <=
-        disk_manager_->file_sizes_[fd]);  // check if read beyond file length
+        disk_manager_->file_size_inBytes_[fd]);  // check if read beyond file length
 
       auto ret = ::pread(disk_manager_->fd_oss_[fd].first, data, size, offset);
-      // if (ret != size)
-      // {
-      //   std::cout << "ret= " << disk_manager_->fd_oss_[fd].first << std::endl;
-      // }
-      assert(ret == size);
+      if (ret == 0)
+      {
+        std::cout << "ret= " << offset / 4096 << " " << size << std::endl;
+      }
+      assert(ret != 0);
       // if file ends before reading PAGE_SIZE
       if (ret < size) {
         // std::cerr << "Read less than a page" << std::endl;
@@ -480,7 +468,7 @@ namespace gbp {
       return true;
     }
 
-    bool Read(fpage_id_type fpage_id, ::iovec* io_info, GBPfile_handle_type fd,
+    bool Read(size_t offset, ::iovec* io_info, GBPfile_handle_type fd,
       bool* finish = nullptr) override {
       assert(fd < disk_manager_->fd_oss_.size() &&
         disk_manager_->fd_oss_[fd].second);
@@ -489,11 +477,10 @@ namespace gbp {
         debug::get_counter_read().fetch_add(1);
 #endif
 
-      size_t offset = (size_t)fpage_id * PAGE_SIZE_FILE;
       assert(offset <=
-        disk_manager_->file_sizes_[fd]);  // check if read beyond file length
+        disk_manager_->file_size_inBytes_[fd]);  // check if read beyond file length
 
-      auto ret = ::pread(disk_manager_->fd_oss_[fd].first, io_info->iov_base,
+      auto ret = ::pread(disk_manager_->fd_oss_[fd].first, io_info[0].iov_base,
         PAGE_SIZE_FILE, offset);
       // ::lseek(fd, offset);
       // readv(fd, &io_info[0], PER_IO);

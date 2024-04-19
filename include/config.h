@@ -6,7 +6,7 @@
 
 #pragma once
 
-#define GRAPHSCOPE
+ // #define GRAPHSCOPE
 
 #ifdef GRAPHSCOPE
 

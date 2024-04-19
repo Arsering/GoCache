@@ -31,8 +31,12 @@ namespace gbp {
       return fpage_id % num_partitions_;
     }
 
-    FORCE_INLINE fpage_id_type GetFPageIdInPool(fpage_id_type fpage_id) const {
+    FORCE_INLINE fpage_id_type GetFPageIdInPartition(fpage_id_type fpage_id) const {
       return fpage_id / num_partitions_;
+    }
+
+    FORCE_INLINE fpage_id_type GetFPageIdGlobal(partition_id_type partition_id, fpage_id_type fpage_id_inpartition) const {
+      return partition_id + fpage_id_inpartition * num_partitions_;
     }
 
     FORCE_INLINE fpage_id_type NumFPage(partition_id_type partition_id) const {

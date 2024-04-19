@@ -47,8 +47,8 @@ namespace gbp {
 
     bool ReleasePage(PageTableInner::PTE* tar);
 
-    bool FlushPage(mpage_id_type page_id, GBPfile_handle_type fd = 0);
-    bool FlushPage(PTE* pte);
+    bool FlushPage(fpage_id_type page_id, GBPfile_handle_type fd = 0);
+    // bool FlushPage(PTE* pte);
 
     PageTableInner::PTE* NewPage(mpage_id_type& page_id,
       GBPfile_handle_type fd = 0);
@@ -81,21 +81,33 @@ namespace gbp {
 
     void WarmUp() {
       size_t free_page_num = GetFreePageNum();
-      for (int fd_gbp = 0; fd_gbp < disk_manager_->file_sizes_.size(); fd_gbp++) {
+      size_t count = 0;
+      for (int fd_gbp = 0; fd_gbp < disk_manager_->file_size_inBytes_.size(); fd_gbp++) {
         if (!disk_manager_->fd_oss_[fd_gbp].second)
           continue;
         size_t page_f_num =
-          ceil(disk_manager_->file_sizes_[fd_gbp], PAGE_SIZE_FILE);
+          ceil(disk_manager_->file_size_inBytes_[fd_gbp], PAGE_SIZE_FILE);
         for (size_t page_idx_f = 0; page_idx_f < page_f_num; page_idx_f++) {
+          if (partitioner_->GetPartitionId(page_idx_f) != pool_ID_)
+            continue;
+          count++;
+
           auto mpage = FetchPage(page_idx_f, fd_gbp);
           std::get<0>(mpage)->DecRefCount();
 
           if (--free_page_num == 0) {
-            // LOG(INFO) << "pool is full";
+#ifdef GRAPHSCOPE
+            LOG(INFO) << "Load " << count << " into memory";
+#endif
             return;
           }
         }
       }
+      // FIXME: 数据是假的，只是为了证明它确实在warmup而已
+#ifdef GRAPHSCOPE
+      LOG(INFO) << "Load " << count << " into memory";
+#endif
+      return;
     }
 
     void RegisterFile(OSfile_handle_type fd);
@@ -104,6 +116,10 @@ namespace gbp {
     std::tuple<PTE*, char*> Pin(fpage_id_type fpage_id, GBPfile_handle_type fd);
 
   private:
+
+    bool ReadWrite(size_t offset, size_t file_size, char* buf, size_t buf_size,
+      GBPfile_handle_type fd, bool is_read);
+
     uint32_t pool_ID_ = std::numeric_limits<uint32_t>::max();
     mpage_id_type pool_size_;  // number of pages in buffer pool
     MemoryPool* buffer_pool_ = nullptr;

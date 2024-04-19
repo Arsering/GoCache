@@ -66,13 +66,11 @@ namespace gbp
       auto* pte = page_table_->FromPageId(victim->val);
       auto pte_unpacked = pte->ToUnpacked();
 
-      auto [locked, mpage_id] = page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id, false);
-      if (locked && pte->Lock())
+      auto [locked, mpage_id] = page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id);
+      if (locked && pte->ref_count == 0 && mpage_id != PageMapping::Mapping::EMPTY_VALUE)
         break;
-      pte->UnLock();
-      page_table_->CreateMapping(pte->fd, pte->fpage_id, mpage_id);
-
-
+      if (locked)
+        assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
       victim = victim->prev;
     }
 
@@ -101,12 +99,12 @@ namespace gbp
         pte = page_table_->FromPageId(victim->val);
         auto pte_unpacked = pte->ToUnpacked();
 
-        auto [locked, mpage_id] = page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id, false);
-        if (locked && pte->Lock() && !pte->dirty)
+        auto [locked, mpage_id] = page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id);
+        if (locked && !pte->dirty && pte->ref_count == 0 && mpage_id != PageMapping::Mapping::EMPTY_VALUE)
           break;
+        if (locked)
+          assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
 
-        pte->UnLock();
-        page_table_->CreateMapping(pte->fd, pte->fpage_id, mpage_id);
         victim = victim->prev;
       }
       page_table_->DeleteMapping(pte->fd, pte->fpage_id);
