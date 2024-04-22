@@ -8,7 +8,7 @@
 #include <iostream>
 #include <mutex>
 #include "config.h"
-#include "logger.h"
+// #include "logger.h"
 #include "utils.h"
 
 namespace gbp
@@ -23,9 +23,9 @@ namespace gbp
     {
     public:
       // noncopyable but movable.
-      BitMap(const BitMap &) = delete;
-      BitMap &operator=(const BitMap &) = delete;
-      BitMap(BitMap &&) noexcept = default;
+      BitMap(const BitMap&) = delete;
+      BitMap& operator=(const BitMap&) = delete;
+      BitMap(BitMap&&) noexcept = default;
 
       BitMap()
       {
@@ -95,7 +95,7 @@ namespace gbp
 
           bits_.resize(ceil(bit_size_new, 8));
           ::memset(bits_.data() + ceil(bit_size_, 8), 0,
-                   bit_size_new / 8 - bit_size_ / 8);
+            bit_size_new / 8 - bit_size_ / 8);
         }
         bit_size_ = bit_size_new;
       }
@@ -107,14 +107,14 @@ namespace gbp
       size_t one_num_;
     };
 
-    std::atomic<size_t> &get_counter_read();
-    std::atomic<size_t> &get_counter_fetch();
-    std::atomic<size_t> &get_counter_fetch_unique();
-    std::atomic<size_t> &get_counter();
+    std::atomic<size_t>& get_counter_read();
+    std::atomic<size_t>& get_counter_fetch();
+    std::atomic<size_t>& get_counter_fetch_unique();
+    std::atomic<size_t>& get_counter();
 
-    BitMap &get_bitset(uint32_t file_id);
-    std::vector<debug::BitMap> &get_bitmaps();
-    void reinit_bit_maps(std::vector<size_t> &file_sizes);
+    BitMap& get_bitset(uint32_t file_id);
+    std::vector<debug::BitMap>& get_bitmaps();
+    void reinit_bit_maps(std::vector<size_t>& file_sizes);
 
 #define GET_LATENCY(target_fun, latency) \
   {                                      \
@@ -123,30 +123,30 @@ namespace gbp
     latency = GetSystemTime();           \
   }
 
-    std::atomic<size_t> &get_counter_MAP_find();
-    std::atomic<size_t> &get_counter_FPL_get();
-    std::atomic<size_t> &get_counter_pread();
-    std::atomic<size_t> &get_counter_MAP_eviction();
-    std::atomic<size_t> &get_counter_ES_eviction();
-    std::atomic<size_t> &get_counter_MAP_insert();
-    std::atomic<size_t> &get_counter_ES_insert();
-    std::atomic<size_t> &get_counter_copy();
-    std::atomic<size_t> &get_counter_malloc();
-    std::atomic<size_t> &get_log_marker();
+    std::atomic<size_t>& get_counter_MAP_find();
+    std::atomic<size_t>& get_counter_FPL_get();
+    std::atomic<size_t>& get_counter_pread();
+    std::atomic<size_t>& get_counter_MAP_eviction();
+    std::atomic<size_t>& get_counter_ES_eviction();
+    std::atomic<size_t>& get_counter_MAP_insert();
+    std::atomic<size_t>& get_counter_ES_insert();
+    std::atomic<size_t>& get_counter_copy();
+    std::atomic<size_t>& get_counter_malloc();
+    std::atomic<size_t>& get_log_marker();
 
-    std::atomic<size_t> &get_counter_bpm();
-    std::atomic<size_t> &get_counter_any();
+    std::atomic<size_t>& get_counter_bpm();
+    std::atomic<size_t>& get_counter_any();
 
-    std::atomic<size_t> &get_counter_CopyObj();
-    std::atomic<size_t> &get_counter_RefObj();
+    std::atomic<size_t>& get_counter_CopyObj();
+    std::atomic<size_t>& get_counter_RefObj();
 
-    std::ofstream &get_result_file(size_t file_id, std::string file_path = "");
-    std::atomic<size_t> &get_query_id();
+    std::ofstream& get_result_file(size_t file_id, std::string file_path = "");
+    std::atomic<size_t>& get_query_id();
 
-    std::mutex &get_file_lock();
+    std::mutex& get_file_lock();
 
-    std::atomic<size_t> &get_counter_eviction();
-    std::atomic<size_t> &get_counter_contention();
-    size_t &get_thread_id();
+    std::atomic<size_t>& get_counter_eviction();
+    std::atomic<size_t>& get_counter_contention();
+    size_t& get_thread_id();
   } // namespace debug
 } // namespace gbp

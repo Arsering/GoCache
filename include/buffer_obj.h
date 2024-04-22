@@ -18,6 +18,7 @@
 #include <cstdio>
 #include <cstring>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <memory>
 #include <mutex>
@@ -1039,44 +1040,24 @@ namespace gbp {
     }
 #endif
 
-    template <typename T>
-    FORCE_INLINE static T& Decode(const BufferObjectImp5& obj, size_t idx = 0) {
-      return *obj.Decode1<T>(idx);
+    template <typename OBJ_Type>
+    FORCE_INLINE static const OBJ_Type& Ref(const BufferObjectImp5& obj,
+      size_t idx = 0) {
+      return *obj.Ptr<OBJ_Type>(idx);
+    }
+
+    template <typename OBJ_Type>
+    FORCE_INLINE static void UpdateContent(std::function<void(OBJ_Type&)> cb,
+      const BufferObjectImp5& obj,
+      size_t idx = 0) {
+      auto data = obj.Decode<OBJ_Type>(idx);
+      cb(*std::get<0>(data));
+      std::get<1>(data)->SetDirty(true);
     }
 
     template <class T>
-    FORCE_INLINE T* Decode1(size_t idx = 0) const {
-      // static_assert(PAGE_SIZE_MEMORY % sizeof(T) == 0);
-      constexpr size_t OBJ_NUM = PAGE_SIZE_MEMORY / sizeof(T);
-      assert(data_ != nullptr);
-      assert(sizeof(T) * (idx + 1) <= size_);
-
-      char* ret = nullptr;
-
-      if (ptes_ == nullptr) {
-        ret = data_[0] + idx * sizeof(T);
-      }
-      else {
-        auto obj_num_firstpage =
-          (PAGE_SIZE_MEMORY - ((uintptr_t)data_[0] % PAGE_SIZE_MEMORY)) /
-          sizeof(T);
-
-        if (obj_num_firstpage > idx) {
-          ret = data_[0] + idx * sizeof(T);
-        }
-        else {
-          idx -= obj_num_firstpage;
-          ret = data_[idx / OBJ_NUM + 1] + (idx % OBJ_NUM) * sizeof(T);
-        }
-      }
-
-      assert(ret != nullptr);
-      return reinterpret_cast<T*>(ret);
-    }
-
-    template <class T>
-    FORCE_INLINE T& Decode(size_t idx = 0) const {
-      return *Decode1<T>(idx);
+    FORCE_INLINE const T* Ptr(size_t idx = 0) const {
+      return std::get<0>(Decode<T>(idx));
     }
 
     // char* Data() const { return data_[0]; }
@@ -1163,6 +1144,41 @@ namespace gbp {
       size_ = size;
       page_num_ = 0;
       ptes_ = nullptr;
+    }
+
+    template <class T>
+    FORCE_INLINE std::tuple<T*, PTE*> Decode(size_t idx = 0) const {
+      // static_assert(PAGE_SIZE_MEMORY % sizeof(T) == 0);
+      constexpr size_t OBJ_NUM = PAGE_SIZE_MEMORY / sizeof(T);
+      assert(data_ != nullptr);
+      if (sizeof(T) * (idx + 1) > size_)
+        std::cout << sizeof(T) << " " << idx << " " << size_ << std::endl;
+      assert(sizeof(T) * (idx + 1) <= size_);
+
+      char* ret = nullptr;
+      PTE* pte_ret = nullptr;
+
+      if (ptes_ == nullptr) {
+        ret = data_[0] + idx * sizeof(T);
+      }
+      else {
+        auto obj_num_firstpage =
+          (PAGE_SIZE_MEMORY - ((uintptr_t)data_[0] % PAGE_SIZE_MEMORY)) /
+          sizeof(T);
+
+        if (obj_num_firstpage > idx) {
+          ret = data_[0] + idx * sizeof(T);
+          pte_ret = ptes_[0];
+        }
+        else {
+          idx -= obj_num_firstpage;
+          auto page_id = idx / OBJ_NUM + 1;
+          ret = data_[page_id] + (idx % OBJ_NUM) * sizeof(T);
+          pte_ret = ptes_[page_id];
+        }
+      }
+      assert(ret != nullptr);
+      return { reinterpret_cast<T*>(ret), pte_ret };
     }
 
     char** data_ = nullptr;

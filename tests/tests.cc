@@ -100,7 +100,7 @@ namespace test
       item_num_firstpage = (4096 - (curr_io_fileoffset % 4096)) / sizeof(size_t);
       page_id = curr_io_fileoffset / 4096;
       for (int i = 0;i < io_size / 4096; i++) {
-        data = ret.Decode<size_t>(item_num_firstpage + (i - 1) * 512);
+        data = gbp::BufferObject::Ref<size_t>(ret, item_num_firstpage + (i - 1) * 512);
         if (data != page_id + i) {
           std::cout << data << " | " << page_id + i << std::endl;
         }
@@ -118,6 +118,7 @@ namespace test
     size_t thread_id)
   {
     gbp::debug::get_thread_id() = thread_id;
+    assert(io_size % sizeof(size_t) == 0);
     size_t io_num = file_size_inByte / io_size;
 
     std::random_device rd;
@@ -127,15 +128,15 @@ namespace test
     auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
     char* out_buf = (char*)aligned_alloc(512, io_size);
     // ::memset(out_buf, 0, io_size);
-    {
-      char* str = "abcdefg";
-      size_t buf_size = 0;
-      while (buf_size < io_size)
-      {
-        buf_size += ::snprintf(out_buf + buf_size, io_size - buf_size, "%s",
-          str);
-      }
-    }
+    // {
+    //   char* str = "abcdefg";
+    //   size_t buf_size = 0;
+    //   while (buf_size < io_size)
+    //   {
+    //     buf_size += ::snprintf(out_buf + buf_size, io_size - buf_size, "%s",
+    //       str);
+    //   }
+    // }
 
     size_t curr_io_fileoffset, ret;
     volatile size_t sum = 0;
@@ -148,17 +149,17 @@ namespace test
       // {
       //   io_id = rnd(gen);
       //   curr_io_fileoffset = io_id * io_size;
-
+      auto ret_obj = bpm.GetObject(curr_io_fileoffset, io_size);
       size_t buf_offset = 4096 - (curr_io_fileoffset % 4096 == 0 ? 4096 : curr_io_fileoffset % 4096);
       while (buf_offset < io_size) {
         page_id = (curr_io_fileoffset + buf_offset) / 4096;
-        // std::cout << page_id << std::endl;
-        memcpy(out_buf + buf_offset, &page_id, sizeof(size_t));
+        // memcpy(out_buf + buf_offset, &page_id, sizeof(size_t));
+        gbp::BufferObject::UpdateContent<size_t>([&](size_t& content) {content = page_id;}, ret_obj, buf_offset / sizeof(size_t));
+
         // ::snprintf(out_buf + buf_offset, io_size - buf_offset, "%lu", page_id);
         buf_offset += 4096;
       }
-      // std::cout << "a = " << page_id << std::endl;
-      auto ret = bpm.SetObject(out_buf, curr_io_fileoffset, io_size, 0, false);
+      // auto ret = bpm.SetObject(out_buf, curr_io_fileoffset, io_size, 0, false);
 
       // if (*reinterpret_cast<size_t*>(ret.Data()) != io_id)
       // std::cout << *reinterpret_cast<size_t*>(out_buf) << " | " << io_id << std::endl;
@@ -520,25 +521,25 @@ namespace test
     // std::cout << "warm up finishing" << std::endl;
     gbp::debug::get_log_marker().store(1);
 
-    std::vector<std::thread> thread_pool;
-    std::thread log_thread(logging);
-    sleep(1);
-    Client_Read_throughput().store(0);
-    Client_Write_throughput().store(0);
-
     // worker_num = file_size_inByte / (1024LU * 1024LU * 1024LU * 1);
     // file_size_inByte = file_size_inByte / worker_num;
 
     printf("file_size_MB = %lu\tworker_num = %lu\tpool_num = %lu\tpool_size_MB = %lu\tio_server_num = %lu\tio_size = %lu\n", file_size_MB, worker_num, pool_num, pool_size_MB, io_server_num, io_size);
     // warmup(data_file_mmaped, file_size_inByte, io_size);
 
+    Client_Read_throughput().store(0);
+    Client_Write_throughput().store(0);
+    std::thread log_thread(logging);
+    sleep(1);
+
+    std::vector<std::thread> thread_pool;
     for (size_t i = 0; i < worker_num; i++)
     {
       // thread_pool.emplace_back(write_mmap, data_file_mmaped,
       //   (1024LU * 1024LU * 1024LU * 1), io_size,
       //   (1024LU * 1024LU * 1024LU * 1) * i, i);
-      // thread_pool.emplace_back(read_pread, io_backend, file_size_inByte,
-      //   io_size, i);
+      thread_pool.emplace_back(read_pread, io_backend, file_size_inByte,
+        io_size, i);
       // thread_pool.emplace_back(write_pwrite, io_backend, file_size_inByte,
       //   io_size, i);
       // thread_pool.emplace_back(fiber_pread_1_2, disk_manager, file_size_inByte, io_size, i);
@@ -556,8 +557,8 @@ namespace test
       //     io_size, i);
       // thread_pool.emplace_back(randwrite_bufferpool, 0, file_size_inByte,
       //   io_size, i);
-      thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte,
-        io_size, i);
+      // thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte,
+      //   io_size, i);
     }
     for (auto& thread : thread_pool)
     {

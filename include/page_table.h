@@ -126,7 +126,10 @@ namespace gbp {
 
         return { true, old_ref_count };
       }
-
+      bool SetDirty(bool _dirty) {
+        dirty = _dirty;
+        return true;
+      }
       bool Lock() {
         std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
         uint64_t old_packed = atomic_packed.load(std::memory_order_acquire),
