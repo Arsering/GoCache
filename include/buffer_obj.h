@@ -36,9 +36,6 @@
 
 namespace gbp {
 #if !OV
-#define LBMalloc(size) ::malloc(size)
-#define LBFree(p) ::free(p)
-#define LBRealloc(p, size) ::realloc((p), (size))
   /**
    * Representation for a memory block. It can be used to store a const
    * reference to a memory block, or a memory block malloced, and thus owned by
@@ -757,39 +754,9 @@ namespace gbp {
       assert(sizeof(T) * (idx + 1) <= obj.Size());
       return *reinterpret_cast<const T*>(obj.Data() + idx * sizeof(T));
     }
-  };
+      };
 
   class BufferObjectImp5 {
-    template <typename T>
-    class iterator {
-    public:
-      iterator(const T* ptr, const T* end) : ptr_(ptr), end_(end) {
-        while (ptr_ != end) {
-          ++ptr_;
-        }
-      }
-
-      const T& operator*() const { return *ptr_; }
-
-      const T* operator->() const { return ptr_; }
-
-      iterator& operator++() {
-        ++ptr_;
-        while (ptr_ != end_) {
-          ++ptr_;
-        }
-        return *this;
-      }
-
-      bool operator==(const iterator& rhs) const { return (ptr_ == rhs.ptr_); }
-
-      bool operator!=(const iterator& rhs) const { return (ptr_ != rhs.ptr_); }
-
-    private:
-      const T* ptr_;
-      const T* end_;
-    };
-
   public:
     BufferObjectImp5() {
       data_ = nullptr;
@@ -800,27 +767,27 @@ namespace gbp {
 
     BufferObjectImp5(size_t size, size_t page_num)
       : page_num_(page_num), size_(size) {
-      data_ = (char**)malloc(page_num_ * sizeof(char*));
-      ptes_ = (PTE**)malloc(page_num_ * sizeof(PTE*));
+      data_ = (char**)LBMalloc(page_num_ * sizeof(char*));
+      ptes_ = (PTE**)LBMalloc(page_num_ * sizeof(PTE*));
       assert(data_ != nullptr);
       assert(ptes_ != nullptr);
       type_ = ObjectType::gbpClass;
     }
 
     BufferObjectImp5(size_t size, char* data) : size_(size) {
-      data_ = (char**)malloc(1 * sizeof(char*));
+      data_ = (char**)LBMalloc(1 * sizeof(char*));
       ptes_ = nullptr;
       assert(data_ != nullptr);
-      data_[0] = (char*)malloc(size_);
+      data_[0] = (char*)LBMalloc(size_);
       memcpy(data_[0], data, size_);
       type_ = ObjectType::gbpClass;
     }
 
     BufferObjectImp5(size_t size) : size_(size) {
-      data_ = (char**)malloc(1 * sizeof(char*));
+      data_ = (char**)LBMalloc(1 * sizeof(char*));
       ptes_ = nullptr;
       assert(data_ != nullptr);
-      data_[0] = (char*)malloc(size);
+      data_[0] = (char*)LBMalloc(size);
       type_ = ObjectType::gbpClass;
     }
 
@@ -1060,7 +1027,12 @@ namespace gbp {
       return std::get<0>(Decode<T>(idx));
     }
 
-    // char* Data() const { return data_[0]; }
+    char* Data() const {
+      if (data_ != nullptr && ptes_ == nullptr)
+        return data_[0];
+      assert(false);
+      return nullptr;
+    }
     size_t Size() const { return size_; }
     size_t PageNum() const { return page_num_; }
 
@@ -1187,7 +1159,7 @@ namespace gbp {
 
     size_t page_num_ = 0;
     ObjectType type_;
-  };
+    };
 
   class BufferObjectImp3 {
   private:
@@ -1296,4 +1268,4 @@ namespace gbp {
 
 #endif
 
-}  // namespace gbp
+    }  // namespace gbp

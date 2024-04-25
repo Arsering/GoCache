@@ -17,13 +17,13 @@ cd ..
 
 CUR_DIR=.
 
-export FILE_SIZE_MB=$((3000))
-export WORKER_NUM=10
+export FILE_SIZE_MB=$((1024*30))
+export WORKER_NUM=30
 export POOL_NUM=10
 export IO_SERVER_NUM=1
-export POOL_SIZE_MB=$((1))
-export IO_SIZE_Byte=$((8*512))
-export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD
+export POOL_SIZE_MB=$((1024*50))
+export IO_SIZE_Byte=$((8*512+64))
+# export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD
 
 # for WORKER_NUM in 1 8 16 32 64 128 256 512
 # do
@@ -32,10 +32,10 @@ export LOG_DIR=${CUR_DIR}/logs/${time}
 mkdir -p ${LOG_DIR}
 cp -r ./$0 ${LOG_DIR}/run.sh
 
-# echo 1 > /proc/sys/vm/drop_caches
+echo 1 > /proc/sys/vm/drop_caches
 
-# sudo ./bin/graphscope_bufferpool ${FILE_SIZE_MB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_MB} ${IO_SERVER_NUM} ${IO_SIZE_Byte} ${TEST_TYPE} > ${LOG_DIR}/log.log
-
+sudo  ./bin/graphscope_bufferpool ${FILE_SIZE_MB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_MB} ${IO_SERVER_NUM} ${IO_SIZE_Byte} ${LOG_DIR} > ${LOG_DIR}/log.log
+# cgexec -g memory:yz_15g
 
 # done
 # timeout 2m

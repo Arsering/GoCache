@@ -8,7 +8,7 @@
 #include <unistd.h>
 #include <bitset>
 #include <iostream>
-
+// #include <mimalloc.h>
 #include <assert.h>
 #include <ctime>
 #include <random>
@@ -506,6 +506,7 @@ int test_aa(const std::string& file_path) {
   close(fd);
   io_uring_queue_exit(&ring);
 }
+
 int main(int argc, char** argv) {
   // google::InitGoogleLogging(argv[0]);
   // FLAGS_logtostderr = true;
@@ -518,6 +519,7 @@ int main(int argc, char** argv) {
 
   // test1();
   // test3();
+  // mi_malloc(10);
 
   test::test_concurrency(argc, argv);
 

@@ -6,7 +6,7 @@
 
 #pragma once
 
-#define GRAPHSCOPE
+ // #define GRAPHSCOPE
 
 #ifdef GRAPHSCOPE
 
@@ -17,11 +17,20 @@
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+// #include "../deps/mimalloc/include/mimalloc.h"
+
 
 #define FORCE_INLINE __attribute__((always_inline))
 #define likely(x) __builtin_expect((x), 1)
 #define unlikely(x) __builtin_expect((x), 0)
 
+#define LBMalloc(size) ::malloc(size)
+#define LBFree(p) ::free(p)
+#define LBRealloc(p, size) ::realloc((p), (size))
+
+// #define LBMalloc(size) mi_malloc(size)
+// #define LBFree(p) mi_free(p)
+// #define LBRealloc(p, size) mi_realloc((p), (size))
 
 namespace gbp {
     using fpage_id_type = uint32_t;
@@ -29,6 +38,8 @@ namespace gbp {
     using GBPfile_handle_type = uint32_t;
     using OSfile_handle_type = uint32_t;
     using partition_id_type = uint32_t;
+
+    constexpr bool PERSISTENT = false;
 
     constexpr uint32_t INVALID_PAGE_ID =
         std::numeric_limits<uint32_t>::max();  // representing an invalid page id
