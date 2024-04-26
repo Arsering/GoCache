@@ -71,7 +71,7 @@ namespace gbp {
     for (size_t fpage_id = 0; fpage_id < fpage_num; fpage_id++) {
       auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id,
         fd);
-      std::get<0>(mpage)->DecRefCount();
+      mpage.first->DecRefCount();
     }
     return ret;
   }
@@ -117,11 +117,11 @@ namespace gbp {
     while (object_size > 0) {
       auto mpage =
         pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
-      assert(std::get<0>(mpage) != nullptr && std::get<1>(mpage) != nullptr);
+      assert(mpage.first != nullptr && mpage.second != nullptr);
 
       object_size_t =
-        PageTableInner::GetObject(mpage, buf, fpage_offset, object_size);
-      std::get<0>(mpage)->DecRefCount();
+        PageTableInner::GetObject(mpage.second, buf, fpage_offset, object_size);
+      mpage.first->DecRefCount();
 
       object_size -= object_size_t;
       buf += object_size_t;
@@ -141,11 +141,11 @@ namespace gbp {
     while (object_size > 0) {
       auto mpage =
         pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
-      assert(std::get<0>(mpage) != nullptr && std::get<1>(mpage) != nullptr);
+      assert(mpage.first != nullptr && mpage.second != nullptr);
 
       object_size_t =
-        PageTableInner::SetObject(buf, mpage, fpage_offset, object_size);
-      std::get<0>(mpage)->DecRefCount(true);
+        PageTableInner::SetObject(buf, mpage.second, fpage_offset, object_size);
+      mpage.first->DecRefCount(true);
 
       if (flush)
         assert(pools_[partitioner_->GetPartitionId(fpage_id)]->FlushPage(fpage_id,
@@ -170,14 +170,14 @@ namespace gbp {
     while (object_size > 0) {
       auto mpage =
         pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
-      assert(std::get<0>(mpage) != nullptr && std::get<1>(mpage) != nullptr);
+      assert(mpage.first != nullptr && mpage.second != nullptr);
 
-      object_size_t = buf.Copy(std::get<1>(mpage) + fpage_offset,
+      object_size_t = buf.Copy(mpage.second + fpage_offset,
         (PAGE_SIZE_MEMORY - fpage_offset) > object_size
         ? object_size
         : (PAGE_SIZE_MEMORY - fpage_offset),
         buf_size);
-      std::get<0>(mpage)->DecRefCount(true);
+      mpage.first->DecRefCount(true);
 
       if (flush)
         assert(pools_[partitioner_->GetPartitionId(fpage_id)]->FlushPage(fpage_id,
@@ -221,10 +221,10 @@ namespace gbp {
     while (num_page > 0) {
       auto mpage =
         pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
-      assert(std::get<0>(mpage) != nullptr && std::get<1>(mpage) != nullptr);
+      assert(mpage.first != nullptr && mpage.second != nullptr);
 
-      ret.InsertPage(page_id, std::get<1>(mpage) + fpage_offset,
-        std::get<0>(mpage));
+      ret.InsertPage(page_id, mpage.second + fpage_offset,
+        mpage.first);
       page_id++;
       num_page--;
       fpage_offset = 0;

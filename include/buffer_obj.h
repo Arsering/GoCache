@@ -754,7 +754,7 @@ namespace gbp {
       assert(sizeof(T) * (idx + 1) <= obj.Size());
       return *reinterpret_cast<const T*>(obj.Data() + idx * sizeof(T));
     }
-      };
+  };
 
   class BufferObjectImp5 {
   public:
@@ -1119,7 +1119,7 @@ namespace gbp {
     }
 
     template <class T>
-    FORCE_INLINE std::tuple<T*, PTE*> Decode(size_t idx = 0) const {
+    FORCE_INLINE pair_min<T*, PTE*> Decode(size_t idx = 0) const {
       // static_assert(PAGE_SIZE_MEMORY % sizeof(T) == 0);
       constexpr size_t OBJ_NUM = PAGE_SIZE_MEMORY / sizeof(T);
       assert(data_ != nullptr);
@@ -1159,7 +1159,7 @@ namespace gbp {
 
     size_t page_num_ = 0;
     ObjectType type_;
-    };
+  };
 
   class BufferObjectImp3 {
   private:
@@ -1268,4 +1268,4 @@ namespace gbp {
 
 #endif
 
-    }  // namespace gbp
+}  // namespace gbp

@@ -93,7 +93,7 @@ namespace gbp {
           count++;
 
           auto mpage = FetchPage(page_idx_f, fd_gbp);
-          std::get<0>(mpage)->DecRefCount();
+          mpage.first->DecRefCount();
 
           if (--free_page_num == 0) {
 #ifdef GRAPHSCOPE
@@ -111,9 +111,9 @@ namespace gbp {
     }
 
     void RegisterFile(OSfile_handle_type fd);
-    std::tuple<PTE*, char*> FetchPage(mpage_id_type page_id_f,
+    pair_min<PTE*, char*> FetchPage(mpage_id_type page_id_f,
       GBPfile_handle_type fd);
-    std::tuple<PTE*, char*> Pin(fpage_id_type fpage_id, GBPfile_handle_type fd);
+    pair_min<PTE*, char*> Pin(fpage_id_type fpage_id, GBPfile_handle_type fd);
 
   private:
 

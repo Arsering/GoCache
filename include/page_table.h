@@ -70,8 +70,9 @@ namespace gbp {
         auto pte = PTE::FromPacked(packed_header);
         return { pte.fpage_id, pte.fd, pte.ref_count, pte.dirty, pte.busy };
       }
+
       // 需要获得文件页的相关信息，因为该内存页可能被用于存储其他文件页
-      std::tuple<bool, uint16_t> IncRefCount(fpage_id_type fpage_id,
+      pair_min<bool, uint16_t> IncRefCount(fpage_id_type fpage_id,
         GBPfile_handle_type fd) {
         // return {true, 0};
         std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
@@ -104,7 +105,7 @@ namespace gbp {
 
       // 无需获得文件页的相关信息，因为该内存页的 ref_count >0
       // 时不可能被用于存储其他文件页
-      std::tuple<bool, uint16_t> DecRefCount(bool is_write = false,
+      pair_min<bool, uint16_t> DecRefCount(bool is_write = false,
         bool write_to_ssd = false) {
         // return {true, 1};
 
@@ -189,22 +190,22 @@ namespace gbp {
     };
     static_assert(sizeof(PackedPTECacheLine) == CACHELINE_SIZE);
 
-    static size_t SetObject(const char* buf, std::tuple<PTE*, char*> dst,
+    static size_t SetObject(const char* buf, char* dst,
       size_t page_offset, size_t object_size) {
       object_size = object_size + page_offset > PAGE_SIZE_FILE
         ? PAGE_SIZE_FILE - page_offset
         : object_size;
-      ::memcpy(std::get<1>(dst) + page_offset, buf, object_size);
+      ::memcpy(dst + page_offset, buf, object_size);
 
       return object_size;
     }
 
-    static size_t GetObject(std::tuple<PTE*, char*> src, char* buf,
+    static size_t GetObject(char* src, char* buf,
       size_t page_offset, size_t object_size) {
       object_size = object_size + page_offset > PAGE_SIZE_FILE
         ? PAGE_SIZE_FILE - page_offset
         : object_size;
-      ::memcpy(buf, (char*)std::get<1>(src) + page_offset, object_size);
+      ::memcpy(buf, src + page_offset, object_size);
       return object_size;
     }
 
@@ -286,7 +287,7 @@ namespace gbp {
       Resize(fpage_num);
     }
 
-    std::tuple<bool, mpage_id_type> FindMapping(fpage_id_type fpage_id) const {
+    pair_min<bool, mpage_id_type> FindMapping(fpage_id_type fpage_id) const {
       assert(fpage_id < size_);
       std::atomic<mpage_id_type>& atomic_data =
         as_atomic((mpage_id_type&)mappings_[fpage_id]);
@@ -335,7 +336,7 @@ namespace gbp {
       return true;
     }
 
-    std::tuple<bool, mpage_id_type> LockMapping(fpage_id_type fpage_id) {
+    pair_min<bool, mpage_id_type> LockMapping(fpage_id_type fpage_id) {
       assert(fpage_id < size_);
       std::atomic<mpage_id_type>& atomic_data =
         as_atomic((mpage_id_type&)mappings_[fpage_id]);
@@ -346,6 +347,7 @@ namespace gbp {
 
         if (unpacked_data.mpage_id == Mapping::BUSY_VALUE) {
           return { false, unpacked_data.mpage_id };
+
         }
         // if (for_modify && unpacked_data.mpage_id != Mapping::EMPTY_VALUE) {
         //   return { false, unpacked_data.mpage_id };
@@ -412,7 +414,7 @@ namespace gbp {
       return mappings_[fd]->Resize(new_file_size_in_page);
     }
 
-    FORCE_INLINE std::tuple<bool, mpage_id_type> FindMapping(
+    FORCE_INLINE pair_min<bool, mpage_id_type> FindMapping(
       GBPfile_handle_type fd, fpage_id_type fpage_id) const {
       assert(fd < mappings_.size());
       return mappings_[fd]->FindMapping(fpage_id);
@@ -455,7 +457,7 @@ namespace gbp {
      * @param for_modify 情况1时为true，其他时候为false
      * @return FORCE_INLINE
      */
-    FORCE_INLINE std::tuple<bool, mpage_id_type> LockMapping(
+    FORCE_INLINE pair_min<bool, mpage_id_type> LockMapping(
       GBPfile_handle_type fd, fpage_id_type fpage_id) {
       assert(fd < mappings_.size());
       auto [success, mpage_id] = mappings_[fd]->LockMapping(fpage_id);
