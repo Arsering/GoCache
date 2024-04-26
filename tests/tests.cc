@@ -69,7 +69,7 @@ namespace test {
     size_t st, page_id, item_num_firstpage, data, io_id, file_offset_aligned;
     // for (io_id = 0; io_id < io_num;io_id++) {
     //  curr_io_fileoffset = io_id * io_size;
-    size_t query_count = 10000000LU;
+    size_t query_count = 1000000000LU;
     while (query_count != 0) {
       query_count--;
       io_id = rnd(gen);
@@ -77,7 +77,7 @@ namespace test {
 
       file_offset_aligned = gbp::ceil(curr_io_fileoffset, 4096) * 4096;
 
-      st = gbp::GetSystemTime();
+      // st = gbp::GetSystemTime();
       while (file_offset_aligned + sizeof(size_t) <
         curr_io_fileoffset + io_size) {
         if (*reinterpret_cast<size_t*>(data_file_mmaped + file_offset_aligned) !=
@@ -93,8 +93,8 @@ namespace test {
       }
       ::memcpy(buf, data_file_mmaped + curr_io_fileoffset, io_size);
 
-      st = gbp::GetSystemTime() - st;
-      latency_log << st << std::endl;
+      // st = gbp::GetSystemTime() - st;
+      // latency_log << st << std::endl;
 
       Client_Read_throughput().fetch_add(io_size);
     }
@@ -125,15 +125,15 @@ namespace test {
     size_t st, page_id, item_num_firstpage, data, io_id, file_offset_aligned;
     // for (io_id = 0; io_id < io_num;io_id++) {
     //  curr_io_fileoffset = io_id * io_size;
-    size_t query_count = 10000000LU;
+    size_t query_count = 1000000000LU;
     while (query_count != 0) {
-      query_count--;
+      // query_count--;
       io_id = rnd(gen);
       curr_io_fileoffset = start_offset + io_id * io_size;
 
       file_offset_aligned = gbp::ceil(curr_io_fileoffset, 4096) * 4096;
 
-      st = gbp::GetSystemTime();
+      // st = gbp::GetSystemTime();
       {
         auto ret = bpm.GetObject(curr_io_fileoffset, io_size);
         while (file_offset_aligned + sizeof(size_t) <
@@ -152,12 +152,12 @@ namespace test {
             file_offset_aligned / 4096);
           file_offset_aligned += 4096;
         }
-        ret.Copy(buf, io_size);
+        // ret.Copy(buf, io_size);
       }
-      st = gbp::GetSystemTime() - st;
-      latency_log << st << std::endl;
+      // st = gbp::GetSystemTime() - st;
+      // latency_log << st << std::endl;
 
-      Client_Read_throughput().fetch_add(io_size);
+      // Client_Read_throughput().fetch_add(io_size);
     }
     latency_log.flush();
     latency_log.close();
@@ -524,7 +524,7 @@ namespace test {
     int data_file = -1;
     data_file = ::open(file_path.c_str(), O_RDWR | O_CREAT | O_DIRECT);
     assert(data_file != -1);
-    ::ftruncate(data_file, file_size_inByte);
+    // ::ftruncate(data_file, file_size_inByte);
 
     char* data_file_mmaped = nullptr;
 
@@ -549,7 +549,7 @@ namespace test {
     // std::cout << "warm up finishing" << std::endl;
     gbp::debug::get_log_marker().store(1);
 
-    worker_num = file_size_inByte / (1024LU * 1024LU * 1024LU * 1);
+    // worker_num = file_size_inByte / (1024LU * 1024LU * 1024LU * 1);
     // file_size_inByte = file_size_inByte / worker_num;
 
     printf(
@@ -560,16 +560,16 @@ namespace test {
 
     Client_Read_throughput().store(0);
     Client_Write_throughput().store(0);
-    std::thread log_thread(logging);
+    // std::thread log_thread(logging);
     sleep(1);
 
     std::vector<std::thread> thread_pool;
     for (size_t i = 0; i < worker_num; i++) {
-      thread_pool.emplace_back(write_mmap, data_file_mmaped,
-        (1024LU * 1024LU * 1024LU * 1), io_size,
-        (1024LU * 1024LU * 1024LU * 1) * i, i);
+      // thread_pool.emplace_back(write_mmap, data_file_mmaped,
+      //   (1024LU * 1024LU * 1024LU * 1), io_size,
+      //   (1024LU * 1024LU * 1024LU * 1) * i, i);
       // thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
-      //                          io_size, 0, i);
+      //   io_size, 0, i);
       // thread_pool.emplace_back(read_pread, io_backend, file_size_inByte,
       // io_size, i);
       // thread_pool.emplace_back(write_pwrite, io_backend, file_size_inByte,
@@ -584,8 +584,8 @@ namespace test {
       //   thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte,
       //   io_size, i);
       // else
-      // thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size,
-      // i);
+      thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size,
+        i);
       //  thread_pool.emplace_back(randwrite_bufferpool, 0, file_size_inByte,
       //  io_size, i);
       // thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte, io_size,
@@ -596,8 +596,8 @@ namespace test {
     }
     // ::sleep(100);
     log_thread_run = false;
-    if (log_thread.joinable())
-      log_thread.join();
+    // if (log_thread.joinable())
+    //   log_thread.join();
 
     return 0;
   }
