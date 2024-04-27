@@ -48,6 +48,7 @@ class DiskManager {
     assert(::ftruncate(GetFileDescriptor(fd), new_size_inByte) == 0);
     // file_sizes_[fd_gbp] = GetFileSize(GetFileDescriptor(fd_gbp));
     file_size_inBytes_[fd] = new_size_inByte;
+
 #ifdef DEBUG
     debug::get_bitmaps()[fd].Resize(
         cell(file_sizes_[fd], PAGE_SIZE_BUFFER_POOL));

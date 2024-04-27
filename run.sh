@@ -34,7 +34,7 @@ cp -r ./$0 ${LOG_DIR}/run.sh
 
 echo 1 > /proc/sys/vm/drop_caches
 
-nohup sudo  ./bin/graphscope_bufferpool ${FILE_SIZE_MB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_MB} ${IO_SERVER_NUM} ${IO_SIZE_Byte} ${LOG_DIR} > ${LOG_DIR}/log.log &
+nohup ./bin/graphscope_bufferpool ${FILE_SIZE_MB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_MB} ${IO_SERVER_NUM} ${IO_SIZE_Byte} ${LOG_DIR} > ${LOG_DIR}/log.log &
 # cgexec -g memory:yz_15g
 
 # done
@@ -45,6 +45,7 @@ nohup sudo  ./bin/graphscope_bufferpool ${FILE_SIZE_MB} ${WORKER_NUM} ${POOL_NUM
 # ./bin/graphscope_bufferpool 
 # cgexec -g memory:yz_256M ./bin/graphscope_bufferpool
 # nohup ./bin/graphscope_bufferpool &
+
 sleep 100s
 timeout 100s perf record -F 999 -a -g -p `pidof graphscope_bufferpool` -o ${LOG_DIR}/perf.data
 
