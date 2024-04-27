@@ -1018,13 +1018,13 @@ namespace gbp {
       const BufferObjectImp5& obj,
       size_t idx = 0) {
       auto data = obj.Decode<OBJ_Type>(idx);
-      cb(*std::get<0>(data));
-      std::get<1>(data)->SetDirty(true);
+      cb(*data.first);
+      data.second->SetDirty(true);
     }
 
     template <class T>
     FORCE_INLINE const T* Ptr(size_t idx = 0) const {
-      return std::get<0>(Decode<T>(idx));
+      return Decode<T>(idx).first;
     }
 
     char* Data() const {

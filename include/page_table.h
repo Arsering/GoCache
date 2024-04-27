@@ -190,8 +190,8 @@ namespace gbp {
     };
     static_assert(sizeof(PackedPTECacheLine) == CACHELINE_SIZE);
 
-    static size_t SetObject(const char* buf, char* dst,
-      size_t page_offset, size_t object_size) {
+    static size_t SetObject(const char* buf, char* dst, size_t page_offset,
+      size_t object_size) {
       object_size = object_size + page_offset > PAGE_SIZE_FILE
         ? PAGE_SIZE_FILE - page_offset
         : object_size;
@@ -200,8 +200,8 @@ namespace gbp {
       return object_size;
     }
 
-    static size_t GetObject(char* src, char* buf,
-      size_t page_offset, size_t object_size) {
+    static size_t GetObject(char* src, char* buf, size_t page_offset,
+      size_t object_size) {
       object_size = object_size + page_offset > PAGE_SIZE_FILE
         ? PAGE_SIZE_FILE - page_offset
         : object_size;
@@ -347,7 +347,6 @@ namespace gbp {
 
         if (unpacked_data.mpage_id == Mapping::BUSY_VALUE) {
           return { false, unpacked_data.mpage_id };
-
         }
         // if (for_modify && unpacked_data.mpage_id != Mapping::EMPTY_VALUE) {
         //   return { false, unpacked_data.mpage_id };

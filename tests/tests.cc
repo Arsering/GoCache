@@ -20,7 +20,10 @@
 #include "tests.h"
 #include "utils.h"
 
+using namespace gbp;
+
 namespace test {
+
   std::atomic<size_t>& Client_Read_throughput() {
     static std::atomic<size_t> data;
     return data;
@@ -75,7 +78,7 @@ namespace test {
       io_id = rnd(gen);
       curr_io_fileoffset = start_offset + io_id * io_size;
 
-      file_offset_aligned = gbp::ceil(curr_io_fileoffset, 4096) * 4096;
+      file_offset_aligned = CEIL(curr_io_fileoffset, 4096) * 4096;
 
       // st = gbp::GetSystemTime();
       while (file_offset_aligned + sizeof(size_t) <
@@ -130,9 +133,7 @@ namespace test {
       // query_count--;
       io_id = rnd(gen);
       curr_io_fileoffset = start_offset + io_id * io_size;
-
-      file_offset_aligned = gbp::ceil(curr_io_fileoffset, 4096) * 4096;
-
+      file_offset_aligned = CEIL(curr_io_fileoffset, 4096) * 4096;
       // st = gbp::GetSystemTime();
       {
         auto ret = bpm.GetObject(curr_io_fileoffset, io_size);
@@ -152,7 +153,7 @@ namespace test {
             file_offset_aligned / 4096);
           file_offset_aligned += 4096;
         }
-        // ret.Copy(buf, io_size);
+        ret.Copy(buf, sizeof(size_t));
       }
       // st = gbp::GetSystemTime() - st;
       // latency_log << st << std::endl;
@@ -290,7 +291,7 @@ namespace test {
 
   void read_pread(gbp::IOBackend* io_backend, size_t file_size_inByte,
     size_t io_size, size_t thread_id) {
-    size_t io_num = gbp::ceil(file_size_inByte, io_size) - 1;
+    size_t io_num = CEIL(file_size_inByte, io_size) - 1;
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -313,7 +314,7 @@ namespace test {
       for (size_t i = 0; i < io_size; i += 4096) {
         sum += in_buf[i];
       }
-      file_offset_aligned = gbp::ceil(curr_io_fileoffset, 4096) * 4096;
+      file_offset_aligned = CEIL(curr_io_fileoffset, 4096) * 4096;
 
       while (file_offset_aligned + sizeof(size_t) <
         curr_io_fileoffset + io_size) {
@@ -342,7 +343,7 @@ namespace test {
 
   void write_pwrite(gbp::IOBackend* io_backend, size_t file_size_inByte,
     size_t io_size, size_t thread_id) {
-    size_t io_num = gbp::ceil(file_size_inByte, io_size) - 1;
+    size_t io_num = CEIL(file_size_inByte, io_size) - 1;
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -375,7 +376,7 @@ namespace test {
     std::atomic<size_t>& memory_used) {
     size_t curr_io_fileoffset, ret;
     volatile size_t sum = 0;
-    size_t io_num = gbp::ceil(file_size_inByte, io_size);
+    size_t io_num = CEIL(file_size_inByte, io_size);
 
     for (size_t io_id = 0; io_id < io_num; io_id++) {
       curr_io_fileoffset = io_id * io_size;
@@ -398,7 +399,7 @@ namespace test {
     std::atomic<size_t>& memory_used) {
     size_t curr_io_fileoffset;
     volatile size_t sum = 0;
-    size_t io_num = gbp::ceil(file_size_inByte, io_size);
+    size_t io_num = CEIL(file_size_inByte, io_size);
     auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
 
     for (size_t io_id = 0; io_id < io_num; io_id++) {
@@ -541,6 +542,7 @@ namespace test {
     gbp::IOBackend* io_backend = new gbp::RWSysCall(&disk_manager);
 
     auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
+
     bpm.init(pool_num, pool_size_page, io_server_num, file_path);
     // bpm.Resize(0, file_size_inByte);
     gbp::debug::get_log_marker().store(0);
@@ -584,8 +586,7 @@ namespace test {
       //   thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte,
       //   io_size, i);
       // else
-      thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size,
-        i);
+      thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size, i);
       //  thread_pool.emplace_back(randwrite_bufferpool, 0, file_size_inByte,
       //  io_size, i);
       // thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte, io_size,

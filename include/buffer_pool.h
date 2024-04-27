@@ -82,7 +82,8 @@ namespace gbp {
     void WarmUp() {
       size_t free_page_num = GetFreePageNum();
       size_t count = 0;
-      for (int fd_gbp = 0; fd_gbp < disk_manager_->file_size_inBytes_.size(); fd_gbp++) {
+      for (int fd_gbp = 0; fd_gbp < disk_manager_->file_size_inBytes_.size();
+        fd_gbp++) {
         if (!disk_manager_->fd_oss_[fd_gbp].second)
           continue;
         size_t page_f_num =
@@ -116,7 +117,6 @@ namespace gbp {
     pair_min<PTE*, char*> Pin(fpage_id_type fpage_id, GBPfile_handle_type fd);
 
   private:
-
     bool ReadWrite(size_t offset, size_t file_size, char* buf, size_t buf_size,
       GBPfile_handle_type fd, bool is_read);
 

@@ -11,52 +11,44 @@
 // #include "logger.h"
 #include "utils.h"
 
-namespace gbp
-{
+namespace gbp {
   // #define DEBUG_1
 
   // #define DEBUG_t
 
-  namespace debug
-  {
-    class BitMap
-    {
+  namespace debug {
+    class BitMap {
     public:
       // noncopyable but movable.
       BitMap(const BitMap&) = delete;
       BitMap& operator=(const BitMap&) = delete;
       BitMap(BitMap&&) noexcept = default;
 
-      BitMap()
-      {
+      BitMap() {
         bit_size_ = 0;
         one_num_ = 0;
         // bits_ = nullptr;
       }
-      BitMap(size_t bit_size)
-      {
+      BitMap(size_t bit_size) {
         bit_size_ = 0;
         Resize(bit_size);
         one_num_ = 0;
       }
 
-      ~BitMap()
-      {
+      ~BitMap() {
         // if (bits_ != NULL) {
         //   ::free(bits_);
         // }
       }
 
-      void set(size_t idx)
-      {
+      void set(size_t idx) {
         assert(idx < bit_size_);
 
         size_t vector_idx = idx / 8;
         size_t bit_idx = idx % 8;
         bits_[vector_idx] |= (1 << bit_idx);
       }
-      void reset(size_t idx)
-      {
+      void reset(size_t idx) {
         assert(idx < bit_size_);
 
         size_t vector_idx = idx / 8;
@@ -64,8 +56,7 @@ namespace gbp
         bits_[vector_idx] &= ~(1 << bit_idx);
       }
       void reset_all() { ::memset(bits_.data(), 0, ceil(bit_size_, 8)); }
-      bool test(size_t idx)
-      {
+      bool test(size_t idx) {
         if (idx >= bit_size_)
           std::cout << idx << " | " << bit_size_ << std::endl;
         assert(idx < bit_size_);
@@ -75,10 +66,8 @@ namespace gbp
         return bits_[vector_idx] & (1 << bit_idx);
       }
 
-      void Resize(size_t bit_size_new)
-      {
-        if (bit_size_ == 0 || bit_size_new / 8 > bit_size_ / 8)
-        {
+      void Resize(size_t bit_size_new) {
+        if (bit_size_ == 0 || bit_size_new / 8 > bit_size_ / 8) {
           // LOG(INFO) << "cp" << bit_size_new;
           // char* bits_tmp = (char*) malloc(cell(bit_size_new, 8));
           // LOG(INFO) << "cp";
@@ -148,5 +137,5 @@ namespace gbp
     std::atomic<size_t>& get_counter_eviction();
     std::atomic<size_t>& get_counter_contention();
     size_t& get_thread_id();
-  } // namespace debug
-} // namespace gbp
+  }  // namespace debug
+}  // namespace gbp
