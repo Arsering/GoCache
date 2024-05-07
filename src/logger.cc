@@ -222,5 +222,9 @@ void PerformanceLogServer::Logging() {
       break;
   }
 }
+std::atomic<int>& log_enable() {
+  static std::atomic<int> data;
+  return data;
+}
 
 }  // namespace gbp

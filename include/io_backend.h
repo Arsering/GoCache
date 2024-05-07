@@ -33,6 +33,8 @@ class DiskManager {
 
   FORCE_INLINE OSfile_handle_type
   GetFileDescriptor(GBPfile_handle_type fd) const {
+    if (fd >= fd_oss_.size())
+      LOG(FATAL) << "fuck";
     assert(fd < fd_oss_.size());
     return fd_oss_[fd].first;
   }

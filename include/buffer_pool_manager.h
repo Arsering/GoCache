@@ -96,7 +96,10 @@ class BufferPoolManager {
     RegisterFile(fd);
     return fd;
   }
-  void CloseFile(GBPfile_handle_type fd) { disk_manager_->CloseFile(fd); }
+  void CloseFile(GBPfile_handle_type fd) {
+    assert(FlushFile(fd));
+    disk_manager_->CloseFile(fd);
+  }
 
   bool FlushPage(mpage_id_type page_id, GBPfile_handle_type fd = 0);
   bool FlushFile(GBPfile_handle_type fd = 0);

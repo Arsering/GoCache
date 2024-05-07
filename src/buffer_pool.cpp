@@ -263,9 +263,10 @@ PTE* BufferPool::GetVictimPage() {
  */
 pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
                                             GBPfile_handle_type fd) {
-  // auto file_size = disk_manager_->GetFileSizeShort(fd);
-  // assert(fpage_id <
-  //   CEIL(file_size, PAGE_SIZE_MEMORY));
+  auto file_size = disk_manager_->GetFileSizeShort(fd);
+  if (fpage_id >= CEIL(file_size, PAGE_SIZE_MEMORY))
+    LOG(FATAL) << fpage_id << " " << CEIL(file_size, PAGE_SIZE_MEMORY);
+  assert(fpage_id < CEIL(file_size, PAGE_SIZE_MEMORY));
 #ifdef DEBUG
   if (debug::get_log_marker() == 1)
     debug::get_counter_fetch().fetch_add(1);
