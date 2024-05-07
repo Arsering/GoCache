@@ -200,6 +200,7 @@ std::atomic<size_t>& get_counter_operation();
 
 std::ofstream& get_query_file(std::string query_file_path = " ");
 std::ofstream& get_result_file(std::string result_file_path = " ");
+std::atomic<int>& log_enable();
 
 class PerformanceLogServer {
   constexpr static size_t B2GB = 1024.0 * 1024 * 1024;
