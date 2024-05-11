@@ -33,9 +33,8 @@ class DiskManager {
 
   FORCE_INLINE OSfile_handle_type
   GetFileDescriptor(GBPfile_handle_type fd) const {
-    if (fd >= fd_oss_.size())
-      LOG(FATAL) << "fuck";
-    assert(fd < fd_oss_.size());
+    if constexpr (ASSERT_ENABLE)
+      assert(fd < fd_oss_.size());
     return fd_oss_[fd].first;
   }
 
@@ -47,8 +46,9 @@ class DiskManager {
   }
 
   int Resize(GBPfile_handle_type fd, size_t new_size_inByte) {
-    assert(::ftruncate(GetFileDescriptor(fd), new_size_inByte) == 0);
-    // file_sizes_[fd_gbp] = GetFileSize(GetFileDescriptor(fd_gbp));
+    if constexpr (ASSERT_ENABLE)
+      assert(::ftruncate(GetFileDescriptor(fd), new_size_inByte) == 0);
+
     file_size_inBytes_[fd] = new_size_inByte;
 
 #ifdef DEBUG
@@ -64,12 +64,13 @@ class DiskManager {
     auto fd_os = ::open(file_path.c_str(), o_flag, 0777);
     assert(fd_os != -1);
     fd_oss_.push_back(std::make_pair(fd_os, true));
-    file_size_inBytes_.push_back(GetFileSize(fd_os));
     file_names_.push_back(file_path);
+    file_size_inBytes_.push_back(GetFileSize(fd_oss_.size() - 1));
 #ifdef DEBUG
     debug::get_bitmaps().emplace_back(
         ceil(file_sizes_[file_sizes_.size() - 1], PAGE_SIZE_MEMORY));
 #endif
+
     return fd_oss_.size() - 1;
   }
 
@@ -87,11 +88,11 @@ class DiskManager {
   /**
    * Public helper function to get disk file size
    */
-  FORCE_INLINE size_t GetFileSize(OSfile_handle_type fd) const {
-    struct stat stat_buf;
-    auto rc = ::fstat(fd, &stat_buf);
-    return rc == 0 ? stat_buf.st_size : std::numeric_limits<uint32_t>::max();
+  FORCE_INLINE size_t GetFileSize(GBPfile_handle_type fd) const {
+    assert(fd < file_names_.size());
+    return std::filesystem::file_size(file_names_[fd]);
   }
+
   FORCE_INLINE std::string GetFilePath(GBPfile_handle_type fd) const {
     assert(ValidFD(fd));
     return file_names_[fd];
@@ -136,21 +137,12 @@ class IOBackend {
    * Public helper function to get disk file size
    */
   FORCE_INLINE size_t GetFileSize(OSfile_handle_type fd) const {
-    return disk_manager_->GetFileSize(fd);
+    return disk_manager_->GetFileSizeShort(fd);
   }
+
   FORCE_INLINE int Resize(GBPfile_handle_type fd, size_t new_size) {
     return disk_manager_->Resize(fd, new_size);
   }
-
-  // FORCE_INLINE GBPfile_handle_type OpenFile(const std::string& file_path,
-  //   int o_flag = O_RDWR | O_CREAT) {
-  //   return disk_manager_->OpenFile(file_path, o_flag);
-  // }
-
-  // FORCE_INLINE void CloseFile(GBPfile_handle_type fd) {
-  //   disk_manager_->CloseFile(fd);
-  //   return;
-  // }
 
   DiskManager* disk_manager_;
 };
@@ -255,10 +247,12 @@ class IOURing : public IOBackend {
 
   bool Read(size_t offset, char* data, size_t size, GBPfile_handle_type fd,
             bool* finish = nullptr) override {
-    assert(fd < disk_manager_->fd_oss_.size() &&
-           disk_manager_->fd_oss_[fd].second);
-    assert(offset < disk_manager_->file_size_inBytes_[fd] &&
-           ((uintptr_t) data) % PAGE_SIZE_MEMORY == 0);
+    if constexpr (ASSERT_ENABLE)
+      assert(fd < disk_manager_->fd_oss_.size() &&
+             disk_manager_->fd_oss_[fd].second);
+    if constexpr (ASSERT_ENABLE)
+      assert(offset < disk_manager_->file_size_inBytes_[fd] &&
+             ((uintptr_t) data) % PAGE_SIZE_MEMORY == 0);
 
     auto sqe = io_uring_get_sqe(&ring_);
     if (!sqe) {
@@ -276,10 +270,12 @@ class IOURing : public IOBackend {
 
   bool Read(size_t offset, ::iovec* io_info, GBPfile_handle_type fd,
             bool* finish = nullptr) override {
-    assert(fd < disk_manager_->fd_oss_.size() &&
-           disk_manager_->fd_oss_[fd].second);
-    assert(offset < disk_manager_->file_size_inBytes_[fd] &&
-           ((uintptr_t) io_info->iov_base) % PAGE_SIZE_FILE == 0);
+    if constexpr (ASSERT_ENABLE)
+      assert(fd < disk_manager_->fd_oss_.size() &&
+             disk_manager_->fd_oss_[fd].second);
+    if constexpr (ASSERT_ENABLE)
+      assert(offset < disk_manager_->file_size_inBytes_[fd] &&
+             ((uintptr_t) io_info->iov_base) % PAGE_SIZE_FILE == 0);
 
     auto sqe = io_uring_get_sqe(&ring_);
     if (!sqe) {
@@ -340,14 +336,14 @@ class RWSysCall : public IOBackend {
 
   bool Write(size_t offset, std::string_view data, GBPfile_handle_type fd,
              bool* finish = nullptr) override {
-    assert(fd < disk_manager_->fd_oss_.size() &&
-           disk_manager_->fd_oss_[fd].second);
+    if constexpr (ASSERT_ENABLE)
+      assert(fd < disk_manager_->fd_oss_.size() &&
+             disk_manager_->fd_oss_[fd].second);
 
     auto ret = ::pwrite(disk_manager_->fd_oss_[fd].first, data.data(),
                         data.size(), offset);
-    if (ret != data.size())
-      std::cout << ret << " " << data.size() << std::endl;
-    assert(ret == data.size());  // check for I/O error
+    if constexpr (ASSERT_ENABLE)
+      assert(ret == data.size());  // check for I/O error
 
     ::fdatasync(disk_manager_->fd_oss_[fd]
                     .first);  // needs to flush to keep disk file in sync
@@ -360,12 +356,16 @@ class RWSysCall : public IOBackend {
 
   bool Write(size_t offset, const char* data, size_t size,
              GBPfile_handle_type fd, bool* finish = nullptr) override {
-    assert(fd < disk_manager_->fd_oss_.size() &&
-           disk_manager_->fd_oss_[fd].second);
+    if constexpr (ASSERT_ENABLE)
+      assert(fd < disk_manager_->fd_oss_.size() &&
+             disk_manager_->fd_oss_[fd].second);
 
     auto ret = ::pwrite(disk_manager_->fd_oss_[fd].first, data, size, offset);
-    assert(ret == size);  // check for I/O error
+    if constexpr (ASSERT_ENABLE)
+      assert(ret == size);  // check for I/O error
 
+    if (unlikely(disk_manager_->file_size_inBytes_[fd] - offset < size))
+      disk_manager_->Resize(fd, disk_manager_->file_size_inBytes_[fd]);
     ::fdatasync(disk_manager_->fd_oss_[fd]
                     .first);  // needs to flush to keep disk file in sync
 
@@ -377,13 +377,18 @@ class RWSysCall : public IOBackend {
 
   bool Write(size_t offset, ::iovec* io_info, GBPfile_handle_type fd,
              bool* finish = nullptr) override {
-    assert(fd < disk_manager_->fd_oss_.size() &&
-           disk_manager_->fd_oss_[fd].second);
+    if constexpr (ASSERT_ENABLE)
+      assert(fd < disk_manager_->fd_oss_.size() &&
+             disk_manager_->fd_oss_[fd].second);
 
     auto ret = ::pwrite(disk_manager_->fd_oss_[fd].first, io_info[0].iov_base,
-                        PAGE_SIZE_FILE, offset);
-    assert(ret != -1);  // check for I/O error
+                        io_info[0].iov_len, offset);
+    if constexpr (ASSERT_ENABLE)
+      assert(ret != -1);  // check for I/O error
 
+    if (unlikely(disk_manager_->file_size_inBytes_[fd] - offset <
+                 io_info[0].iov_len))
+      disk_manager_->Resize(fd, disk_manager_->file_size_inBytes_[fd]);
     fsync(disk_manager_->fd_oss_[fd]
               .first);  // needs to flush to keep disk file in sync
 
@@ -428,15 +433,17 @@ class RWSysCall : public IOBackend {
    */
   bool Read(size_t offset, std::string_view data, GBPfile_handle_type fd,
             bool* finish = nullptr) override {
-    assert(fd < disk_manager_->fd_oss_.size() &&
-           disk_manager_->fd_oss_[fd].second);
+    if constexpr (ASSERT_ENABLE)
+      assert(fd < disk_manager_->fd_oss_.size() &&
+             disk_manager_->fd_oss_[fd].second);
 #ifdef DEBUG
     if (get_mark_warmup().load() == 1)
       debug::get_counter_read().fetch_add(1);
 #endif
-    assert(offset <=
-           disk_manager_
-               ->file_size_inBytes_[fd]);  // check if read beyond file length
+    if constexpr (ASSERT_ENABLE)
+      assert(offset <=
+             disk_manager_
+                 ->file_size_inBytes_[fd]);  // check if read beyond file length
 
     auto ret = ::pread(disk_manager_->fd_oss_[fd].first, (void*) data.data(),
                        data.size(), offset);
@@ -456,21 +463,24 @@ class RWSysCall : public IOBackend {
    */
   bool Read(size_t offset, char* data, size_t size, GBPfile_handle_type fd,
             bool* finish = nullptr) override {
-    assert(fd < disk_manager_->fd_oss_.size() &&
-           disk_manager_->fd_oss_[fd].second);
+    if constexpr (ASSERT_ENABLE)
+      assert(fd < disk_manager_->fd_oss_.size() &&
+             disk_manager_->fd_oss_[fd].second);
 #ifdef DEBUG
     if (get_mark_warmup().load() == 1)
       debug::get_counter_read().fetch_add(1);
 #endif
-    assert(offset <=
-           disk_manager_
-               ->file_size_inBytes_[fd]);  // check if read beyond file length
+    if constexpr (ASSERT_ENABLE)
+      assert(offset <=
+             disk_manager_
+                 ->file_size_inBytes_[fd]);  // check if read beyond file length
 
     auto ret = ::pread(disk_manager_->fd_oss_[fd].first, data, size, offset);
     if (ret == 0) {
       std::cout << "ret= " << offset / 4096 << " " << size << std::endl;
     }
-    assert(ret != 0);
+    if constexpr (ASSERT_ENABLE)
+      assert(ret != 0);
     // if file ends before reading PAGE_SIZE
     if (ret < size) {
       // std::cerr << "Read less than a page" << std::endl;
@@ -483,16 +493,17 @@ class RWSysCall : public IOBackend {
 
   bool Read(size_t offset, ::iovec* io_info, GBPfile_handle_type fd,
             bool* finish = nullptr) override {
-    assert(fd < disk_manager_->fd_oss_.size() &&
-           disk_manager_->fd_oss_[fd].second);
+    if constexpr (ASSERT_ENABLE)
+      assert(fd < disk_manager_->fd_oss_.size() &&
+             disk_manager_->fd_oss_[fd].second);
 #ifdef DEBUG
     if (get_mark_warmup().load() == 1)
       debug::get_counter_read().fetch_add(1);
 #endif
-
-    assert(offset <=
-           disk_manager_
-               ->file_size_inBytes_[fd]);  // check if read beyond file length
+    if constexpr (ASSERT_ENABLE)
+      assert(offset <=
+             disk_manager_
+                 ->file_size_inBytes_[fd]);  // check if read beyond file length
 
     auto ret = ::pread(disk_manager_->fd_oss_[fd].first, io_info[0].iov_base,
                        PAGE_SIZE_FILE, offset);

@@ -6,7 +6,7 @@
 
 #pragma once
 
-#define GRAPHSCOPE
+// #define GRAPHSCOPE
 
 #ifdef GRAPHSCOPE
 #include <glog/logging.h>
@@ -42,7 +42,8 @@ using GBPfile_handle_type = uint32_t;
 using OSfile_handle_type = uint32_t;
 using partition_id_type = uint32_t;
 
-constexpr bool PERSISTENT = false;
+constexpr bool PERSISTENT = true;
+constexpr bool ASSERT_ENABLE = false;
 
 constexpr uint32_t INVALID_PAGE_ID =
     std::numeric_limits<uint32_t>::max();  // representing an invalid page id

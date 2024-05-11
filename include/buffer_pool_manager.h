@@ -65,6 +65,7 @@ class BufferPoolManager {
     }
     return 0;
   }
+
   size_t GetFreePageNum() {
     size_t free_page_num = 0;
     for (auto pool : pools_)

@@ -15,6 +15,7 @@
 #pragma once
 
 #include <sys/mman.h>
+#include <algorithm>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
@@ -57,7 +58,10 @@ class BufferObjectImp0 {
 
   void Malloc(size_t s) {
     data_ = (char*) LBMalloc(s);
+#if (ASSERT_ENABLE)
     assert(data_ != NULL);
+#endif
+
     // if (data_ == NULL)
     //   LOG(FATAL) << "Allocation failed!! (size = " << std::to_string(s);
     need_delete_ = true;
@@ -569,7 +573,9 @@ struct BufferObjectInner {
  private:
   void Malloc(size_t s) {
     data_ = (char*) LBMalloc(s);
+#if (ASSERT_ENABLE)
     assert(data_ != NULL);
+#endif
     need_delete_ = true;
     size_ = s;
   }
@@ -719,7 +725,9 @@ class BufferObjectImp2 {
 
   void Malloc(size_t s) {
     data_ = (char*) LBMalloc(s);
+#if (ASSERT_ENABLE)
     assert(data_ != NULL);
+#endif
     need_delete_ = true;
     size_ = s;
   }
@@ -728,20 +736,27 @@ class BufferObjectImp2 {
 
   template <typename T>
   static T& Decode(BufferObjectImp2& obj) {
+#if (ASSERT_ENABLE)
     assert(sizeof(T) == obj.Size());
+#endif
+
     return *reinterpret_cast<T*>(obj.Data());
   }
 
   template <typename T>
   static const T& Decode(const BufferObjectImp2& obj) {
+#if (ASSERT_ENABLE)
     assert(sizeof(T) == obj.Size());
+#endif
 
     return *reinterpret_cast<const T*>(obj.Data());
   }
 
   template <typename T>
   static const T& Decode(const BufferObjectImp2& obj, size_t idx) {
+#if (ASSERT_ENABLE)
     assert(sizeof(T) * (idx + 1) <= obj.Size());
+#endif
     return *reinterpret_cast<const T*>(obj.Data() + idx * sizeof(T));
   }
 };
@@ -759,15 +774,19 @@ class BufferObjectImp5 {
       : page_num_(page_num), size_(size) {
     data_ = (char**) LBMalloc(page_num_ * sizeof(char*));
     ptes_ = (PTE**) LBMalloc(page_num_ * sizeof(PTE*));
+#if (ASSERT_ENABLE)
     assert(data_ != nullptr);
     assert(ptes_ != nullptr);
+#endif
     type_ = ObjectType::gbpClass;
   }
 
   BufferObjectImp5(size_t size, char* data) : size_(size) {
     data_ = (char**) LBMalloc(1 * sizeof(char*));
     ptes_ = nullptr;
+#if (ASSERT_ENABLE)
     assert(data_ != nullptr);
+#endif
     data_[0] = (char*) LBMalloc(size_);
     memcpy(data_[0], data, size_);
     type_ = ObjectType::gbpClass;
@@ -776,7 +795,9 @@ class BufferObjectImp5 {
   BufferObjectImp5(size_t size) : size_(size) {
     data_ = (char**) LBMalloc(1 * sizeof(char*));
     ptes_ = nullptr;
+#if (ASSERT_ENABLE)
     assert(data_ != nullptr);
+#endif
     data_[0] = (char*) LBMalloc(size);
     type_ = ObjectType::gbpClass;
   }
@@ -839,7 +860,7 @@ class BufferObjectImp5 {
     return Compare(right) <= 0 ? true : false;
   }
   FORCE_INLINE bool operator<(const std::string& right) const {
-    return Compare(right) <= 0 ? true : false;
+    return Compare(right) < 0 ? true : false;
   }
   FORCE_INLINE bool operator==(const std::string& right) const {
     return Compare(right) == 0 ? true : false;
@@ -855,7 +876,7 @@ class BufferObjectImp5 {
     return Compare(right) <= 0 ? true : false;
   }
   FORCE_INLINE bool operator<(const std::string_view right) const {
-    return Compare(right) <= 0 ? true : false;
+    return Compare(right) < 0 ? true : false;
   }
   FORCE_INLINE bool operator==(const std::string_view right) const {
     return Compare(right) == 0 ? true : false;
@@ -871,21 +892,25 @@ class BufferObjectImp5 {
     return Compare(right) <= 0 ? true : false;
   }
   FORCE_INLINE bool operator<(const BufferObjectImp5& right) const {
-    return Compare(right) <= 0 ? true : false;
+    return Compare(right) < 0 ? true : false;
   }
   FORCE_INLINE bool operator==(const BufferObjectImp5& right) const {
     return Compare(right) == 0 ? true : false;
   }
 
   void InsertPage(size_t idx, char* data, PTE* pte) {
+#if (ASSERT_ENABLE)
     assert(idx < page_num_);
+#endif
     data_[idx] = data;
     ptes_[idx] = pte;
   }
 
   static BufferObjectImp5 Copy(const BufferObjectImp5& rhs) {
     BufferObjectImp5 ret(rhs.size_);
+#if (ASSERT_ENABLE)
     assert(rhs.data_ != nullptr);
+#endif
 
     if (rhs.ptes_ == nullptr)
       memcpy(ret.data_[0], rhs.data_[0], rhs.size_);
@@ -904,8 +929,10 @@ class BufferObjectImp5 {
   }
 
   size_t Copy(char* buf, size_t buf_size, size_t offset = 0) const {
+#if (ASSERT_ENABLE)
     assert(data_ != nullptr);
     assert(offset < size_);
+#endif
     size_t ret = (buf_size + offset) > size_ ? size_ : buf_size;
 
     if (ptes_ == nullptr) {
@@ -1024,10 +1051,11 @@ class BufferObjectImp5 {
 
   FORCE_INLINE int Compare(const std::string_view right,
                            size_t offset = 0) const {
+#if (ASSERT_ENABLE)
     assert(data_ != nullptr);
     assert(offset < size_);
-    size_t size_left = (size_ - offset) < right.size() ? (size_ - offset)
-                                                       : right.size(),
+#endif
+    size_t size_left = std::min((size_ - offset), right.size()),
            offset_t = offset;
     int ret = 0;
 
@@ -1067,7 +1095,9 @@ class BufferObjectImp5 {
   }
 
   FORCE_INLINE int Compare(const BufferObjectImp5& right) const {
+#if (ASSERT_ENABLE)
     assert(data_ != nullptr);
+#endif
     int ret = 0;
 
     if (ptes_ != nullptr && right.ptes_ != nullptr) {
@@ -1076,24 +1106,74 @@ class BufferObjectImp5 {
       for (idx_right = 0; idx_right < right.page_num_; idx_right++) {
         loc_inpage = PAGE_SIZE_MEMORY -
                      (uintptr_t) right.data_[idx_right] % PAGE_SIZE_MEMORY;
-        ret = Compare({right.data_[idx_right], loc_inpage}, len_right);
+        loc_inpage = std::min(loc_inpage, right.Size() - len_right);
+        ret = Compare_inner({right.data_[idx_right], loc_inpage}, len_right);
         if (ret != 0) {
           break;
         }
         len_right += loc_inpage;
       }
     } else if (ptes_ != nullptr) {
-      ret = Compare({right.data_[0], right.size_});
+      ret = Compare_inner({right.data_[0], right.size_});
     } else {
-      ret = right.Compare({data_[0], size_});
+      ret = right.Compare_inner({data_[0], size_});
     }
+
+    if (ret == 0 && size_ != right.size_)
+      ret = size_ - right.size_;
     return ret;
   }
 
  private:
+  FORCE_INLINE int Compare_inner(const std::string_view right,
+                                 size_t offset = 0) const {
+#if (ASSERT_ENABLE)
+    assert(data_ != nullptr && offset < size_);
+#endif
+    size_t size_left = std::min(size_ - offset, right.size()),
+           offset_t = offset;
+    int ret = 0;
+
+    if (ptes_ != nullptr) {
+      size_t size_cum = 0, slice_len, loc_inpage, idx;
+      for (idx = 0; idx < page_num_; idx++) {
+        loc_inpage =
+            PAGE_SIZE_MEMORY - (uintptr_t) data_[idx] % PAGE_SIZE_MEMORY;
+        if (offset_t > loc_inpage) {
+          offset_t -= loc_inpage;
+        } else {
+          break;
+        }
+      }
+      for (; idx < page_num_; idx++) {
+        loc_inpage = PAGE_SIZE_MEMORY -
+                     (uintptr_t) (data_[idx] + offset_t) % PAGE_SIZE_MEMORY;
+        slice_len = loc_inpage < size_left ? loc_inpage : size_left;
+        ret = ::strncmp(data_[idx] + offset_t, right.data() + size_cum,
+                        slice_len);
+        if (ret != 0) {
+          break;
+        }
+        offset_t = 0;
+        size_left -= slice_len;
+        size_cum += slice_len;
+      }
+    } else {
+      ret = ::strncmp(data_[0] + offset, right.data(), size_left);
+    }
+
+    // if (ret == 0 && offset == 0 && (size_ - offset) != right.size()) {
+    //   return size_ - right.size();
+    // }
+    // std::cout << "ret=" << ret << std::endl;
+    return ret;
+  }
+
   void Malloc(size_t size) {
     data_ = (char**) LBMalloc(sizeof(char*));
+#if (ASSERT_ENABLE)
     assert(data_ != NULL);
+#endif
     data_[0] = (char*) LBMalloc(sizeof(char) * size);
     size_ = size;
     page_num_ = 0;
@@ -1104,12 +1184,13 @@ class BufferObjectImp5 {
   FORCE_INLINE pair_min<T*, PTE*> Decode(size_t idx = 0) const {
     // static_assert(PAGE_SIZE_MEMORY % sizeof(T) == 0);
     constexpr size_t OBJ_NUM_PERPAGE = PAGE_SIZE_MEMORY / sizeof(T);
+#if (ASSERT_ENABLE)
     assert(data_ != nullptr);
     if (sizeof(T) * (idx + 1) > size_)
       std::cout << sizeof(T) << " " << idx << " " << size_ << std::endl;
     // FIXME: 不够准确
     assert(sizeof(T) * (idx + 1) <= size_);
-
+#endif
     char* ret = nullptr;
     PTE* pte_ret = nullptr;
 
@@ -1129,14 +1210,14 @@ class BufferObjectImp5 {
         ret = data_[page_id] + (idx % OBJ_NUM_PERPAGE) * sizeof(T);
         pte_ret = ptes_[page_id];
       }
-      if (!(((uintptr_t) ret / PAGE_SIZE_MEMORY + 1) * PAGE_SIZE_MEMORY >=
-            (uintptr_t) (ret + sizeof(T))))
-        LOG(FATAL) << "fuck";
+#if (ASSERT_ENABLE)
       assert(((uintptr_t) ret / PAGE_SIZE_MEMORY + 1) * PAGE_SIZE_MEMORY >=
              (uintptr_t) (ret + sizeof(T)));
+#endif
     }
+#if (ASSERT_ENABLE)
     assert(ret != nullptr);
-
+#endif
     return {reinterpret_cast<T*>(ret), pte_ret};
   }
 

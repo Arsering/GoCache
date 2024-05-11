@@ -1,7 +1,7 @@
 set -x
 
-export FLAME_GRAPH_DIR=/data_client2/zhengyang/data/FlameGraph
-export DIR=/data_client2/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/logs/2024-04-27-10:48:42
+export FLAME_GRAPH_DIR=/data/zhengyang/data/FlameGraph
+export DIR=/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/logs/2024-05-11-08:46:05
 
 cd ${DIR}
 perf script -i perf.data > out.perf
