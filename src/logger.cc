@@ -20,28 +20,10 @@ ThreadLog* get_thread_logger() {
   return access_logger_g;
 }
 
-// performance counter of Overall
-std::atomic<size_t>& get_counter_g() {
-  static std::atomic<size_t> counter(0);
-  return counter;
-}
-
-// performance counter of Graph Semantic
-std::atomic<size_t>& get_counter_gs() {
-  static std::atomic<size_t> counter(0);
-  return counter;
-}
-
-// performance counter of Pread
-std::atomic<size_t>& get_counter_pr() {
-  static std::atomic<size_t> counter(0);
-  return counter;
-}
-
 // marker of warmup
-std::atomic<size_t>& get_mark_warmup() {
-  static std::atomic<size_t> counter(0);
-  return counter;
+std::atomic<bool>& warmup_mark() {
+  static std::atomic<bool> data(false);
+  return data;
 }
 
 std::unordered_map<int, std::pair<void*, size_t>>& get_mmap_results() {
@@ -49,19 +31,15 @@ std::unordered_map<int, std::pair<void*, size_t>>& get_mmap_results() {
   return mmap_results;
 }
 
-std::atomic<size_t>& get_mark_mmapwarmup() {
-  static std::atomic<size_t> counter(0);
-  return counter;
+std::atomic<size_t>& get_counter_query() {
+  static std::atomic<size_t> data;
+  return data;
 }
-size_t& get_pool_size() {
-  static size_t pool_size;
-  return pool_size;
+std::mutex& get_log_lock() {
+  static std::mutex latch;
+  return latch;
 }
-std::atomic<size_t>& get_counter_operation() {
-  static std::atomic<size_t> counter(0);
-  return counter;
-}
-
+// 为了replay
 std::ofstream& get_query_file(std::string query_file_path) {
   static std::ofstream query_file;
   static bool marker = false;
@@ -71,7 +49,7 @@ std::ofstream& get_query_file(std::string query_file_path) {
   }
   return query_file;
 }
-
+// 为了replay
 std::ofstream& get_result_file(std::string result_file_path) {
   static std::ofstream result_file;
   static bool marker = false;
@@ -80,6 +58,26 @@ std::ofstream& get_result_file(std::string result_file_path) {
     marker = true;
   }
   return result_file;
+}
+
+// for replay
+std::vector<std::string>& get_results_vec() {
+  static std::vector<std::string> data;
+  return data;
+}
+
+std::atomic<size_t>& get_query_id() {
+  thread_local std::atomic<size_t> counter(0);
+  return counter;
+}
+std::atomic<size_t>& get_type() {
+  thread_local std::atomic<size_t> data(0);
+  return data;
+}
+
+size_t& get_thread_id() {
+  thread_local size_t thread_id;
+  return thread_id;
 }
 
 inline size_t GetMemoryUsage() {
@@ -189,9 +187,9 @@ void PerformanceLogServer::Logging() {
     cur_Client_Read_throughput = client_read_throughput_Byte_.load();
     cur_Client_Write_throughput = client_write_throughput_Byte_.load();
 
-    auto cur_eviction_operation_count = debug::get_counter_eviction().load();
-    auto cur_fetch_count = debug::get_counter_fetch().load();
-    auto cur_contention_count = debug::get_counter_contention().load();
+    // auto cur_eviction_operation_count = debug::get_counter_eviction().load();
+    // auto cur_fetch_count = debug::get_counter_fetch().load();
+    // auto cur_contention_count = debug::get_counter_contention().load();
 
     size = ::snprintf(
         buf, 4096, "%-25lf%-25lf%-25lf%-25lf%-25lu%-25lf\n",
@@ -222,9 +220,18 @@ void PerformanceLogServer::Logging() {
       break;
   }
 }
-std::atomic<int>& log_enable() {
-  static std::atomic<int> data;
+std::atomic<bool>& log_enable() {
+  static std::atomic<bool> data;
   return data;
 }
-
+std::atomic<size_t>& get_counter(size_t idx) {
+  static size_t capacity = 1000;
+  static std::vector<size_t> data(capacity, 0);
+  assert(idx < capacity);
+  return as_atomic(data[idx]);
+}
+std::atomic<size_t>& get_pool_size() {
+  static std::atomic<size_t> data;
+  return data;
+}
 }  // namespace gbp

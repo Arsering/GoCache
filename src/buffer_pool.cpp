@@ -26,33 +26,16 @@ void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
   // page_table_ = new std::vector<ExtendibleHash<page_id_infile, PTE *>>();
   replacer_ = new FIFOReplacer(page_table_);
 
-  for (auto fd_os : disk_manager_->fd_oss_) {
+  for (int i = 0; i < disk_manager_->fd_oss_.size(); i++) {
     uint32_t file_size_in_page =
-        ceil(disk_manager_->GetFileSize(fd_os.first), PAGE_SIZE_MEMORY);
+        ceil(disk_manager_->GetFileSize(i), PAGE_SIZE_MEMORY);
     page_table_->RegisterFile(file_size_in_page);
   }
-
-  // put all the pages into free list
-  // //FIXME: 无法保证线程安全
-  // free_list_ = new VectorSync<mpage_id_type>(pool_size_);
-  // for (mpage_id_type i = 0; i < pool_size_; ++i) {
-  //   free_list_->GetData()[i] = i;
-  //   // free_list_->InsertItem(i);
-  // }
-  // free_list_->size_ = pool_size_;
 
   free_list_ = new lockfree_queue_type<mpage_id_type>(pool_size_);
   for (mpage_id_type i = 0; i < pool_size_; ++i) {
     free_list_->Push(i);
   }
-  // for (mpage_id_type i = 0; i < 10; ++i) {
-  //   free_list1_->Push(i);
-  // }
-  // mpage_id_type aa = 0;
-  // for (mpage_id_type i = 0; i < 10; ++i) {
-  //   free_list1_->Poll(aa);
-  //   assert(aa == i);
-  // }
 }
 
 /*
@@ -243,7 +226,9 @@ PTE* BufferPool::GetVictimPage() {
   }
 #endif
   tar = page_table_->FromPageId(mpage_id);
+#if (ASSERT_ENABLE)
   assert(tar->GetRefCount() == 0);
+#endif
   return tar;
 }
 
@@ -263,10 +248,11 @@ PTE* BufferPool::GetVictimPage() {
  */
 pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
                                             GBPfile_handle_type fd) {
+#if (ASSERT_ENABLE)
   auto file_size = disk_manager_->GetFileSizeShort(fd);
-  if (fpage_id >= CEIL(file_size, PAGE_SIZE_MEMORY))
-    LOG(FATAL) << fpage_id << " " << CEIL(file_size, PAGE_SIZE_MEMORY);
   assert(fpage_id < CEIL(file_size, PAGE_SIZE_MEMORY));
+#endif
+
 #ifdef DEBUG
   if (debug::get_log_marker() == 1)
     debug::get_counter_fetch().fetch_add(1);
@@ -274,20 +260,13 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
     //   debug::get_counter_fetch_unique().fetch_add(1);
     // debug::get_bitset(fd).set(fpage_id);
 #endif
-
-#ifdef DEBUG
-  // if (latch_.try_lock()) {
-  //   latch_.unlock();
-  // } else {
-  //   if (debug::get_log_marker() == 1)
-  //     debug::get_counter_contention().fetch_add(1);
-  // }
-  size_t st = gbp::GetSystemTime();
-#endif
   // std::lock_guard<std::mutex> lck(latch_);
   auto stat = context_type::Phase::Begin;
 
-  // assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
+#if (ASSERT_ENABLE)
+  assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
+#endif
+
   fpage_id_type fpage_id_inpool = partitioner_->GetFPageIdInPartition(fpage_id);
   PTE* tar = nullptr;
   char* mpage_data = nullptr;
@@ -321,7 +300,7 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
         stat = context_type::Phase::Evicting;
       }
       tar = page_table_->FromPageId(mpage_id);
-      assert(tar->ref_count == 0);
+      // assert(tar->ref_count == 0);
       mpage_data = (char*) buffer_pool_->FromPageId(mpage_id);
       break;
     }
@@ -337,25 +316,26 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
       break;
     }
     case context_type::Phase::Loading: {  // 4
-      if constexpr (USING_FIBER_ASYNC_RESPONSE) {
-        context_type context = context_type::GetRawObject();
-        async_request_fiber_type* req = new async_request_fiber_type(
-            mpage_data, PAGE_SIZE_MEMORY,
-            (gbp::fpage_id_type) fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
-            fd, context);
-        assert(io_server_->SendRequest(req));
+      // if constexpr (USING_FIBER_ASYNC_RESPONSE) {
+      //   context_type context = context_type::GetRawObject();
+      //   async_request_fiber_type* req = new async_request_fiber_type(
+      //       mpage_data, PAGE_SIZE_MEMORY,
+      //       (gbp::fpage_id_type) fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
+      //       fd, context);
+      //   assert(io_server_->SendRequest(req));
 
-        size_t loops = 0;
-        while (!req->success) {
-          // hybrid_spin(loops);
-          std::this_thread::yield();
-        }
-        delete req;
-      } else {
-        io_server_->io_backend_->Read(fpage_id * PAGE_SIZE_FILE, mpage_data,
-                                      PAGE_SIZE_FILE, fd);
-      }
-
+      //   size_t loops = 0;
+      //   while (!req->success) {
+      //     // hybrid_spin(loops);
+      //     std::this_thread::yield();
+      //   }
+      //   delete req;
+      // } else {
+      //   io_server_->io_backend_->Read(fpage_id * PAGE_SIZE_FILE, mpage_data,
+      //                                 PAGE_SIZE_FILE, fd);
+      // }
+      assert(ReadWrite(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY, mpage_data,
+                       PAGE_SIZE_MEMORY, fd, true));
       tar->Clean();
       tar->ref_count = 1;
       tar->fpage_id = fpage_id_inpool;
@@ -373,21 +353,6 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
     }
   }
   return {tar, mpage_data};
-}
-
-pair_min<PTE*, char*> BufferPool::Pin(fpage_id_type fpage_id_inpool,
-                                      GBPfile_handle_type fd) {
-  // 1.1
-  auto [success, mpage_id] = page_table_->FindMapping(fd, fpage_id_inpool);
-
-  if (success) {
-    auto tar = page_table_->FromPageId(mpage_id);
-    auto [has_inc, pre_ref_count] = tar->IncRefCount(fpage_id_inpool, fd);
-    if (has_inc) {
-      return {tar, (char*) buffer_pool_->FromPageId(mpage_id)};
-    }
-  }
-  return {nullptr, nullptr};
 }
 
 int BufferPool::GetObject(char* buf, size_t file_offset, size_t object_size,

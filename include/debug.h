@@ -68,20 +68,6 @@ class BitMap {
 
   void Resize(size_t bit_size_new) {
     if (bit_size_ == 0 || bit_size_new / 8 > bit_size_ / 8) {
-      // LOG(INFO) << "cp" << bit_size_new;
-      // char* bits_tmp = (char*) malloc(cell(bit_size_new, 8));
-      // LOG(INFO) << "cp";
-      // memcpy(bits_tmp, bits_, cell(bit_size_, 8));
-      // LOG(INFO) << "cp";
-      // memset(bits_tmp + cell(bit_size_, 8), 0,
-      //        bit_size_new / 8 - bit_size_ / 8);
-      // LOG(INFO) << "cp" << (void*) bits_;
-      // if (bits_ != nullptr) {
-      //   ::free(bits_);
-      // }
-      // LOG(INFO) << "cp";
-      // bits_ = bits_tmp;
-
       bits_.resize(ceil(bit_size_new, 8));
       ::memset(bits_.data() + ceil(bit_size_, 8), 0,
                bit_size_new / 8 - bit_size_ / 8);
@@ -96,15 +82,9 @@ class BitMap {
   size_t one_num_;
 };
 
-std::atomic<size_t>& get_counter_read();
-std::atomic<size_t>& get_counter_fetch();
-std::atomic<size_t>& get_counter_fetch_unique();
-std::atomic<size_t>& get_counter();
-
 BitMap& get_bitset(uint32_t file_id);
 std::vector<debug::BitMap>& get_bitmaps();
 void reinit_bit_maps(std::vector<size_t>& file_sizes);
-std::atomic<size_t>& get_type();
 
 #define GET_LATENCY(target_fun, latency) \
   {                                      \
@@ -112,31 +92,5 @@ std::atomic<size_t>& get_type();
     target_fun;                          \
     latency = GetSystemTime();           \
   }
-
-std::atomic<size_t>& get_counter_MAP_find();
-std::atomic<size_t>& get_counter_FPL_get();
-std::atomic<size_t>& get_counter_pread();
-std::atomic<size_t>& get_counter_MAP_eviction();
-std::atomic<size_t>& get_counter_ES_eviction();
-std::atomic<size_t>& get_counter_MAP_insert();
-std::atomic<size_t>& get_counter_ES_insert();
-std::atomic<size_t>& get_counter_copy();
-std::atomic<size_t>& get_counter_malloc();
-std::atomic<size_t>& get_log_marker();
-
-std::atomic<size_t>& get_counter_bpm();
-std::atomic<size_t>& get_counter_any();
-
-std::atomic<size_t>& get_counter_CopyObj();
-std::atomic<size_t>& get_counter_RefObj();
-
-std::ofstream& get_result_file(size_t file_id, std::string file_path = "");
-std::atomic<size_t>& get_query_id();
-
-std::mutex& get_file_lock();
-
-std::atomic<size_t>& get_counter_eviction();
-std::atomic<size_t>& get_counter_contention();
-size_t& get_thread_id();
 }  // namespace debug
 }  // namespace gbp

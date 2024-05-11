@@ -37,7 +37,6 @@ void BufferPoolManager::init(uint16_t pool_num,
   for (int idx = 0; idx < io_server_num; idx++) {
     io_servers_.push_back(new IOServer_old(disk_manager_));
   }
-
   for (int idx = 0; idx < pool_num; idx++) {
     pools_.push_back(new BufferPool());
     pools_[idx]->init(idx, pool_size_page_per_instance_,
@@ -53,7 +52,12 @@ bool BufferPoolManager::FlushPage(fpage_id_type fpage_id,
 }
 
 bool BufferPoolManager::FlushFile(GBPfile_handle_type fd) {
+  if (!disk_manager_->ValidFD(fd))
+    return true;
+#if (ASSERT_ENABLE)
   assert(disk_manager_->ValidFD(fd));
+#endif
+
   bool ret = true;
   size_t fpage_num =
       ceil(disk_manager_->file_size_inBytes_[fd], PAGE_SIZE_FILE);
@@ -64,7 +68,9 @@ bool BufferPoolManager::FlushFile(GBPfile_handle_type fd) {
 }
 
 bool BufferPoolManager::LoadFile(GBPfile_handle_type fd) {
+#if (ASSERT_ENABLE)
   assert(disk_manager_->ValidFD(fd));
+#endif
   bool ret = true;
   size_t fpage_num =
       ceil(disk_manager_->file_size_inBytes_[fd], PAGE_SIZE_FILE);
@@ -83,10 +89,8 @@ bool BufferPoolManager::Flush() {
 #endif
   std::vector<std::thread> thread_pool;
 
-  auto ret = false;
   for (int fd = 0; fd < disk_manager_->fd_oss_.size(); fd++) {
     if (disk_manager_->ValidFD(fd)) {
-      // ret = FlushFile(fd);
       thread_pool.emplace_back([&, fd]() { assert(FlushFile(fd)); });
     }
   }
@@ -96,7 +100,7 @@ bool BufferPoolManager::Flush() {
 #ifdef GRAPHSCOPE
   LOG(INFO) << "Flush the whole bufferpool: Finish";
 #endif
-  return ret;
+  return true;
 }
 
 void BufferPoolManager::RegisterFile(GBPfile_handle_type fd) {
@@ -117,8 +121,9 @@ int BufferPoolManager::GetObject(char* buf, size_t file_offset,
   while (object_size > 0) {
     auto mpage =
         pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
+#if (ASSERT_ENABLE)
     assert(mpage.first != nullptr && mpage.second != nullptr);
-
+#endif
     object_size_t =
         PageTableInner::GetObject(mpage.second, buf, fpage_offset, object_size);
     mpage.first->DecRefCount();
@@ -141,8 +146,9 @@ int BufferPoolManager::SetObject(const char* buf, size_t file_offset,
   while (object_size > 0) {
     auto mpage =
         pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
+#if (ASSERT_ENABLE)
     assert(mpage.first != nullptr && mpage.second != nullptr);
-
+#endif
     object_size_t =
         PageTableInner::SetObject(buf, mpage.second, fpage_offset, object_size);
     mpage.first->DecRefCount(true);
@@ -162,7 +168,10 @@ int BufferPoolManager::SetObject(const char* buf, size_t file_offset,
 int BufferPoolManager::SetObject(const BufferObject& buf, size_t file_offset,
                                  size_t object_size, GBPfile_handle_type fd,
                                  bool flush) {
+#if (ASSERT_ENABLE)
   assert(buf.Size() == object_size);
+#endif
+
   fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
   size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
 
@@ -170,8 +179,9 @@ int BufferPoolManager::SetObject(const BufferObject& buf, size_t file_offset,
   while (object_size > 0) {
     auto mpage =
         pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
+#if (ASSERT_ENABLE)
     assert(mpage.first != nullptr && mpage.second != nullptr);
-
+#endif
     object_size_t = buf.Copy(mpage.second + fpage_offset,
                              (PAGE_SIZE_MEMORY - fpage_offset) > object_size
                                  ? object_size
@@ -213,8 +223,9 @@ const BufferObject BufferPoolManager::GetObject(size_t file_offset,
   while (num_page > 0) {
     auto mpage =
         pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
+#if (ASSERT_ENABLE)
     assert(mpage.first != nullptr && mpage.second != nullptr);
-
+#endif
     ret.InsertPage(page_id, mpage.second + fpage_offset, mpage.first);
     page_id++;
     num_page--;

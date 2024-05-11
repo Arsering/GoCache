@@ -187,20 +187,19 @@ bool thread_logger_is_empty();
 void set_thread_logger(ThreadLog* access_logger);
 ThreadLog* get_thread_logger();
 
-std::atomic<size_t>& get_counter_g();
-// performance counter of Graph Semantic
-std::atomic<size_t>& get_counter_gs();
-// performance counter of Pread
-std::atomic<size_t>& get_counter_pr();
-std::atomic<size_t>& get_mark_warmup();
-
-std::atomic<size_t>& get_mark_mmapwarmup();
-size_t& get_pool_size();
-std::atomic<size_t>& get_counter_operation();
+std::atomic<bool>& warmup_mark();  // 1: 需要warmup; 0: 无需warmup
 
 std::ofstream& get_query_file(std::string query_file_path = " ");
 std::ofstream& get_result_file(std::string result_file_path = " ");
-std::atomic<int>& log_enable();
+std::vector<std::string>& get_results_vec();
+std::atomic<bool>& log_enable();
+std::atomic<size_t>& get_counter_query();
+std::mutex& get_log_lock();
+
+std::atomic<size_t>& get_type();
+std::atomic<size_t>& get_query_id();
+std::atomic<size_t>& get_counter(size_t idx);
+std::atomic<size_t>& get_pool_size();
 
 class PerformanceLogServer {
   constexpr static size_t B2GB = 1024.0 * 1024 * 1024;
