@@ -158,7 +158,7 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
     // st = gbp::GetSystemTime() - st;
     // latency_log << st << std::endl;
 
-    Client_Read_throughput().fetch_add(io_size);
+    // Client_Read_throughput().fetch_add(io_size);
   }
   latency_log.flush();
   latency_log.close();
@@ -560,7 +560,7 @@ int test_concurrency(int argc, char** argv) {
 
   Client_Read_throughput().store(0);
   Client_Write_throughput().store(0);
-  std::thread log_thread(logging);
+  // std::thread log_thread(logging);
   sleep(1);
 
   std::vector<std::thread> thread_pool;
@@ -595,8 +595,8 @@ int test_concurrency(int argc, char** argv) {
   }
   // ::sleep(100);
   log_thread_run = false;
-  if (log_thread.joinable())
-    log_thread.join();
+  // if (log_thread.joinable())
+  //   log_thread.join();
 
   return 0;
 }
