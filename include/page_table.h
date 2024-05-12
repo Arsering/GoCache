@@ -28,19 +28,19 @@ class PageTableInner {
 
  public:
   struct UnpackedPTE {
-    fpage_id_type fpage_id;
-    GBPfile_handle_type fd;
     uint16_t ref_count;
+    GBPfile_handle_type fd;
     bool dirty;
     bool busy;
+    fpage_id_type fpage_id;
   };
 
   struct alignas(sizeof(uint64_t)) PTE {
-    fpage_id_type fpage_id = INVALID_PAGE_ID;
-    GBPfile_handle_type fd : 16;
-    uint16_t ref_count : 14;
+    uint16_t ref_count : 16;
+    GBPfile_handle_type fd : 14;
     bool dirty : 1;
     bool busy : 1;
+    fpage_id_type fpage_id : 32;
 
     FORCE_INLINE uint64_t& AsPacked() { return (uint64_t&) *this; }
 
@@ -68,7 +68,7 @@ class PageTableInner {
       auto packed_header =
           as_atomic(AsPacked()).load(std::memory_order_relaxed);
       auto pte = PTE::FromPacked(packed_header);
-      return {pte.fpage_id, pte.fd, pte.ref_count, pte.dirty, pte.busy};
+      return {pte.ref_count, pte.fd, pte.dirty, pte.busy, pte.fpage_id};
     }
 
     // 需要获得文件页的相关信息，因为该内存页可能被用于存储其他文件页
@@ -84,14 +84,15 @@ class PageTableInner {
         new_packed = old_packed;
         auto& new_unpacked = PTE::FromPacked(new_packed);
 
-        if (new_unpacked.busy)
+        if (new_unpacked.busy) {
           return {false, 0};
+        }
 
 #if ASSERT_ENABLE
         assert(new_unpacked.ref_count <
                (std::numeric_limits<uint16_t>::max() >> 2) - 1);
+        assert(fd < (std::numeric_limits<uint16_t>::max() >> 2) - 1);
 #endif
-
         if (new_unpacked.fpage_id != fpage_id || new_unpacked.fd != fd) {
           return {false, 0};
         }
@@ -105,12 +106,12 @@ class PageTableInner {
       return {true, old_ref_count};
     }
 
+// #define AA
+#ifdef AA
     // 无需获得文件页的相关信息，因为该内存页的 ref_count >0
     // 时不可能被用于存储其他文件页
     pair_min<bool, uint16_t> DecRefCount(bool is_write = false,
                                          bool write_to_ssd = false) {
-      // return {true, 1};
-
       std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
       uint64_t old_packed = atomic_packed.load(std::memory_order_relaxed),
                new_packed;
@@ -129,13 +130,31 @@ class PageTableInner {
           new_header.dirty = true;
         if (write_to_ssd)
           new_header.dirty = false;
-
       } while (!atomic_packed.compare_exchange_weak(old_packed, new_packed,
                                                     std::memory_order_release,
                                                     std::memory_order_relaxed));
 
       return {true, old_ref_count};
     }
+#else
+    // 无需获得文件页的相关信息，因为该内存页的 ref_count >0
+    // 时不可能被用于存储其他文件页
+    pair_min<bool, uint16_t> DecRefCount(bool is_write = false,
+                                         bool write_to_ssd = false) {
+      std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
+
+      if (is_write)
+        atomic_packed.fetch_or(1 << 30);
+      if (write_to_ssd)
+        atomic_packed.fetch_and(~(((uint64_t) 1) << 30));
+
+      // atomic_packed.fetch_or(((uint64_t) 1) << 31);
+      // atomic_packed.fetch_and(~(((uint64_t) 1) << 31));
+
+      auto new_unpacked = atomic_packed.fetch_sub(1);
+      return {true, FromPacked(new_unpacked).ref_count};
+    }
+#endif
 
     bool SetDirty(bool _dirty) {
       dirty = _dirty;
@@ -184,14 +203,14 @@ class PageTableInner {
   };
 
   static_assert(sizeof(PTE) == sizeof(uint64_t));
-
   struct alignas(CACHELINE_SIZE) PackedPTECacheLine {
     PTE ptes[8];
 
     constexpr static size_t NUM_PACK_PAGES = 8;
-    constexpr static PTE EMPTY_PTE = {INVALID_PAGE_ID, INVALID_FILE_HANDLE, 0,
-                                      0, 0};
+    constexpr static PTE EMPTY_PTE = {0, INVALID_FILE_HANDLE >> 2, 0, 0,
+                                      INVALID_PAGE_ID};
   };
+
   static_assert(sizeof(PackedPTECacheLine) == CACHELINE_SIZE);
 
   static size_t SetObject(const char* buf, char* dst, size_t page_offset,
@@ -234,11 +253,6 @@ class PageTableInner {
   }
 
   PTE* FromPageId(mpage_id_type page_id) const {
-    if (page_id >= num_pages_) {
-      std::cout << page_id << " " << num_pages_ << std::endl;
-
-      std::cout << gbp::get_stack_trace() << std::endl;
-    }
 #if (ASSERT_ENABLE)
     assert(page_id < num_pages_);
 #endif

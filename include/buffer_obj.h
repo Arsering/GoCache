@@ -848,7 +848,10 @@ class BufferObjectImp5 {
     return *this;
   }
 
-  ~BufferObjectImp5() { free(); }
+  ~BufferObjectImp5() {
+    // std::cout << __FILE__ << ":" << __LINE__ << ": " << "aa" << std::endl;
+    free();
+  }
 
   FORCE_INLINE bool operator>=(const std::string& right) const {
     return Compare(right) >= 0 ? true : false;
