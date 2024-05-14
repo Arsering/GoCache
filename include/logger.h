@@ -7,6 +7,7 @@
 #include <boost/algorithm/string.hpp>
 #include <fstream>
 #include <iostream>
+#include <mutex>
 
 #include <assert.h>
 #include <algorithm>
@@ -23,21 +24,13 @@
 #include "glog/logging.h"
 #endif
 
-#include "debug.h"
+#include "utils.h"
 
 namespace gbp {
 #define DL false
 
 void set_log_directory(const std::string& log_directory_i);
 const std::string& get_log_directory();
-
-__always_inline size_t GetSystemTime() {
-  size_t hi, lo;
-  __asm__ __volatile__("" : : : "memory");
-  __asm__ __volatile__("rdtscp" : "=a"(lo), "=d"(hi));
-  __asm__ __volatile__("" : : : "memory");
-  return ((size_t) lo) | (((size_t) hi) << 32);
-}
 
 enum MmapArrayType {
   lf_index,

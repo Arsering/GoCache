@@ -12,9 +12,6 @@
 #include "utils.h"
 
 namespace gbp {
-// #define DEBUG_1
-
-// #define DEBUG_t
 
 namespace debug {
 class BitMap {

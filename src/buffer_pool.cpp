@@ -200,31 +200,14 @@ PTE* BufferPool::GetVictimPage() {
   mpage_id_type mpage_id;
 
   size_t st;
-#ifdef DEBUG_1
-  { st = GetSystemTime(); }
-#endif
-#ifdef DEBUG_1
-  {
-    st = GetSystemTime() - st;
-    if (debug::get_log_marker() == 1)
-      debug::get_counter_FPL_get().fetch_add(st);
-  }
-#endif
+
   if (replacer_->Size() == 0) {
     return nullptr;
   }
-#ifdef DEBUG_1
-  { st = GetSystemTime(); }
-#endif
+
   if (!replacer_->Victim(mpage_id))
     return nullptr;
-#ifdef DEBUG_1
-  {
-    st = GetSystemTime() - st;
-    if (debug::get_log_marker() == 1)
-      debug::get_counter_ES_eviction().fetch_add(st);
-  }
-#endif
+
   tar = page_table_->FromPageId(mpage_id);
 #if (ASSERT_ENABLE)
   assert(tar->GetRefCount() == 0);
@@ -253,13 +236,6 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
   assert(fpage_id < CEIL(file_size, PAGE_SIZE_MEMORY));
 #endif
 
-#ifdef DEBUG
-  if (debug::get_log_marker() == 1)
-    debug::get_counter_fetch().fetch_add(1);
-    // if (!debug::get_bitset(fd).test(fpage_id))
-    //   debug::get_counter_fetch_unique().fetch_add(1);
-    // debug::get_bitset(fd).set(fpage_id);
-#endif
   // std::lock_guard<std::mutex> lck(latch_);
   auto stat = context_type::Phase::Begin;
 
@@ -362,28 +338,12 @@ int BufferPool::GetObject(char* buf, size_t file_offset, size_t object_size,
   size_t object_size_t = 0;
   size_t st, latency;
   while (object_size > 0) {
-#ifdef DEBUG
-    st = GetSystemTime();
-#endif
     auto mpage = FetchPage(page_id, fd);
-#ifdef DEBUG
-    latency = GetSystemTime() - st;
-    if (debug::get_log_marker() == 1)
-      debug::get_counter_bpm().fetch_add(latency);
-#endif
 
-#ifdef DEBUG
-    st = GetSystemTime();
-#endif
     object_size_t =
         PageTableInner::SetObject(buf, mpage.second, page_offset, object_size);
     mpage.first->DecRefCount(true);
 
-#ifdef DEBUG
-    latency = GetSystemTime() - st;
-    if (debug::get_log_marker() == 1)
-      debug::get_counter_copy().fetch_add(latency);
-#endif
     object_size -= object_size_t;
     buf += object_size_t;
     page_id++;

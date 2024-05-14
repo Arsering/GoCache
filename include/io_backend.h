@@ -52,10 +52,6 @@ class DiskManager {
 #endif
     file_size_inBytes_[fd] = new_size_inByte;
 
-#ifdef DEBUG
-    debug::get_bitmaps()[fd].Resize(
-        cell(file_sizes_[fd], PAGE_SIZE_BUFFER_POOL));
-#endif
     return 0;
   }
 
@@ -439,16 +435,11 @@ class RWSysCall : public IOBackend {
 #if ASSERT_ENABLE
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
-#endif
-#ifdef DEBUG
-    if (get_mark_warmup().load() == 1)
-      debug::get_counter_read().fetch_add(1);
-#endif
-#if ASSERT_ENABLE
     assert(offset <=
            disk_manager_
                ->file_size_inBytes_[fd]);  // check if read beyond file length
 #endif
+
     auto ret = ::pread(disk_manager_->fd_oss_[fd].first, (void*) data.data(),
                        data.size(), offset);
 
@@ -470,12 +461,6 @@ class RWSysCall : public IOBackend {
 #if ASSERT_ENABLE
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
-#endif
-#ifdef DEBUG
-    if (get_mark_warmup().load() == 1)
-      debug::get_counter_read().fetch_add(1);
-#endif
-#if ASSERT_ENABLE
     assert(offset <=
            disk_manager_
                ->file_size_inBytes_[fd]);  // check if read beyond file length
@@ -503,16 +488,11 @@ class RWSysCall : public IOBackend {
 #if ASSERT_ENABLE
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
-#endif
-#ifdef DEBUG
-    if (get_mark_warmup().load() == 1)
-      debug::get_counter_read().fetch_add(1);
-#endif
-#if ASSERT_ENABLE
     assert(offset <=
            disk_manager_
                ->file_size_inBytes_[fd]);  // check if read beyond file length
 #endif
+
     auto ret = ::pread(disk_manager_->fd_oss_[fd].first, io_info[0].iov_base,
                        PAGE_SIZE_FILE, offset);
     // ::lseek(fd, offset);

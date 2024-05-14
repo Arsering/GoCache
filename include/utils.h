@@ -198,4 +198,6 @@ struct pair_min {
   T_2 second;
 };
 
+size_t GetSystemTime();
+
 }  // namespace gbp

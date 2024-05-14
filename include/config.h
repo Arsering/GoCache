@@ -6,8 +6,11 @@
 
 #pragma once
 
-#define GRAPHSCOPE
+// #define GRAPHSCOPE
+
 #define ASSERT_ENABLE false
+// #define DEBUG_1
+// #define USING_EDGE_ITER
 
 #ifdef GRAPHSCOPE
 #include <glog/logging.h>
@@ -22,6 +25,7 @@
 // #include "../deps/mimalloc/include/mimalloc.h"
 
 #define FORCE_INLINE __attribute__((always_inline))
+
 #define likely(x) __builtin_expect((x), 1)
 #define unlikely(x) __builtin_expect((x), 0)
 
@@ -80,3 +84,12 @@ class NonCopyable {
 std::atomic<size_t>& get_pool_num();
 
 }  // namespace gbp
+
+// #ifdef DEBUG_1
+// st = gbp::GetSystemTime() - st;
+// gbp::get_counter(1).fetch_add(st);
+// #endif
+
+// #ifdef DEBUG_1
+// st = gbp::GetSystemTime();
+// #endif
