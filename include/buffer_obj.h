@@ -761,7 +761,13 @@ class BufferObjectImp2 {
   }
 };
 
+template <typename OBJ_Type>
+class BufferObjectIter;
+
 class BufferObjectImp5 {
+  template <typename OBJ_Type>
+  friend class BufferObjectIter;
+
  public:
   BufferObjectImp5() {
     data_ = nullptr;
@@ -1186,11 +1192,13 @@ class BufferObjectImp5 {
   template <class T>
   FORCE_INLINE pair_min<T*, PTE*> Decode(size_t idx = 0) const {
     // static_assert(PAGE_SIZE_MEMORY % sizeof(T) == 0);
+
+#ifdef DEBUG_1
+    size_t st = gbp::GetSystemTime();
+#endif
+
     constexpr size_t OBJ_NUM_PERPAGE = PAGE_SIZE_MEMORY / sizeof(T);
 #if (ASSERT_ENABLE)
-    assert(data_ != nullptr);
-    if (sizeof(T) * (idx + 1) > size_)
-      std::cout << sizeof(T) << " " << idx << " " << size_ << std::endl;
     // FIXME: 不够准确
     assert(sizeof(T) * (idx + 1) <= size_);
 #endif
@@ -1218,12 +1226,17 @@ class BufferObjectImp5 {
              (uintptr_t) (ret + sizeof(T)));
 #endif
     }
+#ifdef DEBUG_1
+    st = gbp::GetSystemTime() - st;
+    gbp::get_counter(10).fetch_add(st);
+#endif
 #if (ASSERT_ENABLE)
     assert(ret != nullptr);
 #endif
     return {reinterpret_cast<T*>(ret), pte_ret};
   }
 
+ private:
   char** data_ = nullptr;
   PTE** ptes_ = nullptr;
   size_t size_;
@@ -1330,6 +1343,69 @@ class BufferObjectImp4 {
 };
 
 using BufferObject = BufferObjectImp5;
+
+template <typename OBJ_Type>
+class BufferObjectIter {
+ public:
+  BufferObjectIter() = default;
+  BufferObjectIter(BufferObject& buffer_obj) {
+    assert(buffer_obj.data_ != nullptr);
+    buffer_obj_ = buffer_obj;
+    if (buffer_obj_.ptes_ != nullptr) {
+      cur_ptr_ = reinterpret_cast<OBJ_Type*>(buffer_obj_.data_[0]);
+      cur_page_num_rest_ =
+          std::min((PAGE_SIZE_MEMORY -
+                    ((uintptr_t) buffer_obj_.data_[0] % PAGE_SIZE_MEMORY)),
+                   buffer_obj_.size_) /
+              sizeof(OBJ_Type) -
+          1;
+      cur_page_ = 0;
+    } else {
+      cur_ptr_ = reinterpret_cast<OBJ_Type*>(buffer_obj_.data_[0]);
+      cur_page_num_rest_ = buffer_obj_.size_ / sizeof(OBJ_Type);
+    }
+  }
+  ~BufferObjectIter() = default;
+
+  OBJ_Type* next() {
+    if (likely(cur_page_num_rest_ > 0)) {
+      cur_page_num_rest_--;
+      cur_ptr_ += 1;
+    } else {
+      if (buffer_obj_.ptes_ != nullptr) {
+        cur_page_++;
+        if (cur_page_ < buffer_obj_.page_num_) {
+          cur_ptr_ = reinterpret_cast<OBJ_Type*>(buffer_obj_.data_[cur_page_]);
+          if (unlikely(cur_page_ == buffer_obj_.page_num_ - 1)) {
+            auto buf_size_left =
+                buffer_obj_.size_ -
+                (PAGE_SIZE_MEMORY -
+                 ((uintptr_t) buffer_obj_.data_[0] % PAGE_SIZE_MEMORY));
+            cur_page_num_rest_ = (buf_size_left % PAGE_SIZE_MEMORY == 0
+                                      ? PAGE_SIZE_MEMORY
+                                      : buf_size_left % PAGE_SIZE_MEMORY) /
+                                     sizeof(OBJ_Type) -
+                                 1;
+          } else {
+            cur_page_num_rest_ = PAGE_SIZE_MEMORY / sizeof(OBJ_Type) - 1;
+          }
+        } else
+          cur_ptr_ = nullptr;
+      } else
+        cur_ptr_ = nullptr;
+    }
+    return cur_ptr_;
+  }
+
+  OBJ_Type* current() const { return cur_ptr_; }
+  BufferObject& get_buffer_obj() { return buffer_obj_; }
+
+ private:
+  BufferObject buffer_obj_;
+  uint16_t cur_page_;
+  uint16_t cur_page_num_rest_;
+  OBJ_Type* cur_ptr_;
+};
 
 #endif
 

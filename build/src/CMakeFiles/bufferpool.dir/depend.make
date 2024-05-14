@@ -68,7 +68,6 @@ src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.o: ../include/utils.h
 src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.o: ../src/fifo_replacer.cpp
 
 src/CMakeFiles/bufferpool.dir/logger.cc.o: ../include/config.h
-src/CMakeFiles/bufferpool.dir/logger.cc.o: ../include/debug.h
 src/CMakeFiles/bufferpool.dir/logger.cc.o: ../include/logger.h
 src/CMakeFiles/bufferpool.dir/logger.cc.o: ../include/utils.h
 src/CMakeFiles/bufferpool.dir/logger.cc.o: ../src/logger.cc

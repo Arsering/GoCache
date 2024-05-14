@@ -34,73 +34,71 @@ std::atomic<size_t>& Client_Write_throughput() {
 }
 std::string log_directory = "a";
 
-void write_mmap(char* data_file_mmaped, size_t file_size, size_t io_size,
+void write_mmap(char* data_file_mmaped, size_t file_size_inByte, size_t io_size,
                 size_t start_offset, size_t thread_id) {
+  assert(file_size_inByte % sizeof(size_t) == 0);
+  assert(start_offset % sizeof(size_t) == 0);
+
+  size_t io_num = file_size_inByte / sizeof(size_t);
+
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::uniform_int_distribution<uint64_t> rnd(0, file_size / io_size);
-
-  char* out_buf = (char*) aligned_alloc(512, io_size);
-  size_t io_num = file_size / io_size;
+  std::uniform_int_distribution<uint64_t> rnd(0, io_num);
 
   size_t curr_io_fileoffset, ret;
   for (size_t io_id = 0; io_id < io_num; io_id++) {
-    curr_io_fileoffset = start_offset + io_id * io_size;
-    size_t page_id = curr_io_fileoffset / 4096;
-    memcpy(data_file_mmaped + curr_io_fileoffset, &page_id, sizeof(size_t));
+    curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
+    size_t data = curr_io_fileoffset / sizeof(size_t);
+    memcpy(data_file_mmaped + curr_io_fileoffset, &data, sizeof(size_t));
     assert(*reinterpret_cast<size_t*>(data_file_mmaped + curr_io_fileoffset) ==
-           page_id);
+           data);
 
-    Client_Write_throughput().fetch_add(io_size);
+    Client_Write_throughput().fetch_add(sizeof(size_t));
   }
 }
-void read_mmap(char* data_file_mmaped, size_t file_size, size_t io_size,
+void read_mmap(char* data_file_mmaped, size_t file_size_inByte, size_t io_size,
                size_t start_offset, size_t thread_id) {
   std::ofstream latency_log(log_directory + "/" + std::to_string(thread_id) +
                             ".log");
   latency_log << "read_mmap" << std::endl;
+  size_t io_num = file_size_inByte / sizeof(size_t);
 
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::uniform_int_distribution<uint64_t> rnd(0, file_size / io_size - 10);
+  std::uniform_int_distribution<uint64_t> rnd(0, io_num);
+  std::uniform_int_distribution<uint64_t> rnd_io_size(1, 1024 * 5);
 
-  char* buf = (char*) aligned_alloc(512, io_size);
-
-  size_t io_num = file_size / io_size;
   size_t curr_io_fileoffset, ret, offset_tmp;
 
   size_t st, page_id, item_num_firstpage, data, io_id, file_offset_aligned;
-  // for (io_id = 0; io_id < io_num;io_id++) {
-  //  curr_io_fileoffset = io_id * io_size;
-  size_t query_count = 1000000000LU;
+
+  size_t query_count = 1000LU;
+  // for (io_id = 0; io_id < io_num; io_id++) {
+  //   io_size = sizeof(size_t);
   while (query_count != 0) {
-    query_count--;
+    // query_count--;
     io_id = rnd(gen);
-    curr_io_fileoffset = start_offset + io_id * io_size;
+    // io_size = rnd_io_size(gen) * sizeof(size_t);
+    io_size = 8 * 512;
 
-    file_offset_aligned = CEIL(curr_io_fileoffset, 4096) * 4096;
-
+    curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
+    io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
     // st = gbp::GetSystemTime();
-    while (file_offset_aligned + sizeof(size_t) <
-           curr_io_fileoffset + io_size) {
-      if (*reinterpret_cast<size_t*>(data_file_mmaped + file_offset_aligned) !=
-          file_offset_aligned / 4096) {
-        std::cout << *reinterpret_cast<size_t*>(data_file_mmaped +
-                                                file_offset_aligned + 4096)
-                  << " " << file_offset_aligned / 4096 << std::endl;
+    {
+      if constexpr (true) {
+        for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
+          assert(*reinterpret_cast<size_t*>(data_file_mmaped +
+                                            curr_io_fileoffset +
+                                            i * sizeof(size_t)) ==
+                 (curr_io_fileoffset / sizeof(size_t) + i));
+        }
       }
-      assert(
-          *reinterpret_cast<size_t*>(data_file_mmaped + file_offset_aligned) ==
-          file_offset_aligned / 4096);
-      file_offset_aligned += 4096;
     }
-    ::memcpy(buf, data_file_mmaped + curr_io_fileoffset, io_size);
-
     // st = gbp::GetSystemTime() - st;
     // latency_log << st << std::endl;
-
     Client_Read_throughput().fetch_add(io_size);
   }
+
   latency_log.flush();
   latency_log.close();
 
@@ -114,52 +112,56 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
   std::ofstream latency_log(log_directory + "/" + std::to_string(thread_id) +
                             ".log");
   latency_log << "read" << std::endl;
-  size_t io_num = file_size_inByte / io_size - 10;
+
+  size_t io_num = file_size_inByte / sizeof(size_t) - 10;
 
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_int_distribution<uint64_t> rnd(0, io_num);
+  std::uniform_int_distribution<uint64_t> rnd_io_size(1, 1024 * 5);
 
   auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
   char* buf = (char*) aligned_alloc(512, io_size);
 
   size_t curr_io_fileoffset, ret;
-  volatile size_t sum = 0;
-  size_t st, page_id, item_num_firstpage, data, io_id, file_offset_aligned;
-  // for (io_id = 0; io_id < io_num;io_id++) {
-  //  curr_io_fileoffset = io_id * io_size;
-  size_t query_count = 1000000000LU;
+  size_t st, io_id;
+  size_t query_count = 1000LU;
+
+  // for (io_id = 0; io_id < io_num; io_id++) {
+  //   io_size = sizeof(size_t);
+
   while (query_count != 0) {
     // query_count--;
     io_id = rnd(gen);
-    curr_io_fileoffset = start_offset + io_id * io_size;
-    file_offset_aligned = CEIL(curr_io_fileoffset, 4096) * 4096;
+    // io_size = rnd_io_size(gen) * sizeof(size_t);
+    io_size = 8 * 512;
+
+    curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
+    io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
+
     // st = gbp::GetSystemTime();
     {
       auto ret = bpm.GetObject(curr_io_fileoffset, io_size);
-      while (file_offset_aligned + sizeof(size_t) <
-             curr_io_fileoffset + io_size) {
-        if (*reinterpret_cast<const size_t*>(&gbp::BufferObject::Ref<char>(
-                ret, file_offset_aligned - curr_io_fileoffset)) !=
-            file_offset_aligned / 4096) {
-          std::cout << *reinterpret_cast<const size_t*>(
-                           &gbp::BufferObject::Ref<char>(
-                               ret, file_offset_aligned - curr_io_fileoffset))
-                    << " " << file_offset_aligned / 4096 << std::endl;
-        }
 
-        assert(*reinterpret_cast<const size_t*>(&gbp::BufferObject::Ref<char>(
-                   ret, file_offset_aligned - curr_io_fileoffset)) ==
-               file_offset_aligned / 4096);
-        file_offset_aligned += 4096;
+      if constexpr (true) {
+        auto ret_new = bpm.GetObject(curr_io_fileoffset, io_size);
+        auto iter = gbp::BufferObjectIter<size_t>(ret_new);
+        for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
+          // assert(gbp::BufferObject::Ref<size_t>(ret, i) ==
+          //        (curr_io_fileoffset / sizeof(size_t) + i));
+          assert(*(iter.current()) ==
+                 (curr_io_fileoffset / sizeof(size_t) + i));
+          iter.next();
+        }
+        assert(iter.current() == nullptr);
       }
-      ret.Copy(buf, sizeof(size_t));
     }
     // st = gbp::GetSystemTime() - st;
     // latency_log << st << std::endl;
 
-    // Client_Read_throughput().fetch_add(io_size);
+    Client_Read_throughput().fetch_add(io_size);
   }
+
   latency_log.flush();
   latency_log.close();
   std::cout << "thread " << thread_id << " exits" << std::endl;
@@ -471,7 +473,8 @@ void logging() {
     // auto cur_eviction_operation_count =
     //   gbp::debug::get_counter_eviction().load();
     // auto cur_fetch_count = gbp::debug::get_counter_fetch().load();
-    // auto cur_contention_count = gbp::debug::get_counter_contention().load();
+    // auto cur_contention_count =
+    // gbp::debug::get_counter_contention().load();
 
     printf("%-25lf%-25lf%-25lf%-25lf%-25lu%-25lf\n",
            (cur_Client_Read_throughput - last_Client_Read_throughput) /
@@ -527,12 +530,11 @@ int test_concurrency(int argc, char** argv) {
 
   char* data_file_mmaped = nullptr;
 
-  // data_file_mmaped = (char*) ::mmap(
-  //     NULL, file_size_inByte, PROT_READ | PROT_WRITE, MAP_SHARED, data_file,
-  //     0);
-  // assert(data_file_mmaped != nullptr);
-  // ::madvise(data_file_mmaped, file_size_inByte,
-  //           MADV_RANDOM);  // Turn off readahead
+  data_file_mmaped = (char*) ::mmap(
+      NULL, file_size_inByte, PROT_READ | PROT_WRITE, MAP_SHARED, data_file, 0);
+  assert(data_file_mmaped != nullptr);
+  ::madvise(data_file_mmaped, file_size_inByte,
+            MADV_RANDOM);  // Turn off readahead
 
   size_t pool_size_page =
       pool_size_MB * 1024LU * 1024LU / gbp::PAGE_SIZE_MEMORY / pool_num + 1;
@@ -560,7 +562,7 @@ int test_concurrency(int argc, char** argv) {
 
   Client_Read_throughput().store(0);
   Client_Write_throughput().store(0);
-  // std::thread log_thread(logging);
+  std::thread log_thread(logging);
   sleep(1);
 
   std::vector<std::thread> thread_pool;
@@ -569,7 +571,7 @@ int test_concurrency(int argc, char** argv) {
     //                          (1024LU * 1024LU * 1024LU * 1), io_size,
     //                          (1024LU * 1024LU * 1024LU * 1) * i, i);
     // thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
-    //   io_size, 0, i);
+    //                          io_size, 0, i);
     // thread_pool.emplace_back(read_pread, io_backend, file_size_inByte,
     // io_size, i);
     // thread_pool.emplace_back(write_pwrite, io_backend, file_size_inByte,
@@ -587,16 +589,16 @@ int test_concurrency(int argc, char** argv) {
     thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size, i);
     //  thread_pool.emplace_back(randwrite_bufferpool, 0, file_size_inByte,
     //  io_size, i);
-    // thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte, io_size,
-    // i);
+    // thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte,
+    // io_size, i);
   }
   for (auto& thread : thread_pool) {
     thread.join();
   }
   // ::sleep(100);
   log_thread_run = false;
-  // if (log_thread.joinable())
-  //   log_thread.join();
+  if (log_thread.joinable())
+    log_thread.join();
 
   return 0;
 }

@@ -22,19 +22,16 @@
 //     return 0;
 // }
 
-inline size_t GetMemoryUsage()
-{
+inline size_t GetMemoryUsage() {
   std::ifstream proc_status("/proc/self/status");
   // std::ifstream
   // proc_status("/data/experiment_space/graphscope_bufferpool/status");
   assert(!!proc_status);
-  for (std::string line; std::getline(proc_status, line);)
-  {
-    if (line.find("VmRSS") != std::string::npos)
-    {
+  for (std::string line; std::getline(proc_status, line);) {
+    if (line.find("VmRSS") != std::string::npos) {
       std::vector<std::string> strs;
       boost::split(strs, line, boost::is_any_of("\t "),
-        boost::token_compress_on);
+                   boost::token_compress_on);
       std::stringstream ss(strs[1]);
       auto ret = std::stoull(strs[1]);
       return ret;
@@ -43,20 +40,16 @@ inline size_t GetMemoryUsage()
   return 0;
 }
 
-uint64_t readTLBShootdownCount()
-{
+uint64_t readTLBShootdownCount() {
   std::ifstream irq_stats("/proc/interrupts");
   assert(!!irq_stats);
 
-  for (std::string line; std::getline(irq_stats, line);)
-  {
-    if (line.find("TLB") != std::string::npos)
-    {
+  for (std::string line; std::getline(irq_stats, line);) {
+    if (line.find("TLB") != std::string::npos) {
       std::vector<std::string> strs;
       boost::split(strs, line, boost::is_any_of("\t "));
       uint64_t count = 0;
-      for (size_t i = 0; i < strs.size(); i++)
-      {
+      for (size_t i = 0; i < strs.size(); i++) {
         std::stringstream ss(strs[i]);
         uint64_t c;
         ss >> c;
@@ -68,13 +61,11 @@ uint64_t readTLBShootdownCount()
   return 0;
 }
 
-uint64_t readIObytesOne()
-{
+uint64_t readIObytesOne() {
   std::ifstream stat("/sys/block/nvme0n1/stat");
   assert(!!stat);
 
-  for (std::string line; std::getline(stat, line);)
-  {
+  for (std::string line; std::getline(stat, line);) {
     std::vector<std::string> strs;
     boost::split(strs, line, boost::is_any_of("\t "), boost::token_compress_on);
     std::stringstream ss(strs[2]);
@@ -85,30 +76,26 @@ uint64_t readIObytesOne()
   return 0;
 }
 
-std::tuple<size_t, size_t> SSD_io_bytes()
-{
+std::tuple<size_t, size_t> SSD_io_bytes() {
   std::ifstream stat("/proc/diskstats");
   assert(!!stat);
 
   uint64_t read = 0, write = 0;
-  for (std::string line; std::getline(stat, line);)
-  {
-    if (line.find("vdc") != std::string::npos)
-    {
+  for (std::string line; std::getline(stat, line);) {
+    if (line.find("nvme0n1") != std::string::npos) {
       std::vector<std::string> strs;
       boost::split(strs, line, boost::is_any_of("\t "),
-        boost::token_compress_on);
+                   boost::token_compress_on);
       // std::cout << std::stoull(strs[6]) << std::endl;
       read += std::stoull(strs[6]) * 512;
       write += std::stoull(strs[10]) * 512;
     }
   }
-  return { read, write };
+  return {read, write};
 }
 
-double gettime()
-{
+double gettime() {
   struct timeval now_tv;
   gettimeofday(&now_tv, NULL);
-  return ((double)now_tv.tv_sec) + ((double)now_tv.tv_usec) / 1000000.0;
+  return ((double) now_tv.tv_sec) + ((double) now_tv.tv_usec) / 1000000.0;
 }

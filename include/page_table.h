@@ -142,7 +142,6 @@ class PageTableInner {
     pair_min<bool, uint16_t> DecRefCount(bool is_write = false,
                                          bool write_to_ssd = false) {
       std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
-
       if (is_write)
         atomic_packed.fetch_or(1 << 30);
       if (write_to_ssd)

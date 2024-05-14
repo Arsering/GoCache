@@ -64,7 +64,7 @@ int test1() {
   bpm.init(10, pool_size, 10, "tests/test.db");
   // bpm.Resize(0, file_size * gbp::PAGE_SIZE_BUFFER_POOL);
 
-#ifdef DEBUG_1
+#ifdef DEBUG
   bpm.ReinitBitMap();
   // bpm.WarmUp();
   std::cout << "warmup finished" << std::endl;

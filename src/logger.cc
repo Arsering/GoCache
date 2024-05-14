@@ -1,4 +1,5 @@
 #include "../include/logger.h"
+#include "../include/utils.h"
 
 namespace gbp {
 
@@ -225,8 +226,8 @@ std::atomic<bool>& log_enable() {
   return data;
 }
 std::atomic<size_t>& get_counter(size_t idx) {
-  static size_t capacity = 1000;
-  static std::vector<size_t> data(capacity, 0);
+  static size_t capacity = 100;
+  thread_local static std::vector<size_t> data(capacity, 0);
   assert(idx < capacity);
   return as_atomic(data[idx]);
 }
