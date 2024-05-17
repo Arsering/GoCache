@@ -762,21 +762,21 @@ class BufferObjectImp2 {
 };
 
 template <typename OBJ_Type>
-class BufferObjectIter;
+class BufferBlockIter;
 
-class BufferObjectImp5 {
+class BufferBlockImp5 {
   template <typename OBJ_Type>
-  friend class BufferObjectIter;
+  friend class BufferBlockIter;
 
  public:
-  BufferObjectImp5() {
+  BufferBlockImp5() {
     data_ = nullptr;
     page_num_ = 0;
     ptes_ = nullptr;
     type_ = ObjectType::gbpClass;
   }
 
-  BufferObjectImp5(size_t size, size_t page_num)
+  BufferBlockImp5(size_t size, size_t page_num)
       : page_num_(page_num), size_(size) {
     data_ = (char**) LBMalloc(page_num_ * sizeof(char*));
     ptes_ = (PTE**) LBMalloc(page_num_ * sizeof(PTE*));
@@ -787,7 +787,7 @@ class BufferObjectImp5 {
     type_ = ObjectType::gbpClass;
   }
 
-  BufferObjectImp5(size_t size, char* data) : size_(size) {
+  BufferBlockImp5(size_t size, char* data) : size_(size) {
     data_ = (char**) LBMalloc(1 * sizeof(char*));
     ptes_ = nullptr;
 #if (ASSERT_ENABLE)
@@ -798,7 +798,7 @@ class BufferObjectImp5 {
     type_ = ObjectType::gbpClass;
   }
 
-  BufferObjectImp5(size_t size) : size_(size) {
+  BufferBlockImp5(size_t size) : size_(size) {
     data_ = (char**) LBMalloc(1 * sizeof(char*));
     ptes_ = nullptr;
 #if (ASSERT_ENABLE)
@@ -809,7 +809,7 @@ class BufferObjectImp5 {
   }
 
 #ifdef GRAPHSCOPE
-  BufferObjectImp5(const gs::Any& value) {
+  BufferBlockImp5(const gs::Any& value) {
     type_ = ObjectType::gbpAny;
 
     if (value.type == gs::PropertyType::kInt32) {
@@ -840,21 +840,21 @@ class BufferObjectImp5 {
   }
 #endif
 
-  BufferObjectImp5(const BufferObjectImp5& src) { Move(src, *this); }
+  BufferBlockImp5(const BufferBlockImp5& src) { Move(src, *this); }
   // BufferObjectImp5& operator=(const BufferObjectImp5&) = delete;
-  BufferObjectImp5& operator=(const BufferObjectImp5& src) {
+  BufferBlockImp5& operator=(const BufferBlockImp5& src) {
     Move(src, *this);
     return *this;
   }
 
-  BufferObjectImp5(BufferObjectImp5&& src) noexcept { Move(src, *this); }
+  BufferBlockImp5(BufferBlockImp5&& src) noexcept { Move(src, *this); }
 
-  BufferObjectImp5& operator=(BufferObjectImp5&& src) noexcept {
+  BufferBlockImp5& operator=(BufferBlockImp5&& src) noexcept {
     Move(src, *this);
     return *this;
   }
 
-  ~BufferObjectImp5() {
+  ~BufferBlockImp5() {
     // std::cout << __FILE__ << ":" << __LINE__ << ": " << "aa" << std::endl;
     free();
   }
@@ -891,19 +891,19 @@ class BufferObjectImp5 {
     return Compare(right) == 0 ? true : false;
   }
 
-  FORCE_INLINE bool operator>=(const BufferObjectImp5& right) const {
+  FORCE_INLINE bool operator>=(const BufferBlockImp5& right) const {
     return Compare(right) >= 0 ? true : false;
   }
-  FORCE_INLINE bool operator>(const BufferObjectImp5& right) const {
+  FORCE_INLINE bool operator>(const BufferBlockImp5& right) const {
     return Compare(right) > 0 ? true : false;
   }
-  FORCE_INLINE bool operator<=(const BufferObjectImp5& right) const {
+  FORCE_INLINE bool operator<=(const BufferBlockImp5& right) const {
     return Compare(right) <= 0 ? true : false;
   }
-  FORCE_INLINE bool operator<(const BufferObjectImp5& right) const {
+  FORCE_INLINE bool operator<(const BufferBlockImp5& right) const {
     return Compare(right) < 0 ? true : false;
   }
-  FORCE_INLINE bool operator==(const BufferObjectImp5& right) const {
+  FORCE_INLINE bool operator==(const BufferBlockImp5& right) const {
     return Compare(right) == 0 ? true : false;
   }
 
@@ -915,8 +915,8 @@ class BufferObjectImp5 {
     ptes_[idx] = pte;
   }
 
-  static BufferObjectImp5 Copy(const BufferObjectImp5& rhs) {
-    BufferObjectImp5 ret(rhs.size_);
+  static BufferBlockImp5 Copy(const BufferBlockImp5& rhs) {
+    BufferBlockImp5 ret(rhs.size_);
 #if (ASSERT_ENABLE)
     assert(rhs.data_ != nullptr);
 #endif
@@ -975,7 +975,7 @@ class BufferObjectImp5 {
     return ret;
   }
 
-  static void Move(const BufferObjectImp5& src, BufferObjectImp5& dst) {
+  static void Move(const BufferBlockImp5& src, BufferBlockImp5& dst) {
     dst.free();
     dst.data_ = src.data_;
     dst.page_num_ = src.page_num_;
@@ -983,8 +983,8 @@ class BufferObjectImp5 {
     dst.type_ = src.type_;
     dst.size_ = src.size_;
 
-    const_cast<BufferObjectImp5&>(src).data_ = nullptr;
-    const_cast<BufferObjectImp5&>(src).ptes_ = nullptr;
+    const_cast<BufferBlockImp5&>(src).data_ = nullptr;
+    const_cast<BufferBlockImp5&>(src).ptes_ = nullptr;
   }
 
   template <typename INNER_T>
@@ -1025,14 +1025,14 @@ class BufferObjectImp5 {
 #endif
 
   template <typename OBJ_Type>
-  FORCE_INLINE static const OBJ_Type& Ref(const BufferObjectImp5& obj,
+  FORCE_INLINE static const OBJ_Type& Ref(const BufferBlockImp5& obj,
                                           size_t idx = 0) {
     return *obj.Ptr<OBJ_Type>(idx);
   }
 
   template <typename OBJ_Type>
   FORCE_INLINE static void UpdateContent(std::function<void(OBJ_Type&)> cb,
-                                         const BufferObjectImp5& obj,
+                                         const BufferBlockImp5& obj,
                                          size_t idx = 0) {
     auto data = obj.Decode<OBJ_Type>(idx);
     cb(*data.first);
@@ -1103,7 +1103,7 @@ class BufferObjectImp5 {
     return ret;
   }
 
-  FORCE_INLINE int Compare(const BufferObjectImp5& right) const {
+  FORCE_INLINE int Compare(const BufferBlockImp5& right) const {
 #if (ASSERT_ENABLE)
     assert(data_ != nullptr);
 #endif
@@ -1205,32 +1205,38 @@ class BufferObjectImp5 {
     char* ret = nullptr;
     PTE* pte_ret = nullptr;
 
-    if (ptes_ == nullptr) {
+    if (unlikely(ptes_ == nullptr)) {
       ret = data_[0] + idx * sizeof(T);
     } else {
-      auto obj_num_curpage =
-          (PAGE_SIZE_MEMORY - ((uintptr_t) data_[0] % PAGE_SIZE_MEMORY)) /
-          sizeof(T);
-
-      if (obj_num_curpage > idx) {
-        ret = data_[0] + idx * sizeof(T);
+      if (likely(idx == 0)) {
+        ret = data_[0];
         pte_ret = ptes_[0];
       } else {
-        idx -= obj_num_curpage;
-        auto page_id = idx / OBJ_NUM_PERPAGE + 1;
-        ret = data_[page_id] + (idx % OBJ_NUM_PERPAGE) * sizeof(T);
-        pte_ret = ptes_[page_id];
+        auto obj_num_curpage =
+            (PAGE_SIZE_MEMORY - ((uintptr_t) data_[0] % PAGE_SIZE_MEMORY)) /
+            sizeof(T);
+
+        if (obj_num_curpage > idx) {
+          ret = data_[0] + idx * sizeof(T);
+          pte_ret = ptes_[0];
+        } else {
+          idx -= obj_num_curpage;
+          auto page_id = idx / OBJ_NUM_PERPAGE + 1;
+          ret = data_[page_id] + (idx % OBJ_NUM_PERPAGE) * sizeof(T);
+          pte_ret = ptes_[page_id];
+        }
       }
-#if (ASSERT_ENABLE)
-      assert(((uintptr_t) ret / PAGE_SIZE_MEMORY + 1) * PAGE_SIZE_MEMORY >=
-             (uintptr_t) (ret + sizeof(T)));
-#endif
     }
+#if (ASSERT_ENABLE)
+    assert(((uintptr_t) ret / PAGE_SIZE_MEMORY + 1) * PAGE_SIZE_MEMORY >=
+           (uintptr_t) (ret + sizeof(T)));
+#endif
 #ifdef DEBUG_1
     st = gbp::GetSystemTime() - st;
-    gbp::get_counter(10).fetch_add(st);
+    gbp::get_counter(1) += st;
+    gbp::get_counter(2)++;
 #endif
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(ret != nullptr);
 #endif
     return {reinterpret_cast<T*>(ret), pte_ret};
@@ -1342,13 +1348,16 @@ class BufferObjectImp4 {
 #endif
 };
 
-using BufferObject = BufferObjectImp5;
+using BufferBlock = BufferBlockImp5;
 
 template <typename OBJ_Type>
-class BufferObjectIter {
+class BufferBlockIter {
  public:
-  BufferObjectIter() = default;
-  BufferObjectIter(BufferObject& buffer_obj) {
+  BufferBlockIter() = default;
+  BufferBlockIter(BufferBlock& buffer_obj) {
+#ifdef DEBUG_
+    size_t st = gbp::GetSystemTime();
+#endif
     assert(buffer_obj.data_ != nullptr);
     buffer_obj_ = buffer_obj;
     if (buffer_obj_.ptes_ != nullptr) {
@@ -1364,10 +1373,17 @@ class BufferObjectIter {
       cur_ptr_ = reinterpret_cast<OBJ_Type*>(buffer_obj_.data_[0]);
       cur_page_num_rest_ = buffer_obj_.size_ / sizeof(OBJ_Type);
     }
+#ifdef DEBUG_
+    st = gbp::GetSystemTime() - st;
+    gbp::get_counter(11) += st;
+#endif
   }
-  ~BufferObjectIter() = default;
+  ~BufferBlockIter() = default;
 
-  OBJ_Type* next() {
+  FORCE_INLINE OBJ_Type* next() {
+#ifdef DEBUG_
+    size_t st = gbp::GetSystemTime();
+#endif
     if (likely(cur_page_num_rest_ > 0)) {
       cur_page_num_rest_--;
       cur_ptr_ += 1;
@@ -1389,19 +1405,25 @@ class BufferObjectIter {
           } else {
             cur_page_num_rest_ = PAGE_SIZE_MEMORY / sizeof(OBJ_Type) - 1;
           }
-        } else
+        } else {
           cur_ptr_ = nullptr;
-      } else
+        }
+      } else {
         cur_ptr_ = nullptr;
+      }
     }
+#ifdef DEBUG_
+    st = gbp::GetSystemTime() - st;
+    gbp::get_counter(11) += st;
+#endif
     return cur_ptr_;
   }
 
-  OBJ_Type* current() const { return cur_ptr_; }
-  BufferObject& get_buffer_obj() { return buffer_obj_; }
+  FORCE_INLINE OBJ_Type* current() const { return cur_ptr_; }
+  BufferBlock& get_buffer_obj() { return buffer_obj_; }
 
  private:
-  BufferObject buffer_obj_;
+  BufferBlock buffer_obj_;
   uint16_t cur_page_;
   uint16_t cur_page_num_rest_;
   OBJ_Type* cur_ptr_;

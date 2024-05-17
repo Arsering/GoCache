@@ -2,8 +2,11 @@ cmake_minimum_required (VERSION 3.5)
 set(CMAKE_C_COMPILER "/usr/bin/gcc")
 set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 # set(CMAKE_C_FLAGS "-fxray-instrument")
-set(CMAKE_C_FLAGS "-g")
-set(CMAKE_CXX_STANDARD 17)
+
+set(CMAKE_BUILD_TYPE "Release")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -rdynamic")
+set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0")
+set(CMAKE_CXX_FLAGS_RELEASE "-g1 -O2")
 
 # file(GLOB SRC_FILE *.c) # 建立变量SRC_FILE为目录下.c文件列表
 

@@ -1,4 +1,7 @@
+#define _GNU_SOURCE
 #include <fcntl.h>
+#include <pthread.h>
+#include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,6 +26,19 @@
 using namespace gbp;
 
 namespace test {
+
+void set_cpu_affinity(int cpu) {
+  cpu_set_t cpuset;
+  CPU_ZERO(&cpuset);
+  CPU_SET(cpu, &cpuset);
+
+  pid_t pid = getpid();  // 获取当前进程的 PID
+
+  if (sched_setaffinity(pid, sizeof(cpu_set_t), &cpuset) != 0) {
+    perror("sched_setaffinity");
+    exit(EXIT_FAILURE);
+  }
+}
 
 std::atomic<size_t>& Client_Read_throughput() {
   static std::atomic<size_t> data;
@@ -56,8 +72,8 @@ void write_mmap(char* data_file_mmaped, size_t file_size_inByte, size_t io_size,
     Client_Write_throughput().fetch_add(sizeof(size_t));
   }
 }
-void read_mmap(char* data_file_mmaped, size_t file_size_inByte, size_t io_size,
-               size_t start_offset, size_t thread_id) {
+void read_mmap(char* data_file_mmaped, size_t file_size_inByte,
+               size_t io_size_in, size_t start_offset, size_t thread_id) {
   std::ofstream latency_log(log_directory + "/" + std::to_string(thread_id) +
                             ".log");
   latency_log << "read_mmap" << std::endl;
@@ -70,35 +86,38 @@ void read_mmap(char* data_file_mmaped, size_t file_size_inByte, size_t io_size,
 
   size_t curr_io_fileoffset, ret, offset_tmp;
 
-  size_t st, page_id, item_num_firstpage, data, io_id, file_offset_aligned;
+  size_t st, io_id, io_size;
 
   size_t query_count = 1000LU;
-  // for (io_id = 0; io_id < io_num; io_id++) {
-  //   io_size = sizeof(size_t);
-  while (query_count != 0) {
-    // query_count--;
-    io_id = rnd(gen);
-    // io_size = rnd_io_size(gen) * sizeof(size_t);
-    io_size = 8 * 512;
+  int count = 2;
+  while (count != 0) {
+    count--;
+    for (io_id = 0; io_id < io_num; io_id += io_size_in / sizeof(size_t)) {
+      io_size = io_size_in;
+      // while (query_count != 0) {
+      //   // query_count--;
+      //   io_id = rnd(gen);
+      //   // io_size = rnd_io_size(gen) * sizeof(size_t);
+      //   io_size = 8 * 512;
 
-    curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
-    io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
-    // st = gbp::GetSystemTime();
-    {
-      if constexpr (true) {
-        for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
-          assert(*reinterpret_cast<size_t*>(data_file_mmaped +
-                                            curr_io_fileoffset +
-                                            i * sizeof(size_t)) ==
-                 (curr_io_fileoffset / sizeof(size_t) + i));
+      curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
+      io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
+      st = gbp::GetSystemTime();
+      {
+        if constexpr (true) {
+          for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
+            assert(*reinterpret_cast<size_t*>(data_file_mmaped +
+                                              curr_io_fileoffset +
+                                              i * sizeof(size_t)) ==
+                   (curr_io_fileoffset / sizeof(size_t) + i));
+          }
         }
       }
+      st = gbp::GetSystemTime() - st;
+      latency_log << st << std::endl;
+      Client_Read_throughput().fetch_add(io_size);
     }
-    // st = gbp::GetSystemTime() - st;
-    // latency_log << st << std::endl;
-    Client_Read_throughput().fetch_add(io_size);
   }
-
   latency_log.flush();
   latency_log.close();
 
@@ -106,12 +125,12 @@ void read_mmap(char* data_file_mmaped, size_t file_size_inByte, size_t io_size,
 }
 
 void read_bufferpool(size_t start_offset, size_t file_size_inByte,
-                     size_t io_size, size_t thread_id) {
-  assert(io_size % sizeof(size_t) == 0);
+                     size_t io_size_in, size_t thread_id) {
+  assert(io_size_in % sizeof(size_t) == 0);
   // std::filesystem::create_directory()
   std::ofstream latency_log(log_directory + "/" + std::to_string(thread_id) +
                             ".log");
-  latency_log << "read" << std::endl;
+  latency_log << "read_bufferpool" << std::endl;
 
   size_t io_num = file_size_inByte / sizeof(size_t) - 10;
 
@@ -121,47 +140,55 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
   std::uniform_int_distribution<uint64_t> rnd_io_size(1, 1024 * 5);
 
   auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
-  char* buf = (char*) aligned_alloc(512, io_size);
 
-  size_t curr_io_fileoffset, ret;
+  size_t curr_io_fileoffset, ret, io_size;
   size_t st, io_id;
   size_t query_count = 1000LU;
-
-  // for (io_id = 0; io_id < io_num; io_id++) {
-  //   io_size = sizeof(size_t);
-
-  while (query_count != 0) {
-    // query_count--;
-    io_id = rnd(gen);
-    // io_size = rnd_io_size(gen) * sizeof(size_t);
-    io_size = 8 * 512;
-
-    curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
-    io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
-
-    // st = gbp::GetSystemTime();
-    {
-      auto ret = bpm.GetObject(curr_io_fileoffset, io_size);
-
-      if constexpr (true) {
-        auto ret_new = bpm.GetObject(curr_io_fileoffset, io_size);
-        auto iter = gbp::BufferObjectIter<size_t>(ret_new);
-        for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
-          // assert(gbp::BufferObject::Ref<size_t>(ret, i) ==
-          //        (curr_io_fileoffset / sizeof(size_t) + i));
-          assert(*(iter.current()) ==
-                 (curr_io_fileoffset / sizeof(size_t) + i));
-          iter.next();
-        }
-        assert(iter.current() == nullptr);
+  int count = 2;
+  while (count != 0) {
+    count--;
+    for (io_id = 0; io_id < io_num; io_id += io_size_in / sizeof(size_t)) {
+      // io_size = sizeof(size_t);
+      io_size = io_size_in;
+      // while (query_count != 0) {
+      //   // query_count--;
+      //   io_id = rnd(gen);
+      //   // io_size = rnd_io_size(gen) * sizeof(size_t);
+      //   io_size = 9 * 512;
+      {
+        gbp::get_counter(1) = 0;
+        gbp::get_counter(2) = 0;
+        gbp::get_counter(11) = 0;
+        gbp::get_counter(12) = 0;
       }
+      curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
+      io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
+
+      st = gbp::GetSystemTime();
+      {
+        auto ret = bpm.GetBlock(curr_io_fileoffset, io_size);
+
+        if constexpr (true) {
+          // auto ret_new = bpm.GetObject(curr_io_fileoffset, io_size);
+          // auto iter = gbp::BufferBlockIter<size_t>(ret_new);
+          for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
+            assert(gbp::BufferBlock::Ref<size_t>(ret, i) ==
+                   (curr_io_fileoffset / sizeof(size_t) + i));
+            // assert(*(iter.current()) ==
+            //        (curr_io_fileoffset / sizeof(size_t) + i));
+            // iter.next();
+          }
+          // assert(iter.current() == nullptr);
+        }
+      }
+      st = gbp::GetSystemTime() - st;
+      latency_log << st << " | " << gbp::get_counter(1) << " | "
+                  << gbp::get_counter(2) << " | " << gbp::get_counter(11)
+                  << " | " << gbp::get_counter(12) << std::endl;
+
+      Client_Read_throughput().fetch_add(io_size);
     }
-    // st = gbp::GetSystemTime() - st;
-    // latency_log << st << std::endl;
-
-    Client_Read_throughput().fetch_add(io_size);
   }
-
   latency_log.flush();
   latency_log.close();
   std::cout << "thread " << thread_id << " exits" << std::endl;
@@ -201,14 +228,14 @@ void write_bufferpool(size_t start_offset, size_t file_size_inByte,
     // {
     //   io_id = rnd(gen);
     //   curr_io_fileoffset = io_id * io_size;
-    auto ret_obj = bpm.GetObject(curr_io_fileoffset, io_size);
+    auto ret_obj = bpm.GetBlock(curr_io_fileoffset, io_size);
     size_t buf_offset =
         4096 -
         (curr_io_fileoffset % 4096 == 0 ? 4096 : curr_io_fileoffset % 4096);
     while (buf_offset < io_size) {
       page_id = (curr_io_fileoffset + buf_offset) / 4096;
       // memcpy(out_buf + buf_offset, &page_id, sizeof(size_t));
-      gbp::BufferObject::UpdateContent<size_t>(
+      gbp::BufferBlock::UpdateContent<size_t>(
           [&](size_t& content) { content = page_id; }, ret_obj,
           buf_offset / sizeof(size_t));
 
@@ -267,9 +294,9 @@ void randwrite_bufferpool(size_t start_offset, size_t file_size_inByte,
     auto test_str_1 = random_str(io_size);
 
     auto ret =
-        bpm.SetObject(test_str.data(), curr_io_fileoffset, io_size, 0, false);
-    auto ret_str = bpm.GetObject(curr_io_fileoffset, io_size);
-    bpm.GetObject(out_buf_1, curr_io_fileoffset, io_size);
+        bpm.SetBlock(test_str.data(), curr_io_fileoffset, io_size, 0, false);
+    auto ret_str = bpm.GetBlock(curr_io_fileoffset, io_size);
+    bpm.GetBlock(out_buf_1, curr_io_fileoffset, io_size);
     assert(strncmp(test_str.data(), out_buf_1, io_size) == 0);
     assert(ret_str == test_str);
     // std::cout << test_str << std::endl;
@@ -290,55 +317,54 @@ void randwrite_bufferpool(size_t start_offset, size_t file_size_inByte,
 }
 
 void read_pread(gbp::IOBackend* io_backend, size_t file_size_inByte,
-                size_t io_size, size_t thread_id) {
-  size_t io_num = CEIL(file_size_inByte, io_size) - 1;
+                size_t io_size_in, size_t start_offset, size_t thread_id) {
+  std::ofstream latency_log(log_directory + "/" + std::to_string(thread_id) +
+                            ".log");
+  latency_log << "read_pread" << std::endl;
+  size_t io_num = file_size_inByte / sizeof(size_t);
 
   std::random_device rd;
   std::mt19937 gen(rd());
   std::uniform_int_distribution<uint64_t> rnd(0, io_num);
+  std::uniform_int_distribution<uint64_t> rnd_io_size(1, 1024 * 5);
 
-  char* in_buf = (char*) aligned_alloc(4096, io_size);
-  ::memset(in_buf, 1, io_size);
-  size_t curr_io_fileoffset, ret, io_id, page_id, file_offset_aligned;
-  volatile size_t sum = 0;
-  size_t st;
-  for (io_id = 0; io_id < io_num; io_id++) {
-    curr_io_fileoffset = io_id * io_size;
+  size_t curr_io_fileoffset, ret, offset_tmp;
+  size_t st, io_id, io_size;
 
-    // while (true)
-    // {
-    // io_id = rnd(gen);
-    // curr_io_fileoffset = io_id * io_size;
-    page_id = curr_io_fileoffset / 4096;
-    io_backend->Read(curr_io_fileoffset, in_buf, io_size, 0);
-    for (size_t i = 0; i < io_size; i += 4096) {
-      sum += in_buf[i];
+  char* buf = (char*) aligned_alloc(4096, io_size_in);
+  size_t query_count = 1000LU;
+  int count = 1;
+  while (count != 0) {
+    count--;
+    for (io_id = 0; io_id < io_num; io_id += io_size_in / sizeof(size_t)) {
+      io_size = io_size_in;
+      // while (query_count != 0) {
+      //   // query_count--;
+      //   io_id = rnd(gen);
+      //   // io_size = rnd_io_size(gen) * sizeof(size_t);
+      //   io_size = 8 * 512;
+
+      curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
+      io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
+      st = gbp::GetSystemTime();
+      {
+        io_backend->Read(curr_io_fileoffset, buf, io_size, 0);
+        if constexpr (true) {
+          for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
+            assert(*reinterpret_cast<size_t*>(buf + i * sizeof(size_t)) ==
+                   (curr_io_fileoffset / sizeof(size_t) + i));
+          }
+        }
+      }
+      st = gbp::GetSystemTime() - st;
+      latency_log << st << std::endl;
+      Client_Read_throughput().fetch_add(io_size);
     }
-    file_offset_aligned = CEIL(curr_io_fileoffset, 4096) * 4096;
-
-    while (file_offset_aligned + sizeof(size_t) <
-           curr_io_fileoffset + io_size) {
-      if (*reinterpret_cast<size_t*>(in_buf + file_offset_aligned -
-                                     curr_io_fileoffset) !=
-          file_offset_aligned / 4096)
-        std::cout << *reinterpret_cast<size_t*>(in_buf + file_offset_aligned -
-                                                curr_io_fileoffset)
-                  << " " << file_offset_aligned / 4096 << std::endl;
-      assert((file_offset_aligned - curr_io_fileoffset) % 4096 == 0);
-      assert(*reinterpret_cast<size_t*>(in_buf + file_offset_aligned -
-                                        curr_io_fileoffset) ==
-             file_offset_aligned / 4096);
-      file_offset_aligned += 4096;
-    }
-
-    // if (*reinterpret_cast<size_t*>(in_buf) != page_id) {
-    //   std::cout << *reinterpret_cast<size_t*>(in_buf) << " " << page_id
-    //             << std::endl;
-    // }
-    // assert(*reinterpret_cast<size_t*>(in_buf) == page_id);
-    Client_Read_throughput().fetch_add(io_size);
   }
-  // std::cout << thread_id << std::endl;
+  latency_log.flush();
+  latency_log.close();
+
+  std::cout << "thread " << thread_id << " exits" << std::endl;
 }
 
 void write_pwrite(gbp::IOBackend* io_backend, size_t file_size_inByte,
@@ -407,7 +433,7 @@ void warmup_bufferpool_inner(char* data_file_mmaped, size_t file_size_inByte,
     curr_io_fileoffset = curr_io_fileoffset + io_size < file_size_inByte
                              ? start_offset + curr_io_fileoffset
                              : start_offset + file_size_inByte - io_size;
-    auto ret = bpm.GetObject(curr_io_fileoffset, io_size);
+    auto ret = bpm.GetBlock(curr_io_fileoffset, io_size);
     // for (size_t i = 0; i < io_size; i += 4096)
     // {
     //   sum += ret.Data()[i];
@@ -511,6 +537,8 @@ int test_concurrency(int argc, char** argv) {
   size_t io_server_num = std::stoull(argv[5]);
   size_t io_size = std::stoull(argv[6]);
 
+  set_cpu_affinity(2);
+
   std::filesystem::create_directory(std::string{argv[7]} + "/latency");
   log_directory = std::string{argv[7]} + "/latency";
 
@@ -524,7 +552,7 @@ int test_concurrency(int argc, char** argv) {
 
   size_t file_size_inByte = 1024LU * 1024LU * file_size_MB;
   int data_file = -1;
-  data_file = ::open(file_path.c_str(), O_RDWR | O_CREAT | O_DIRECT);
+  data_file = ::open(file_path.c_str(), O_RDWR | O_CREAT | O_DIRECT, 0777);
   assert(data_file != -1);
   // ::ftruncate(data_file, file_size_inByte);
 
@@ -562,7 +590,7 @@ int test_concurrency(int argc, char** argv) {
 
   Client_Read_throughput().store(0);
   Client_Write_throughput().store(0);
-  std::thread log_thread(logging);
+  // std::thread log_thread(logging);
   sleep(1);
 
   std::vector<std::thread> thread_pool;
@@ -573,7 +601,8 @@ int test_concurrency(int argc, char** argv) {
     // thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
     //                          io_size, 0, i);
     // thread_pool.emplace_back(read_pread, io_backend, file_size_inByte,
-    // io_size, i);
+    // io_size,
+    //                          0, i);
     // thread_pool.emplace_back(write_pwrite, io_backend, file_size_inByte,
     //                          io_size, i);
     // thread_pool.emplace_back(fiber_pread_1_2, disk_manager,
@@ -586,7 +615,9 @@ int test_concurrency(int argc, char** argv) {
     //   thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte,
     //   io_size, i);
     // else
-    thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size, i);
+    // thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size,
+    // i);
+    read_bufferpool(0, file_size_inByte, io_size, i);
     //  thread_pool.emplace_back(randwrite_bufferpool, 0, file_size_inByte,
     //  io_size, i);
     // thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte,
@@ -597,8 +628,8 @@ int test_concurrency(int argc, char** argv) {
   }
   // ::sleep(100);
   log_thread_run = false;
-  if (log_thread.joinable())
-    log_thread.join();
+  // if (log_thread.joinable())
+  //   log_thread.join();
 
   return 0;
 }
