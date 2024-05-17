@@ -3,22 +3,22 @@
 
 namespace gbp {
 
-static std::string log_directory = "";
-static thread_local ThreadLog* access_logger_g = nullptr;
-
-void set_log_directory(const std::string& log_directory_i) {
-  log_directory = log_directory_i;
+size_t get_thread_id() {
+  static size_t thread_id_global = 0;
+  static thread_local size_t thread_id_local = thread_id_global++;
+  return thread_id_local;
 }
-const std::string& get_log_directory() { return log_directory; }
-
-bool thread_logger_is_empty() { return access_logger_g == nullptr; }
-void set_thread_logger(ThreadLog* access_logger) {
-  access_logger_g = access_logger;
+std::string& get_log_dir() {
+  static std::string log_dir = ".";
+  return log_dir;
 }
-ThreadLog* get_thread_logger() {
-  // if (access_logger_g == nullptr)
-  //   LOG(FATAL) << "access logger uninitialized";
-  return access_logger_g;
+std::ofstream& get_thread_logfile() {
+  static thread_local std::ofstream log_file;
+  if (unlikely(!log_file.is_open())) {
+    log_file.open(get_log_dir() + "/thread_log_" +
+                  std::to_string(get_thread_id()) + ".log");
+  }
+  return log_file;
 }
 
 // marker of warmup
@@ -74,11 +74,6 @@ std::atomic<size_t>& get_query_id() {
 std::atomic<size_t>& get_type() {
   thread_local std::atomic<size_t> data(0);
   return data;
-}
-
-size_t& get_thread_id() {
-  thread_local size_t thread_id;
-  return thread_id;
 }
 
 inline size_t GetMemoryUsage() {
@@ -225,11 +220,12 @@ std::atomic<bool>& log_enable() {
   static std::atomic<bool> data;
   return data;
 }
-std::atomic<size_t>& get_counter(size_t idx) {
+
+size_t& get_counter(size_t idx) {
   static size_t capacity = 100;
   thread_local static std::vector<size_t> data(capacity, 0);
   assert(idx < capacity);
-  return as_atomic(data[idx]);
+  return data[idx];
 }
 std::atomic<size_t>& get_pool_size() {
   static std::atomic<size_t> data;

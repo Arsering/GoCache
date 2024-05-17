@@ -109,9 +109,9 @@ void BufferPoolManager::RegisterFile(GBPfile_handle_type fd) {
   }
 }
 
-int BufferPoolManager::GetObject(char* buf, size_t file_offset,
-                                 size_t object_size,
-                                 GBPfile_handle_type fd) const {
+int BufferPoolManager::GetBlock(char* buf, size_t file_offset,
+                                size_t object_size,
+                                GBPfile_handle_type fd) const {
   // std::lock_guard<std::mutex> lck(latch_);
   fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
   size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
@@ -136,9 +136,9 @@ int BufferPoolManager::GetObject(char* buf, size_t file_offset,
   return 0;
 }
 
-int BufferPoolManager::SetObject(const char* buf, size_t file_offset,
-                                 size_t object_size, GBPfile_handle_type fd,
-                                 bool flush) {
+int BufferPoolManager::SetBlock(const char* buf, size_t file_offset,
+                                size_t object_size, GBPfile_handle_type fd,
+                                bool flush) {
   fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
   size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
   size_t object_size_t = 0;
@@ -165,9 +165,9 @@ int BufferPoolManager::SetObject(const char* buf, size_t file_offset,
   return object_size;
 }
 
-int BufferPoolManager::SetObject(const BufferObject& buf, size_t file_offset,
-                                 size_t object_size, GBPfile_handle_type fd,
-                                 bool flush) {
+int BufferPoolManager::SetBlock(const BufferBlock& buf, size_t file_offset,
+                                size_t object_size, GBPfile_handle_type fd,
+                                bool flush) {
 #if (ASSERT_ENABLE)
   assert(buf.Size() == object_size);
 #endif
@@ -204,9 +204,9 @@ int BufferPoolManager::SetObject(const BufferObject& buf, size_t file_offset,
   return buf_size;
 }
 
-const BufferObject BufferPoolManager::GetObject(size_t file_offset,
-                                                size_t object_size,
-                                                GBPfile_handle_type fd) const {
+const BufferBlock BufferPoolManager::GetBlock(size_t file_offset,
+                                              size_t object_size,
+                                              GBPfile_handle_type fd) const {
   size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
   size_t num_page = 0;
 
@@ -216,11 +216,14 @@ const BufferObject BufferPoolManager::GetObject(size_t file_offset,
           : (CEIL(object_size - (PAGE_SIZE_FILE - fpage_offset),
                   PAGE_SIZE_FILE) +
              1);
-  BufferObject ret(object_size, num_page);
+  BufferBlock ret(object_size, num_page);
 
   fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
   size_t page_id = 0;
   while (num_page > 0) {
+#ifdef DEBUG_1
+    size_t st = gbp::GetSystemTime();
+#endif
     auto mpage =
         pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
 #if (ASSERT_ENABLE)
@@ -231,6 +234,11 @@ const BufferObject BufferPoolManager::GetObject(size_t file_offset,
     num_page--;
     fpage_offset = 0;
     fpage_id++;
+#ifdef DEBUG_1
+    st = gbp::GetSystemTime() - st;
+    gbp::get_counter(11) += st;
+    gbp::get_counter(12)++;
+#endif
   }
 
   return ret;

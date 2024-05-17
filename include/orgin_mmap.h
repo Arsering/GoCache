@@ -130,7 +130,7 @@ class mmap_array {
       std::cerr << "Bad index" << std::endl;
       exit(-1);
     }
-    buffer_pool_manager_->SetObject((char*) (&val), idx * sizeof(T), sizeof(T));
+    buffer_pool_manager_->SetBlock((char*) (&val), idx * sizeof(T), sizeof(T));
   }
 
   void set(size_t idx, const char* val, size_t len) {
@@ -138,7 +138,7 @@ class mmap_array {
       std::cerr << "Bad index" << std::endl;
       exit(-1);
     }
-    buffer_pool_manager_->SetObject(val, idx * sizeof(T), len * sizeof(T));
+    buffer_pool_manager_->SetBlock(val, idx * sizeof(T), len * sizeof(T));
   }
 
   std::shared_ptr<gbp::Value> get(size_t idx, size_t num = 1) const {
@@ -149,8 +149,8 @@ class mmap_array {
     size_t object_size = sizeof(T) * num;
     std::shared_ptr<gbp::Value> tar_value =
         std::make_shared<gbp::Value>(object_size);
-    buffer_pool_manager_->GetObject(tar_value->Data(), idx * sizeof(T),
-                                    num * sizeof(T), fd_);
+    buffer_pool_manager_->GetBlock(tar_value->Data(), idx * sizeof(T),
+                                   num * sizeof(T), fd_);
     return tar_value;
   }
 

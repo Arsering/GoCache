@@ -48,15 +48,15 @@ class BufferPoolManager {
     return disk_manager_->GetFileDescriptor(fd);
   }
 
-  int GetObject(char* buf, size_t file_offset, size_t object_size,
-                GBPfile_handle_type fd = 0) const;
-  int SetObject(const char* buf, size_t file_offset, size_t object_size,
-                GBPfile_handle_type fd = 0, bool flush = false);
+  int GetBlock(char* buf, size_t file_offset, size_t object_size,
+               GBPfile_handle_type fd = 0) const;
+  int SetBlock(const char* buf, size_t file_offset, size_t object_size,
+               GBPfile_handle_type fd = 0, bool flush = false);
 
-  const BufferObject GetObject(size_t file_offset, size_t object_size,
-                               GBPfile_handle_type fd = 0) const;
-  int SetObject(const BufferObject& buf, size_t file_offset, size_t object_size,
-                GBPfile_handle_type fd = 0, bool flush = false);
+  const BufferBlock GetBlock(size_t file_offset, size_t object_size,
+                             GBPfile_handle_type fd = 0) const;
+  int SetBlock(const BufferBlock& buf, size_t file_offset, size_t object_size,
+               GBPfile_handle_type fd = 0, bool flush = false);
 
   int Resize(GBPfile_handle_type fd, size_t new_size_inByte) {
     disk_manager_->Resize(fd, new_size_inByte);

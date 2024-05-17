@@ -27,10 +27,9 @@
 #include "utils.h"
 
 namespace gbp {
-#define DL false
-
-void set_log_directory(const std::string& log_directory_i);
-const std::string& get_log_directory();
+size_t get_thread_id();
+std::string& get_log_dir();
+std::ofstream& get_thread_logfile();
 
 enum MmapArrayType {
   lf_index,
@@ -84,7 +83,7 @@ class ThreadLog {
 
   void open_log_file(int tid) {
     thread_id_ = tid;
-    filename_ = get_log_directory() + "/log_thread_" + std::to_string(tid);
+    filename_ = get_log_dir() + "/log_thread_" + std::to_string(tid);
     log_file_.open(filename_, std::ios::out);
     assert(log_file_.is_open());
     // if (!log_file_.is_open())
@@ -176,10 +175,6 @@ class ThreadLog {
   int get_tid() { return thread_id_; }
 };
 
-bool thread_logger_is_empty();
-void set_thread_logger(ThreadLog* access_logger);
-ThreadLog* get_thread_logger();
-
 std::atomic<bool>& warmup_mark();  // 1: 需要warmup; 0: 无需warmup
 
 std::ofstream& get_query_file(std::string query_file_path = " ");
@@ -191,7 +186,7 @@ std::mutex& get_log_lock();
 
 std::atomic<size_t>& get_type();
 std::atomic<size_t>& get_query_id();
-std::atomic<size_t>& get_counter(size_t idx);
+size_t& get_counter(size_t idx);
 std::atomic<size_t>& get_pool_size();
 
 class PerformanceLogServer {

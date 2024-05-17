@@ -37,7 +37,7 @@ int test_read(gbp::BufferPoolManager& bpm, size_t file_size) {
     for (int i = 0; i < file_size; i++) {
       // std::cout << i << std::endl;
       start_ts = gbp::GetSystemTime();
-      bpm.GetObject(str.data(), i * gbp::PAGE_SIZE_FILE, 5);
+      bpm.GetBlock(str.data(), i * gbp::PAGE_SIZE_FILE, 5);
       end_ts = gbp::GetSystemTime();
       sum += end_ts - start_ts;
       std::cout << str.data();
@@ -96,7 +96,7 @@ int test1() {
       // std::cout << i << std::endl;
       start_ts = gbp::GetSystemTime();
 
-      bpm.GetObject(str.data(), i * gbp::PAGE_SIZE_FILE, obj_size);
+      bpm.GetBlock(str.data(), i * gbp::PAGE_SIZE_FILE, obj_size);
 
       end_ts = gbp::GetSystemTime();
       sum += end_ts - start_ts;

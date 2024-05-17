@@ -64,9 +64,9 @@ class BufferPool {
   int SetObject(const char* buf, size_t file_offset, size_t object_size,
                 GBPfile_handle_type fd = 0, bool flush = false);
 
-  BufferObject GetObject(size_t file_offset, size_t object_size,
-                         GBPfile_handle_type fd = 0);
-  int SetObject(BufferObject buf, size_t file_offset, size_t object_size,
+  BufferBlock GetObject(size_t file_offset, size_t object_size,
+                        GBPfile_handle_type fd = 0);
+  int SetObject(BufferBlock buf, size_t file_offset, size_t object_size,
                 GBPfile_handle_type fd = 0, bool flush = false);
 
   int Resize(GBPfile_handle_type fd, size_t new_size) {
