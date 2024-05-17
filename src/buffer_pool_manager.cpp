@@ -221,7 +221,7 @@ const BufferBlock BufferPoolManager::GetBlock(size_t file_offset,
   fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
   size_t page_id = 0;
   while (num_page > 0) {
-#ifdef DEBUG_1
+#ifdef DEBUG_
     size_t st = gbp::GetSystemTime();
 #endif
     auto mpage =
@@ -234,7 +234,7 @@ const BufferBlock BufferPoolManager::GetBlock(size_t file_offset,
     num_page--;
     fpage_offset = 0;
     fpage_id++;
-#ifdef DEBUG_1
+#ifdef DEBUG_
     st = gbp::GetSystemTime() - st;
     gbp::get_counter(11) += st;
     gbp::get_counter(12)++;

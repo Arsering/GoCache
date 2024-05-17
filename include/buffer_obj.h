@@ -1193,7 +1193,7 @@ class BufferBlockImp5 {
   FORCE_INLINE pair_min<T*, PTE*> Decode(size_t idx = 0) const {
     // static_assert(PAGE_SIZE_MEMORY % sizeof(T) == 0);
 
-#ifdef DEBUG_1
+#ifdef DEBUG_
     size_t st = gbp::GetSystemTime();
 #endif
 
@@ -1231,7 +1231,7 @@ class BufferBlockImp5 {
     assert(((uintptr_t) ret / PAGE_SIZE_MEMORY + 1) * PAGE_SIZE_MEMORY >=
            (uintptr_t) (ret + sizeof(T)));
 #endif
-#ifdef DEBUG_1
+#ifdef DEBUG_
     st = gbp::GetSystemTime() - st;
     gbp::get_counter(1) += st;
     gbp::get_counter(2)++;
