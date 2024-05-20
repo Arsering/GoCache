@@ -20,7 +20,6 @@ void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
 
   // a consecutive memory space for buffer pool
   buffer_pool_ = new MemoryPool(pool_size_);
-  madvise(buffer_pool_, pool_size_ * PAGE_SIZE_MEMORY, MADV_RANDOM);
   page_table_ = new PageTable(pool_size_);
 
   // page_table_ = new std::vector<ExtendibleHash<page_id_infile, PTE *>>();
@@ -253,6 +252,11 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
       auto ret = Pin(fpage_id_inpool, fd);
       if (ret.first) {  // 1.1
         stat = context_type::Phase::End;
+        if constexpr (gbp::DEBUG) {
+          if (gbp::warmup_mark().load() == 1)
+            buffer_pool_->GetUsedMark().set(buffer_pool_->ToPageId(ret.second),
+                                            true);
+        }
         return ret;
       }
       auto [locked, mpage_id] = page_table_->LockMapping(fd, fpage_id_inpool);
@@ -324,9 +328,18 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
       stat = context_type::Phase::End;
     }
     case context_type::Phase::End: {
+      if constexpr (gbp::DEBUG) {
+        if (gbp::warmup_mark().load() == 1)
+          buffer_pool_->GetUsedMark().set(buffer_pool_->ToPageId(mpage_data),
+                                          true);
+      }
       return {tar, mpage_data};
     }
     }
+  }
+  if constexpr (gbp::DEBUG) {
+    if (gbp::warmup_mark().load() == 1)
+      buffer_pool_->GetUsedMark().set(buffer_pool_->ToPageId(mpage_data), true);
   }
   return {tar, mpage_data};
 }

@@ -6,6 +6,12 @@
 namespace gbp {
 
 BufferPoolManager::~BufferPoolManager() {
+  if constexpr (DEBUG) {
+    size_t page_used_num = 0;
+    for (auto pool : pools_)
+      page_used_num += pool->buffer_pool_->GetUsedMark().count();
+    LOG(INFO) << "page_used_num = " << page_used_num;
+  }
   if constexpr (PERSISTENT)
     Flush();
 
@@ -24,12 +30,12 @@ BufferPoolManager::~BufferPoolManager() {
  * BufferPoolManager Constructor
  */
 void BufferPoolManager::init(uint16_t pool_num,
-                             size_t pool_size_page_per_instance,
+                             size_t pool_size_inpage_per_instance,
                              uint16_t io_server_num,
                              const std::string& file_path) {
   pool_num_ = pool_num;
   get_pool_num().store(pool_num);
-  pool_size_page_per_instance_ = pool_size_page_per_instance;
+  pool_size_inpage_per_instance_ = pool_size_inpage_per_instance;
   disk_manager_ = new DiskManager(file_path);
   partitioner_ = new RoundRobinPartitioner(pool_num);
   eviction_server_ = new EvictionServer();
@@ -39,7 +45,7 @@ void BufferPoolManager::init(uint16_t pool_num,
   }
   for (int idx = 0; idx < pool_num; idx++) {
     pools_.push_back(new BufferPool());
-    pools_[idx]->init(idx, pool_size_page_per_instance_,
+    pools_[idx]->init(idx, pool_size_inpage_per_instance_,
                       io_servers_[idx % io_server_num], partitioner_,
                       eviction_server_);
   }

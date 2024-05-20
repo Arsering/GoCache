@@ -179,6 +179,7 @@ std::atomic<bool>& warmup_mark();  // 1: 需要warmup; 0: 无需warmup
 
 std::ofstream& get_query_file(std::string query_file_path = " ");
 std::ofstream& get_result_file(std::string result_file_path = " ");
+std::string& get_db_dir();
 std::vector<std::string>& get_results_vec();
 std::atomic<bool>& log_enable();
 std::atomic<size_t>& get_counter_query();
@@ -187,6 +188,7 @@ std::mutex& get_log_lock();
 std::atomic<size_t>& get_type();
 std::atomic<size_t>& get_query_id();
 size_t& get_counter(size_t idx);
+std::atomic<size_t>& get_counter_global(size_t idx);
 std::atomic<size_t>& get_pool_size();
 
 class PerformanceLogServer {

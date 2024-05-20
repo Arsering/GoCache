@@ -6,10 +6,10 @@
 
 #pragma once
 
-// #define GRAPHSCOPE
+#define GRAPHSCOPE
 
 #define ASSERT_ENABLE false
-#define DEBUG_1
+// #define DEBUG_1
 // #define USING_EDGE_ITER
 
 #ifdef GRAPHSCOPE
@@ -48,6 +48,7 @@ using partition_id_type = uint32_t;
 
 constexpr bool PERSISTENT = true;
 // constexpr bool ASSERT_ENABLE = false;
+constexpr bool DEBUG = true;
 
 constexpr uint32_t INVALID_PAGE_ID =
     std::numeric_limits<uint32_t>::max();  // representing an invalid page id

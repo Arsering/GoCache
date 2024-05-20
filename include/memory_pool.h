@@ -14,40 +14,45 @@
 
 #pragma once
 #include <sys/mman.h>
+#include <boost/dynamic_bitset.hpp>
 #include <cassert>
 
 #include "config.h"
 #include "page_table.h"
 
 namespace gbp {
-  class MemoryPool {
-  public:
-    MemoryPool(mpage_id_type num_pages) : num_pages_(num_pages) {
-      pool_ =
-        (char*) ::aligned_alloc(PAGE_SIZE_MEMORY, PAGE_SIZE_MEMORY * num_pages_);
-      madvise(pool_, num_pages_ * PAGE_SIZE_MEMORY, MADV_RANDOM);
-      // printf("pool地址: %p\n", pool_);
-    }
+class MemoryPool {
+ public:
+  MemoryPool(mpage_id_type num_pages) : num_pages_(num_pages) {
+    pool_ = (char*) ::aligned_alloc(PAGE_SIZE_MEMORY,
+                                    PAGE_SIZE_MEMORY * num_pages_);
+    madvise(pool_, num_pages_ * PAGE_SIZE_MEMORY, MADV_RANDOM);
+    used_.resize(num_pages);
+    used_.reset();
+    // printf("pool地址: %p\n", pool_);
+  }
 
-    MemoryPool(const MemoryPool&) = delete;
-    MemoryPool(MemoryPool&&) = delete;
+  MemoryPool(const MemoryPool&) = delete;
+  MemoryPool(MemoryPool&&) = delete;
 
-    ~MemoryPool() { ::free(pool_); }
+  ~MemoryPool() { ::free(pool_); }
 
-    FORCE_INLINE void* FromPageId(const mpage_id_type& mpage_id) const {
-      assert(mpage_id < num_pages_);
-      return pool_ + mpage_id * PAGE_SIZE_MEMORY;
-    }
+  FORCE_INLINE void* FromPageId(const mpage_id_type& mpage_id) const {
+    assert(mpage_id < num_pages_);
+    return pool_ + mpage_id * PAGE_SIZE_MEMORY;
+  }
 
-    FORCE_INLINE mpage_id_type ToPageId(void* ptr) const {
-      assert((uintptr_t)ptr % num_pages_ == 0 && ptr > pool_ &&
-        ptr < pool_ + num_pages_ * PAGE_SIZE_MEMORY);
-      return ((char*)ptr - pool_) / PAGE_SIZE_MEMORY;
-    }
-    mpage_id_type GetSize() const { return num_pages_; }
+  FORCE_INLINE mpage_id_type ToPageId(void* ptr) const {
+    assert(ptr >= pool_);
+    assert(ptr < pool_ + num_pages_ * PAGE_SIZE_MEMORY);
+    return ((char*) ptr - pool_) / PAGE_SIZE_MEMORY;
+  }
+  FORCE_INLINE boost::dynamic_bitset<>& GetUsedMark() { return used_; }
+  mpage_id_type GetSize() const { return num_pages_; }
 
-  private:
-    mpage_id_type num_pages_;
-    char* pool_ = nullptr;
-  };
+ private:
+  mpage_id_type num_pages_;
+  boost::dynamic_bitset<> used_;
+  char* pool_ = nullptr;
+};
 }  // namespace gbp

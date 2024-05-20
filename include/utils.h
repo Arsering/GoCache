@@ -160,17 +160,21 @@ class lockfree_queue_type {
     size_.fetch_add(1);
     return queue_.push(item);
   }
+
   bool Poll(T& item) {
-    size_.fetch_sub(1);
-    return queue_.pop(item);
+    auto ret = queue_.pop(item);
+    if (ret)
+      size_.fetch_sub(1);
+    return ret;
   }
 
-  size_t Size() { return size_; }
+  size_t Size() { return size_.load(); }
 
  private:
   boost::lockfree::queue<T> queue_;
-  std::atomic<size_t> size_;
+  std::atomic<size_t> size_{0};
 };
+
 void Log_mine(std::string& content);
 
 class string_view {};
