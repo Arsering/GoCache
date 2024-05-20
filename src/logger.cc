@@ -1,6 +1,8 @@
 #include "../include/logger.h"
 #include "../include/utils.h"
 
+#include <regex>
+
 namespace gbp {
 
 size_t get_thread_id() {
@@ -149,7 +151,41 @@ std::tuple<size_t, size_t> SSD_io_bytes(
   return {read, write};
 }
 
+size_t GetMemoryUsageMMAP(std::string& mmap_monitored_dir) {
+  std::ifstream smaps_file("/proc/self/smaps");
+
+  if (!smaps_file.is_open()) {
+    std::cerr << "Failed to open /proc/self/smaps" << std::endl;
+    assert(false);
+  }
+
+  std::string line;
+  std::regex rss_regex(R"(Rss:\s+(\d+)\s+kB)");
+  std::smatch match;
+  size_t total_mmap_rss = 0;
+  bool in_mapping = false;
+
+  while (std::getline(smaps_file, line)) {
+    if (in_mapping && std::regex_search(line, match, rss_regex)) {
+      total_mmap_rss += std::stoul(match[1].str());
+      in_mapping = false;
+    } else if (line.find(mmap_monitored_dir) != std::string::npos) {
+      in_mapping = true;
+    }
+  }
+  return total_mmap_rss;
+}
+
 void PerformanceLogServer::Logging() {
+  get_db_dir();
+  std::string mmap_monitored_dir;
+  std::filesystem::path path(get_db_dir());
+  if (path.has_parent_path()) {
+    mmap_monitored_dir = path.parent_path().string();
+  } else {
+    mmap_monitored_dir = "";  // 如果没有父路径（比如根目录），返回空字符串
+  }
+
   char* buf = (char*) malloc(4096);
   size_t size = 0;
 
@@ -170,10 +206,11 @@ void PerformanceLogServer::Logging() {
   // auto last_fetch_count = gbp::debug::get_counter_fetch().load();
   // auto last_contention_count = gbp::debug::get_counter_contention().load();
 
-  size = ::snprintf(buf, 4096, "%-25s%-25s%-25s%-25s%-25s%-25s%-25s\n",
-                    "Client_Read_Throughput", "Client_Write_Throughput",
-                    "SSD_Read_Throughput", "SSD_write_Throughput",
-                    "TLB_shootdown", "Memory_usage", "Eviction_count");
+  size =
+      ::snprintf(buf, 4096, "%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s\n",
+                 "Client_Read_Throughput", "Client_Write_Throughput",
+                 "SSD_Read_Throughput", "SSD_write_Throughput", "TLB_shootdown",
+                 "Memory_usage", "Memory_usage_MMAP", "Eviction_count");
   log_file_.write(buf, size);
 
   while (true) {
@@ -188,14 +225,15 @@ void PerformanceLogServer::Logging() {
     // auto cur_contention_count = debug::get_counter_contention().load();
 
     size = ::snprintf(
-        buf, 4096, "%-25lf%-25lf%-25lf%-25lf%-25lu%-25lf\n",
+        buf, 4096, "%-25lf%-25lf%-25lf%-25lf%-25lu%-25lf%-25lf\n",
         (cur_Client_Read_throughput - last_Client_Read_throughput) /
             (double) B2GB,
         (cur_Client_Write_throughput - last_Client_Write_throughput) /
             (double) B2GB,
         (SSD_read_bytes - last_SSD_read_bytes) / (double) B2GB,
         (SSD_write_bytes - last_SSD_write_bytes) / (double) B2GB,
-        (shootdowns - last_shootdowns), GetMemoryUsage() / (1024.0 * 1024));
+        (shootdowns - last_shootdowns), GetMemoryUsage() / (1024.0 * 1024),
+        GetMemoryUsageMMAP(mmap_monitored_dir) / (1024.0 * 1024));
     log_file_.write(buf, size);
     log_file_.flush();
     // printf("%lu%-20lf%-20lu%-20lf%-20lu\n", cur_IO_throughput,
@@ -227,8 +265,19 @@ size_t& get_counter(size_t idx) {
   assert(idx < capacity);
   return data[idx];
 }
+
+std::atomic<size_t>& get_counter_global(size_t idx) {
+  static size_t capacity = 100;
+  static std::vector<size_t> data(capacity, 0);
+  assert(idx < capacity);
+  return as_atomic(data[idx]);
+}
 std::atomic<size_t>& get_pool_size() {
   static std::atomic<size_t> data;
   return data;
+}
+std::string& get_db_dir() {
+  static std::string db_dir;
+  return db_dir;
 }
 }  // namespace gbp

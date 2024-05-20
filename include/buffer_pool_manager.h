@@ -109,7 +109,8 @@ class BufferPoolManager {
 
  private:
   uint16_t pool_num_;
-  size_t pool_size_page_per_instance_;  // number of pages in buffer pool (Byte)
+  size_t
+      pool_size_inpage_per_instance_;  // number of pages in buffer pool (Byte)
   DiskManager* disk_manager_;
   RoundRobinPartitioner* partitioner_;
   std::vector<IOServer_old*> io_servers_;
