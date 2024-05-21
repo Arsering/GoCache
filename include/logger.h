@@ -224,6 +224,14 @@ class PerformanceLogServer {
     return logger;
   }
 
+  std::atomic<size_t>& GetClientReadThroughputByte() {
+    return client_read_throughput_Byte_;
+  }
+
+  std::atomic<size_t>& GetClientWriteThroughputByte() {
+    return client_write_throughput_Byte_;
+  }
+
  private:
   std::atomic<size_t> client_read_throughput_Byte_;
   std::atomic<size_t> client_write_throughput_Byte_;

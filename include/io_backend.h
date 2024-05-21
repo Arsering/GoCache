@@ -256,7 +256,11 @@ class IOURing : public IOBackend {
       Progress();
       return false;
     }
-
+    if constexpr (DEBUG) {
+      gbp::PerformanceLogServer::GetPerformanceLogger()
+          .GetClientReadThroughputByte()
+          .fetch_add(PAGE_SIZE_FILE);
+    }
     io_uring_prep_read(sqe, disk_manager_->fd_oss_[fd].first, data,
                        PAGE_SIZE_FILE, offset);
     io_uring_sqe_set_data(sqe, finish);
@@ -338,6 +342,13 @@ class RWSysCall : public IOBackend {
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
 #endif
+
+    if constexpr (DEBUG) {
+      gbp::PerformanceLogServer::GetPerformanceLogger()
+          .GetClientWriteThroughputByte()
+          .fetch_add(data.size());
+    }
+
     auto ret = ::pwrite(disk_manager_->fd_oss_[fd].first, data.data(),
                         data.size(), offset);
 #if ASSERT_ENABLE
@@ -358,6 +369,11 @@ class RWSysCall : public IOBackend {
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
 #endif
+    if constexpr (DEBUG) {
+      gbp::PerformanceLogServer::GetPerformanceLogger()
+          .GetClientWriteThroughputByte()
+          .fetch_add(size);
+    }
     auto ret = ::pwrite(disk_manager_->fd_oss_[fd].first, data, size, offset);
 #if ASSERT_ENABLE
     assert(ret == size);  // check for I/O error
@@ -379,6 +395,13 @@ class RWSysCall : public IOBackend {
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
 #endif
+
+    if constexpr (DEBUG) {
+      gbp::PerformanceLogServer::GetPerformanceLogger()
+          .GetClientWriteThroughputByte()
+          .fetch_add(io_info[0].iov_len);
+    }
+
     auto ret = ::pwrite(disk_manager_->fd_oss_[fd].first, io_info[0].iov_base,
                         io_info[0].iov_len, offset);
 #if ASSERT_ENABLE
@@ -397,36 +420,6 @@ class RWSysCall : public IOBackend {
     return true;
   }
 
-  //     /**
-  //      * Read the contents of the specified page into the given memory area
-  //      */
-  //     bool Read(fpage_id_type fpage_id, void* data, GBPfile_handle_type fd,
-  //       bool* finish = nullptr) {
-  //       assert(fd < disk_manager_->fd_oss_.size() &&
-  //         disk_manager_->fd_oss_[fd].second);
-  // #ifdef DEBUG
-  //       if (get_mark_warmup().load() == 1)
-  //         debug::get_counter_read().fetch_add(1);
-  // #endif
-  //       size_t offset = (size_t)fpage_id * PAGE_SIZE_FILE;
-  //       assert(offset <=
-  //         disk_manager_->file_size_inBytes_[fd]);  // check if read beyond
-  //         file length
-
-  //       auto ret =
-  //         ::pread(disk_manager_->fd_oss_[fd].first, data, PAGE_SIZE_FILE,
-  //         offset);
-
-  //       // if file ends before reading PAGE_SIZE
-  //       if (ret < PAGE_SIZE_FILE) {
-  //         // std::cerr << "Read less than a page" << std::endl;
-  //         memset((char*)data + ret, 0, PAGE_SIZE_FILE - ret);
-  //       }
-  //       if (finish != nullptr)
-  //         *finish = true;
-  //       return true;
-  //     }
-
   /**
    * Read the contents of the specified page into the given memory area
    */
@@ -439,7 +432,11 @@ class RWSysCall : public IOBackend {
            disk_manager_
                ->file_size_inBytes_[fd]);  // check if read beyond file length
 #endif
-
+    if constexpr (DEBUG) {
+      gbp::PerformanceLogServer::GetPerformanceLogger()
+          .GetClientReadThroughputByte()
+          .fetch_add(data.size());
+    }
     auto ret = ::pread(disk_manager_->fd_oss_[fd].first, (void*) data.data(),
                        data.size(), offset);
 
@@ -465,7 +462,11 @@ class RWSysCall : public IOBackend {
            disk_manager_
                ->file_size_inBytes_[fd]);  // check if read beyond file length
 #endif
-
+    if constexpr (DEBUG) {
+      gbp::PerformanceLogServer::GetPerformanceLogger()
+          .GetClientReadThroughputByte()
+          .fetch_add(size);
+    }
     auto ret = ::pread(disk_manager_->fd_oss_[fd].first, data, size, offset);
     // if (ret == 0) {
     //   std::cout << "ret= " << offset / 4096 << " " << size << std::endl;

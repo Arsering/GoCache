@@ -296,24 +296,6 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
       break;
     }
     case context_type::Phase::Loading: {  // 4
-      // if constexpr (USING_FIBER_ASYNC_RESPONSE) {
-      //   context_type context = context_type::GetRawObject();
-      //   async_request_fiber_type* req = new async_request_fiber_type(
-      //       mpage_data, PAGE_SIZE_MEMORY,
-      //       (gbp::fpage_id_type) fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
-      //       fd, context);
-      //   assert(io_server_->SendRequest(req));
-
-      //   size_t loops = 0;
-      //   while (!req->success) {
-      //     // hybrid_spin(loops);
-      //     std::this_thread::yield();
-      //   }
-      //   delete req;
-      // } else {
-      //   io_server_->io_backend_->Read(fpage_id * PAGE_SIZE_FILE, mpage_data,
-      //                                 PAGE_SIZE_FILE, fd);
-      // }
       assert(ReadWrite(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY, mpage_data,
                        PAGE_SIZE_MEMORY, fd, true));
       tar->Clean();
