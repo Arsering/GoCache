@@ -7,17 +7,14 @@ set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -rdynamic")
 set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "-g1 -O2")
+set(CMAKE_LIBRARY_PATH "/usr/local/lib;/usr/lib/x86_64-linux-gnu;/usr/lib64")
+
 
 # file(GLOB SRC_FILE *.c) # 建立变量SRC_FILE为目录下.c文件列表
 
 # set(CMAKE_BUILD_TYPE "Debug")
 
 project(graphscope_bufferpool)
-
-set(DEFAULT_BUILD_TYPE "Debug")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -O0")
-set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0")
-set(CMAKE_LIBRARY_PATH "/usr/local/lib;/usr/lib/x86_64-linux-gnu;/usr/lib64")
 
 
 # # find glog---------------------------------------------------------------------
