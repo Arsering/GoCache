@@ -10,7 +10,9 @@ BufferPoolManager::~BufferPoolManager() {
     size_t page_used_num = 0;
     for (auto pool : pools_)
       page_used_num += pool->buffer_pool_->GetUsedMark().count();
+#ifdef GRAPHSCOPE
     LOG(INFO) << "page_used_num = " << page_used_num;
+#endif
   }
   if constexpr (PERSISTENT)
     Flush();

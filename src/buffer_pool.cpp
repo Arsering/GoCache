@@ -230,8 +230,7 @@ PTE* BufferPool::GetVictimPage() {
  */
 pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
                                             GBPfile_handle_type fd) {
-#if (ASSERT_ENABLE)
-  auto file_size = disk_manager_->GetFileSizeShort(fd);
+#if (ASSERT_ENABLE) auto file_size = disk_manager_->GetFileSizeShort(fd);
   assert(fpage_id < CEIL(file_size, PAGE_SIZE_MEMORY));
 #endif
 
@@ -243,21 +242,15 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
 #endif
 
   fpage_id_type fpage_id_inpool = partitioner_->GetFPageIdInPartition(fpage_id);
-  PTE* tar = nullptr;
-  char* mpage_data = nullptr;
+  pair_min<PTE*, char*> ret;
 
   while (true) {
     switch (stat) {
     case context_type::Phase::Begin: {
-      auto ret = Pin(fpage_id_inpool, fd);
+      ret = Pin(fpage_id_inpool, fd);
       if (ret.first) {  // 1.1
         stat = context_type::Phase::End;
-        if constexpr (gbp::DEBUG) {
-          if (gbp::warmup_mark().load() == 1)
-            buffer_pool_->GetUsedMark().set(buffer_pool_->ToPageId(ret.second),
-                                            true);
-        }
-        return ret;
+        break;
       }
       auto [locked, mpage_id] = page_table_->LockMapping(fd, fpage_id_inpool);
       if (locked) {
@@ -275,55 +268,52 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
         stat = context_type::Phase::Loading;
       } else {
         if (!replacer_->Victim(mpage_id)) {
+          assert(false);
           break;
         }
         stat = context_type::Phase::Evicting;
       }
-      tar = page_table_->FromPageId(mpage_id);
-      // assert(tar->ref_count == 0);
-      mpage_data = (char*) buffer_pool_->FromPageId(mpage_id);
+      ret.first = page_table_->FromPageId(mpage_id);
+      ret.second = (char*) buffer_pool_->FromPageId(mpage_id);
       break;
     }
     case context_type::Phase::Evicting: {  // 2
-      if (tar->dirty) {
+      if (ret.first->dirty) {
         assert(ReadWrite(
-            partitioner_->GetFPageIdGlobal(pool_ID_, tar->fpage_id) *
+            partitioner_->GetFPageIdGlobal(pool_ID_, ret.first->fpage_id) *
                 PAGE_SIZE_FILE,
-            PAGE_SIZE_FILE, mpage_data, PAGE_SIZE_MEMORY, tar->fd, false));
+            PAGE_SIZE_FILE, ret.second, PAGE_SIZE_MEMORY, ret.first->fd,
+            false));
       }
-      assert(page_table_->DeleteMapping(tar->fd, tar->fpage_id));
+      assert(page_table_->DeleteMapping(ret.first->fd, ret.first->fpage_id));
       stat = context_type::Phase::Loading;
       break;
     }
     case context_type::Phase::Loading: {  // 4
-      assert(ReadWrite(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY, mpage_data,
+      assert(ReadWrite(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY, ret.second,
                        PAGE_SIZE_MEMORY, fd, true));
-      tar->Clean();
-      tar->ref_count = 1;
-      tar->fpage_id = fpage_id_inpool;
-      tar->fd = fd;
+      ret.first->Clean();
+      ret.first->ref_count = 1;
+      ret.first->fpage_id = fpage_id_inpool;
+      ret.first->fd = fd;
       std::atomic_thread_fence(std::memory_order_release);
       assert(page_table_->CreateMapping(fd, fpage_id_inpool,
-                                        page_table_->ToPageId(tar)));
+                                        page_table_->ToPageId(ret.first)));
 
-      replacer_->Insert(page_table_->ToPageId(tar));
+      replacer_->Insert(page_table_->ToPageId(ret.first));
       stat = context_type::Phase::End;
     }
     case context_type::Phase::End: {
       if constexpr (gbp::DEBUG) {
         if (gbp::warmup_mark().load() == 1)
-          buffer_pool_->GetUsedMark().set(buffer_pool_->ToPageId(mpage_data),
+          buffer_pool_->GetUsedMark().set(buffer_pool_->ToPageId(ret.second),
                                           true);
       }
-      return {tar, mpage_data};
+      return ret;
     }
     }
   }
-  if constexpr (gbp::DEBUG) {
-    if (gbp::warmup_mark().load() == 1)
-      buffer_pool_->GetUsedMark().set(buffer_pool_->ToPageId(mpage_data), true);
-  }
-  return {tar, mpage_data};
+  assert(false);
 }
 
 int BufferPool::GetObject(char* buf, size_t file_offset, size_t object_size,
