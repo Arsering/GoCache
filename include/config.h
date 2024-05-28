@@ -7,9 +7,8 @@
 #pragma once
 
 #define GRAPHSCOPE
-
-#define ASSERT_ENABLE false
-// #define DEBUG_1
+#define DEBUG_BITMAP
+#define ASSERT_ENABLE true
 // #define USING_EDGE_ITER
 
 #ifdef GRAPHSCOPE
@@ -48,7 +47,8 @@ using partition_id_type = uint32_t;
 
 constexpr bool PERSISTENT = true;
 // constexpr bool ASSERT_ENABLE = false;
-constexpr bool DEBUG = true;
+constexpr bool DEBUG = false;
+constexpr bool EVICTION_SERVER_ENABLE = false;
 
 constexpr uint32_t INVALID_PAGE_ID =
     std::numeric_limits<uint32_t>::max();  // representing an invalid page id
@@ -56,7 +56,7 @@ constexpr uint16_t INVALID_FILE_HANDLE = std::numeric_limits<uint16_t>::max();
 constexpr size_t PAGE_SIZE_MEMORY = 4096;  // size of a memory page in byte
 constexpr size_t PAGE_SIZE_FILE = 4096;
 constexpr size_t CACHELINE_SIZE = 64;
-constexpr static size_t IOURing_MAX_DEPTH = 64 * 2;
+constexpr static size_t IOURing_MAX_DEPTH = 0;  // 64 * 2
 constexpr size_t FIBER_BATCH_SIZE = IOURing_MAX_DEPTH * 2;
 constexpr static size_t FIBER_CHANNEL_DEPTH = FIBER_BATCH_SIZE * 2;
 

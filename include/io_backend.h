@@ -34,6 +34,9 @@ class DiskManager {
   FORCE_INLINE OSfile_handle_type
   GetFileDescriptor(GBPfile_handle_type fd) const {
 #if ASSERT_ENABLE
+    if (!fd >= fd_oss_.size()) {
+      LOG(FATAL) << "cp" << fd << " " << fd_oss_.size();
+    }
     assert(fd < fd_oss_.size());
 #endif
     return fd_oss_[fd].first;
@@ -52,6 +55,10 @@ class DiskManager {
 #endif
     file_size_inBytes_[fd] = new_size_inByte;
 
+#ifdef DEBUG_BITMAP
+    useds_[fd].resize(ceil(new_size_inByte, PAGE_SIZE_MEMORY));
+    useds_[fd].reset();
+#endif
     return 0;
   }
 
@@ -66,6 +73,11 @@ class DiskManager {
 #ifdef DEBUG
     debug::get_bitmaps().emplace_back(
         ceil(file_sizes_[file_sizes_.size() - 1], PAGE_SIZE_MEMORY));
+#endif
+#ifdef DEBUG_BITMAP
+    useds_.emplace_back(
+        ceil(file_size_inBytes_[fd_oss_.size() - 1], PAGE_SIZE_MEMORY));
+    useds_[fd_oss_.size() - 1].reset();
 #endif
 
     return fd_oss_.size() - 1;
@@ -95,9 +107,18 @@ class DiskManager {
     return file_names_[fd];
   }
 
+#ifdef DEBUG_BITMAP
+  FORCE_INLINE boost::dynamic_bitset<>& GetUsedMark(GBPfile_handle_type fd) {
+    return useds_[fd];
+  }
+#endif
+
   std::vector<std::pair<OSfile_handle_type, bool>> fd_oss_;
   std::vector<std::string> file_names_;
   std::vector<size_t> file_size_inBytes_;
+#ifdef DEBUG_BITMAP
+  std::vector<boost::dynamic_bitset<>> useds_;
+#endif
 };
 
 class IOBackend {
@@ -455,6 +476,16 @@ class RWSysCall : public IOBackend {
    */
   bool Read(size_t offset, char* data, size_t size, GBPfile_handle_type fd,
             bool* finish = nullptr) override {
+#ifdef DEBUG_BITMAP
+    if (gbp::warmup_mark().load() == 1) {
+      fpage_id_type fpage_id = offset / PAGE_SIZE_FILE;
+      if (disk_manager_->GetUsedMark(fd)[fpage_id] == true)
+        assert(false);
+      disk_manager_->GetUsedMark(fd).set(fpage_id, true);
+      assert(disk_manager_->GetUsedMark(fd)[fpage_id] == true);
+    }
+#endif
+
 #if ASSERT_ENABLE
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
@@ -514,22 +545,6 @@ class RWSysCall : public IOBackend {
     // assert(false);
     return true;
   }
-
-#ifdef DEBUG
-  void ReinitBitMap() {
-    auto& bit_maps = debug::get_bitmaps();
-    for (auto& bit_map : bit_maps) {
-      bit_map.reset_all();
-    }
-    if (bit_maps.size() < file_sizes_.size()) {
-      for (int file_idx = bit_maps.size(); file_idx < file_sizes_.size();
-           file_idx++) {
-        bit_maps.emplace_back(
-            cell(file_sizes_[file_idx], PAGE_SIZE_BUFFER_POOL));
-      }
-    }
-  }
-#endif
 };
 
 }  // namespace gbp

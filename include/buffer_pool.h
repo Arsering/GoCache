@@ -111,7 +111,9 @@ class BufferPool {
     return;
   }
 
-  void RegisterFile(OSfile_handle_type fd);
+  void RegisterFile(GBPfile_handle_type fd);
+  void CloseFile(GBPfile_handle_type fd);
+
   pair_min<PTE*, char*> FetchPage(mpage_id_type page_id_f,
                                   GBPfile_handle_type fd);
 
@@ -128,6 +130,17 @@ class BufferPool {
       }
     }
     return {nullptr, nullptr};
+  }
+  std::tuple<size_t, size_t, size_t, size_t, size_t> GetMemoryUsage() {
+    size_t memory_pool_usage =
+        (buffer_pool_->GetSize() - free_list_->Size()) * PAGE_SIZE_MEMORY;
+
+    size_t metadata_usage = page_table_->GetMemoryUsage() +
+                            replacer_->GetMemoryUsage() +
+                            free_list_->GetMemoryUsage();
+
+    return {memory_pool_usage, metadata_usage, page_table_->GetMemoryUsage(),
+            replacer_->GetMemoryUsage(), free_list_->GetMemoryUsage()};
   }
 
  private:

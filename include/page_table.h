@@ -264,6 +264,7 @@ class PageTableInner {
 #endif
     return (page - pool_);
   }
+  size_t GetMemoryUsage() { return num_pages_ * sizeof(PTE); }
 
  private:
   constexpr static uint16_t NUM_PTE_PERCACHELINE =
@@ -309,6 +310,7 @@ class PageMapping {
   PageMapping(fpage_id_type fpage_num) : mappings_(), size_(0) {
     Resize(fpage_num);
   }
+  ~PageMapping() { Resize(0); }
 
   FORCE_INLINE pair_min<bool, mpage_id_type> FindMapping(
       fpage_id_type fpage_id) const {
@@ -395,6 +397,12 @@ class PageMapping {
   bool Resize(fpage_id_type new_size) {
     if (new_size <= size_)
       return true;
+    if (new_size == 0) {
+      delete[] mappings_;
+      mappings_ = nullptr;
+      size_ = new_size;
+      return true;
+    }
 
     Mapping* new_mapping = (Mapping*) new PackedMappingCacheLine[ceil(
         new_size, NUM_PER_CACHELINE)];
@@ -413,6 +421,7 @@ class PageMapping {
   }
 
   fpage_id_type Size() const { return size_; }
+  size_t GetMemoryUsage() { return size_ * sizeof(Mapping); }
 
  private:
   // 单线程下会有性能问题，
@@ -439,10 +448,17 @@ class PageTable {
     return true;
   }
 
+  FORCE_INLINE bool DeregisterFile(GBPfile_handle_type fd) {
+    delete mappings_[fd];
+    mappings_[fd] = nullptr;
+    return true;
+  }
+
   FORCE_INLINE bool ResizeFile(GBPfile_handle_type fd,
                                fpage_id_type new_file_size_in_page) {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(fd < mappings_.size());
+    assert(mappings_[fd] != nullptr);
 #endif
     return mappings_[fd]->Resize(new_file_size_in_page);
   }
@@ -451,6 +467,7 @@ class PageTable {
       GBPfile_handle_type fd, fpage_id_type fpage_id) const {
 #if (ASSERT_ENABLE)
     assert(fd < mappings_.size());
+    assert(mappings_[fd] != nullptr);
 #endif
     return mappings_[fd]->FindMapping(fpage_id);
   }
@@ -468,6 +485,7 @@ class PageTable {
                                   mpage_id_type mpage_id) {
 #if (ASSERT_ENABLE)
     assert(fd < mappings_.size());
+    assert(mappings_[fd] != nullptr);
 #endif
     return mappings_[fd]->CreateMapping(fpage_id, mpage_id);
   }
@@ -483,6 +501,7 @@ class PageTable {
                                   fpage_id_type fpage_id) {
 #if ASSERT_ENABLE
     assert(fd < mappings_.size());
+    assert(mappings_[fd] != nullptr);
 #endif
     return mappings_[fd]->DeleteMapping(fpage_id);
   }
@@ -500,6 +519,7 @@ class PageTable {
       GBPfile_handle_type fd, fpage_id_type fpage_id) {
 #if ASSERT_ENABLE
     assert(fd < mappings_.size());
+    assert(mappings_[fd] != nullptr);
 #endif
     auto [success, mpage_id] = mappings_[fd]->LockMapping(fpage_id);
     if (!success)
@@ -528,6 +548,11 @@ class PageTable {
   FORCE_INLINE bool UnLockMapping(GBPfile_handle_type fd,
                                   fpage_id_type fpage_id,
                                   mpage_id_type mpage_id) {
+#if ASSERT_ENABLE
+    assert(fd < mappings_.size());
+    assert(mappings_[fd] != nullptr);
+#endif
+
     if (mpage_id != PageMapping::Mapping::EMPTY_VALUE) {
       auto* tar = FromPageId(mpage_id);
       if (tar->fpage_id != fpage_id && tar->fd == fd) {
@@ -539,6 +564,7 @@ class PageTable {
     std::atomic_thread_fence(std::memory_order_release);
 #if ASSERT_ENABLE
     assert(fd < mappings_.size());
+    assert(mappings_[fd] != nullptr);
 #endif
 
     if (!mappings_[fd]->CreateMapping(fpage_id, mpage_id))
@@ -557,6 +583,17 @@ class PageTable {
 
   FORCE_INLINE uint16_t GetRefCount(mpage_id_type mpage_id) const {
     return page_table_inner_->GetRefCount(mpage_id);
+  }
+  size_t GetMemoryUsage() {
+    size_t memory_usage = 0;
+    for (auto mapping : mappings_) {
+      if (mapping == nullptr)
+        continue;
+      memory_usage += mapping->GetMemoryUsage();
+    }
+    memory_usage += page_table_inner_->GetMemoryUsage();
+
+    return memory_usage;
   }
 
  private:
