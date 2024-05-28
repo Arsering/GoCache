@@ -27,8 +27,10 @@ class MemoryPool {
     pool_ = (char*) ::aligned_alloc(PAGE_SIZE_MEMORY,
                                     PAGE_SIZE_MEMORY * num_pages_);
     madvise(pool_, num_pages_ * PAGE_SIZE_MEMORY, MADV_RANDOM);
+#ifdef DEBUG_BITMAP
     used_.resize(num_pages);
     used_.reset();
+#endif
     // printf("pool地址: %p\n", pool_);
   }
 
@@ -47,12 +49,16 @@ class MemoryPool {
     assert(ptr < pool_ + num_pages_ * PAGE_SIZE_MEMORY);
     return ((char*) ptr - pool_) / PAGE_SIZE_MEMORY;
   }
+#ifdef DEBUG_BITMAP
   FORCE_INLINE boost::dynamic_bitset<>& GetUsedMark() { return used_; }
+#endif
   mpage_id_type GetSize() const { return num_pages_; }
 
  private:
   mpage_id_type num_pages_;
+#ifdef DEBUG_BITMAP
   boost::dynamic_bitset<> used_;
+#endif
   char* pool_ = nullptr;
 };
 }  // namespace gbp

@@ -153,7 +153,8 @@ struct VectorSync {
 template <typename T>
 class lockfree_queue_type {
  public:
-  lockfree_queue_type(size_t capacity) : queue_(capacity), size_(0) {}
+  lockfree_queue_type(size_t capacity)
+      : queue_(capacity), size_(0), capacity_(capacity) {}
   ~lockfree_queue_type() = default;
 
   bool Push(T& item) {
@@ -169,10 +170,25 @@ class lockfree_queue_type {
   }
 
   size_t Size() { return size_.load(); }
+  size_t GetMemoryUsage() {
+    // 获取元素类型的大小
+    size_t element_size = sizeof(T);
+    // 计算元素占用的内存
+    size_t elements_memory = element_size * capacity_;
+
+    // 内部结构的额外开销
+    // boost::lockfree::queue 内部结构开销估算：
+    // 1. 一个指针（通常是 void* 或 size_t）
+    // 2. head 和 tail 指针的开销
+    size_t internal_overhead = sizeof(void*) * capacity_ + 2 * sizeof(size_t);
+
+    return elements_memory + internal_overhead;
+  }
 
  private:
   boost::lockfree::queue<T> queue_;
   std::atomic<size_t> size_{0};
+  size_t capacity_;
 };
 
 void Log_mine(std::string& content);

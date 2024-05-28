@@ -8,6 +8,7 @@
 #include <fstream>
 #include <iostream>
 #include <mutex>
+#include <regex>
 
 #include <assert.h>
 #include <algorithm>
@@ -241,4 +242,11 @@ class PerformanceLogServer {
   bool stop_ = false;
   std::thread server_;
 };
+
+inline size_t GetMemoryUsage();
+uint64_t readTLBShootdownCount();
+uint64_t readIObytesOne();
+std::tuple<size_t, size_t> SSD_io_bytes(
+    const std::string& device_name = "nvme0n1");
+size_t GetMemoryUsageMMAP(std::string& mmap_monitored_dir);
 }  // namespace gbp

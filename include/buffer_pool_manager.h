@@ -61,7 +61,7 @@ class BufferPoolManager {
   int Resize(GBPfile_handle_type fd, size_t new_size_inByte) {
     disk_manager_->Resize(fd, new_size_inByte);
     for (auto pool : pools_) {
-      pool->Resize(fd, new_size_inByte);
+      pool->Resize(fd, ceil(new_size_inByte, pool_num_));
     }
     return 0;
   }
@@ -72,10 +72,6 @@ class BufferPoolManager {
       free_page_num += pool->GetFreePageNum();
     return free_page_num;
   }
-
-#ifdef DEBUG
-  void ReinitBitMap() { disk_manager_->ReinitBitMap(); }
-#endif
 
   void WarmUp() {
     std::vector<std::thread> thread_pool;
@@ -100,6 +96,9 @@ class BufferPoolManager {
   void CloseFile(GBPfile_handle_type fd) {
     assert(FlushFile(fd));
     disk_manager_->CloseFile(fd);
+    for (auto pool : pools_) {
+      pool->CloseFile(fd);
+    }
   }
 
   bool FlushPage(mpage_id_type page_id, GBPfile_handle_type fd = 0);
@@ -107,7 +106,29 @@ class BufferPoolManager {
   bool LoadFile(GBPfile_handle_type fd = 0);
   bool Flush();
 
+  std::tuple<size_t, size_t, size_t, size_t, size_t> GetMemoryUsage() {
+    size_t memory_pool_usage = 0;
+    size_t metadata_usage = 0;
+    size_t page_table_usage = 0;
+    size_t replacer_usage = 0;
+    size_t free_list_usage = 0;
+    for (auto pool : pools_) {
+      auto ret = pool->GetMemoryUsage();
+
+      memory_pool_usage += std::get<0>(ret);
+      metadata_usage += std::get<1>(ret);
+      page_table_usage += std::get<2>(ret);
+      replacer_usage += std::get<3>(ret);
+      free_list_usage += std::get<4>(ret);
+    }
+
+    return {memory_pool_usage, metadata_usage, page_table_usage, replacer_usage,
+            free_list_usage};
+  }
+
  private:
+  bool initialized_ = false;
+
   uint16_t pool_num_;
   size_t
       pool_size_inpage_per_instance_;  // number of pages in buffer pool (Byte)

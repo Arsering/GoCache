@@ -1,8 +1,6 @@
 #include "../include/logger.h"
 #include "../include/utils.h"
 
-#include <regex>
-
 namespace gbp {
 
 size_t get_thread_id() {
@@ -78,104 +76,6 @@ std::atomic<size_t>& get_type() {
   return data;
 }
 
-inline size_t GetMemoryUsage() {
-  std::ifstream proc_status("/proc/self/status");
-  // std::ifstream
-  // proc_status("/data/experiment_space/graphscope_bufferpool/status");
-  assert(!!proc_status);
-  for (std::string line; std::getline(proc_status, line);) {
-    if (line.find("VmRSS") != std::string::npos) {
-      std::vector<std::string> strs;
-      boost::split(strs, line, boost::is_any_of("\t "),
-                   boost::token_compress_on);
-      std::stringstream ss(strs[1]);
-      auto ret = std::stoull(strs[1]);
-      return ret;
-    }
-  }
-  return 0;
-}
-
-uint64_t readTLBShootdownCount() {
-  std::ifstream irq_stats("/proc/interrupts");
-  assert(!!irq_stats);
-
-  for (std::string line; std::getline(irq_stats, line);) {
-    if (line.find("TLB") != std::string::npos) {
-      std::vector<std::string> strs;
-      boost::split(strs, line, boost::is_any_of("\t "));
-      uint64_t count = 0;
-      for (size_t i = 0; i < strs.size(); i++) {
-        std::stringstream ss(strs[i]);
-        uint64_t c;
-        ss >> c;
-        count += c;
-      }
-      return count;
-    }
-  }
-  return 0;
-}
-
-uint64_t readIObytesOne() {
-  std::ifstream stat("/sys/block/nvme0n1/stat");
-  assert(!!stat);
-
-  for (std::string line; std::getline(stat, line);) {
-    std::vector<std::string> strs;
-    boost::split(strs, line, boost::is_any_of("\t "), boost::token_compress_on);
-    std::stringstream ss(strs[2]);
-    uint64_t c;
-    ss >> c;
-    return c * 512;
-  }
-  return 0;
-}
-
-std::tuple<size_t, size_t> SSD_io_bytes(
-    const std::string& device_name = "nvme0n1") {
-  std::ifstream stat("/proc/diskstats");
-  assert(!!stat);
-
-  uint64_t read = 0, write = 0;
-  for (std::string line; std::getline(stat, line);) {
-    if (line.find(device_name) != std::string::npos) {
-      std::vector<std::string> strs;
-      boost::split(strs, line, boost::is_any_of("\t "),
-                   boost::token_compress_on);
-      // std::cout << std::stoull(strs[6]) << std::endl;
-      read += std::stoull(strs[6]) * 512;
-      write += std::stoull(strs[10]) * 512;
-    }
-  }
-  return {read, write};
-}
-
-size_t GetMemoryUsageMMAP(std::string& mmap_monitored_dir) {
-  std::ifstream smaps_file("/proc/self/smaps");
-
-  if (!smaps_file.is_open()) {
-    std::cerr << "Failed to open /proc/self/smaps" << std::endl;
-    assert(false);
-  }
-
-  std::string line;
-  std::regex rss_regex(R"(Rss:\s+(\d+)\s+kB)");
-  std::smatch match;
-  size_t total_mmap_rss = 0;
-  bool in_mapping = false;
-
-  while (std::getline(smaps_file, line)) {
-    if (in_mapping && std::regex_search(line, match, rss_regex)) {
-      total_mmap_rss += std::stoul(match[1].str());
-      in_mapping = false;
-    } else if (line.find(mmap_monitored_dir) != std::string::npos) {
-      in_mapping = true;
-    }
-  }
-  return total_mmap_rss;
-}
-
 void PerformanceLogServer::Logging() {
   get_db_dir();
   std::string mmap_monitored_dir;
@@ -185,7 +85,7 @@ void PerformanceLogServer::Logging() {
   } else {
     mmap_monitored_dir = "";  // 如果没有父路径（比如根目录），返回空字符串
   }
-
+  LOG(INFO) << mmap_monitored_dir;
   char* buf = (char*) malloc(4096);
   size_t size = 0;
 
@@ -280,4 +180,102 @@ std::string& get_db_dir() {
   static std::string db_dir;
   return db_dir;
 }
+
+inline size_t GetMemoryUsage() {
+  std::ifstream proc_status("/proc/self/status");
+  // std::ifstream
+  // proc_status("/data/experiment_space/graphscope_bufferpool/status");
+  assert(!!proc_status);
+  for (std::string line; std::getline(proc_status, line);) {
+    if (line.find("VmRSS") != std::string::npos) {
+      std::vector<std::string> strs;
+      boost::split(strs, line, boost::is_any_of("\t "),
+                   boost::token_compress_on);
+      std::stringstream ss(strs[1]);
+      auto ret = std::stoull(strs[1]);
+      return ret;
+    }
+  }
+  return 0;
+}
+
+uint64_t readTLBShootdownCount() {
+  std::ifstream irq_stats("/proc/interrupts");
+  assert(!!irq_stats);
+
+  for (std::string line; std::getline(irq_stats, line);) {
+    if (line.find("TLB") != std::string::npos) {
+      std::vector<std::string> strs;
+      boost::split(strs, line, boost::is_any_of("\t "));
+      uint64_t count = 0;
+      for (size_t i = 0; i < strs.size(); i++) {
+        std::stringstream ss(strs[i]);
+        uint64_t c;
+        ss >> c;
+        count += c;
+      }
+      return count;
+    }
+  }
+  return 0;
+}
+
+uint64_t readIObytesOne() {
+  std::ifstream stat("/sys/block/nvme0n1/stat");
+  assert(!!stat);
+
+  for (std::string line; std::getline(stat, line);) {
+    std::vector<std::string> strs;
+    boost::split(strs, line, boost::is_any_of("\t "), boost::token_compress_on);
+    std::stringstream ss(strs[2]);
+    uint64_t c;
+    ss >> c;
+    return c * 512;
+  }
+  return 0;
+}
+
+std::tuple<size_t, size_t> SSD_io_bytes(const std::string& device_name) {
+  std::ifstream stat("/proc/diskstats");
+  assert(!!stat);
+
+  uint64_t read = 0, write = 0;
+  for (std::string line; std::getline(stat, line);) {
+    if (line.find(device_name) != std::string::npos) {
+      std::vector<std::string> strs;
+      boost::split(strs, line, boost::is_any_of("\t "),
+                   boost::token_compress_on);
+      // std::cout << std::stoull(strs[6]) << std::endl;
+      read += std::stoull(strs[6]) * 512;
+      write += std::stoull(strs[10]) * 512;
+    }
+  }
+  return {read, write};
+}
+
+size_t GetMemoryUsageMMAP(std::string& mmap_monitored_dir) {
+  std::ifstream smaps_file("/proc/self/smaps");
+
+  if (!smaps_file.is_open()) {
+    std::cerr << "Failed to open /proc/self/smaps" << std::endl;
+    assert(false);
+  }
+
+  std::string line;
+  std::regex rss_regex(R"(Rss:\s+(\d+)\s+kB)");
+  std::smatch match;
+  size_t total_mmap_rss = 0;
+  bool in_mapping = false;
+
+  while (std::getline(smaps_file, line)) {
+    if (in_mapping && std::regex_search(line, match, rss_regex)) {
+      total_mmap_rss += std::stoul(match[1].str());
+      in_mapping = false;
+    } else if (line.find(mmap_monitored_dir) != std::string::npos) {
+      in_mapping = true;
+    }
+  }
+  return total_mmap_rss;
+}
+
 }  // namespace gbp

@@ -22,7 +22,7 @@
 
 namespace gbp {
 
-class FIFOReplacer : public Replacer<mpage_id_type> {
+class LRUReplacer : public Replacer<mpage_id_type> {
   struct ListNode {
     ListNode(){};
     ListNode(mpage_id_type val) : val(val){};
@@ -34,7 +34,7 @@ class FIFOReplacer : public Replacer<mpage_id_type> {
 
  public:
   // do not change public interface
-  FIFOReplacer(PageTable* pages_) {
+  LRUReplacer(PageTable* pages_) {
     head_ = ListNode();
     tail_ = ListNode();
     head_.next = &tail_;
@@ -42,10 +42,10 @@ class FIFOReplacer : public Replacer<mpage_id_type> {
     tail_.prev = &head_;
     tail_.next = nullptr;
   }
-  FIFOReplacer(const FIFOReplacer& other) = delete;
-  FIFOReplacer& operator=(const FIFOReplacer&) = delete;
+  LRUReplacer(const LRUReplacer& other) = delete;
+  LRUReplacer& operator=(const LRUReplacer&) = delete;
 
-  ~FIFOReplacer() {
+  ~LRUReplacer() {
     ListNode* tmp;
     while (tail_.prev != &head_) {
       tmp = tail_.prev->prev;
@@ -155,6 +155,7 @@ class FIFOReplacer : public Replacer<mpage_id_type> {
       return false;
     }
   }
+
   size_t Size() const override {
     std::lock_guard<std::mutex> lck(latch_);
     return map_.size();

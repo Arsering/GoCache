@@ -55,6 +55,10 @@ void BufferPool::RegisterFile(GBPfile_handle_type fd) {
       ceil(disk_manager_->GetFileSizeShort(fd), PAGE_SIZE_FILE));
 }
 
+void BufferPool::CloseFile(GBPfile_handle_type fd) {
+  page_table_->DeregisterFile(fd);
+}
+
 /*
  * Used to flush a particular PTE of the buffer pool to disk. Should call the
  * write_page method of the disk manager
@@ -106,26 +110,6 @@ bool BufferPool::ReadWrite(size_t offset, size_t file_size, char* buf,
       return io_server_->io_backend_->Write(offset, buf, buf_size, fd);
   }
 }
-// bool BufferPool::FlushPage(PTE* pte) {
-//   char* memory_page =
-//     (char*)buffer_pool_->FromPageId(page_table_->ToPageId(pte));
-
-//   if constexpr (USING_FIBER_ASYNC_RESPONSE) {
-//     gbp::context_type context = gbp::context_type::GetRawObject();
-//     gbp::async_request_fiber_type* req = new gbp::async_request_fiber_type(
-//       memory_page, PAGE_SIZE_MEMORY, (fpage_id_type)pte->fpage_id, 1,
-//       pte->fd, context);
-//     io_server_->SendRequest(req);
-//     while (!req->success) {
-//       // hybrid_spin(loops);
-//       std::this_thread::yield();
-//     }
-//     return true;
-//   }
-//   else
-//     return io_server_->io_backend_->Write(pte->fpage_id, memory_page,
-//     pte->fd);
-// }
 
 /**
  * User should call this method for deleting a page. This routine will call
@@ -230,14 +214,15 @@ PTE* BufferPool::GetVictimPage() {
  */
 pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
                                             GBPfile_handle_type fd) {
-#if (ASSERT_ENABLE) auto file_size = disk_manager_->GetFileSizeShort(fd);
+#if ASSERT_ENABLE
+  auto file_size = disk_manager_->GetFileSizeShort(fd);
   assert(fpage_id < CEIL(file_size, PAGE_SIZE_MEMORY));
 #endif
 
   // std::lock_guard<std::mutex> lck(latch_);
   auto stat = context_type::Phase::Begin;
 
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
   assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
 #endif
 
@@ -253,6 +238,7 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
         break;
       }
       auto [locked, mpage_id] = page_table_->LockMapping(fd, fpage_id_inpool);
+
       if (locked) {
         if (mpage_id == PageMapping::Mapping::EMPTY_VALUE)
           stat = context_type::Phase::Initing;
@@ -268,7 +254,7 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
         stat = context_type::Phase::Loading;
       } else {
         if (!replacer_->Victim(mpage_id)) {
-          assert(false);
+          // assert(false);
           break;
         }
         stat = context_type::Phase::Evicting;
@@ -292,6 +278,7 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
     case context_type::Phase::Loading: {  // 4
       assert(ReadWrite(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY, ret.second,
                        PAGE_SIZE_MEMORY, fd, true));
+
       ret.first->Clean();
       ret.first->ref_count = 1;
       ret.first->fpage_id = fpage_id_inpool;
@@ -301,14 +288,15 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
                                         page_table_->ToPageId(ret.first)));
 
       replacer_->Insert(page_table_->ToPageId(ret.first));
+
       stat = context_type::Phase::End;
     }
     case context_type::Phase::End: {
-      if constexpr (gbp::DEBUG) {
-        if (gbp::warmup_mark().load() == 1)
-          buffer_pool_->GetUsedMark().set(buffer_pool_->ToPageId(ret.second),
-                                          true);
-      }
+#ifdef DEBUG_BITMAP
+      if (gbp::warmup_mark().load() == 1)
+        buffer_pool_->GetUsedMark().set(buffer_pool_->ToPageId(ret.second),
+                                        true);
+#endif
       return ret;
     }
     }
