@@ -30,6 +30,7 @@
 #define LBMalloc(size) ::malloc(size)
 #define LBFree(p) ::free(p)
 #define LBRealloc(p, size) ::realloc((p), (size))
+#define LBCalloc(nitems, size) ::calloc(nitems, size)
 
 // #define ASSERT() assert()
 #define ASSERT() \
