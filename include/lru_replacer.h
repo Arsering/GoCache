@@ -136,6 +136,7 @@ class LRUReplacer : public Replacer<mpage_id_type> {
       victim->prev->next = &tail_;
 
       mpage_ids.push_back(victim->val);
+      page_num--;
       map_.erase(victim->val);
       delete victim;
     }

@@ -71,7 +71,7 @@ bool BufferPoolManager::FlushPage(fpage_id_type fpage_id,
 bool BufferPoolManager::FlushFile(GBPfile_handle_type fd) {
   if (!disk_manager_->ValidFD(fd))
     return true;
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
   assert(disk_manager_->ValidFD(fd));
 #endif
 

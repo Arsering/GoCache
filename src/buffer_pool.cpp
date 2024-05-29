@@ -69,6 +69,7 @@ bool BufferPool::FlushPage(fpage_id_type fpage_id, GBPfile_handle_type fd) {
   fpage_id_type fpage_id_inpool = partitioner_->GetFPageIdInPartition(fpage_id);
 
   auto [locked, mpage_id] = page_table_->LockMapping(fd, fpage_id_inpool);
+  assert(locked);
   if (!locked)
     return false;
 
