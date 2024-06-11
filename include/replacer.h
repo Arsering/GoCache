@@ -16,7 +16,8 @@ class Replacer {
  public:
   Replacer() {}
   virtual ~Replacer() {}
-  virtual void Insert(const T& value) = 0;
+  virtual bool Insert(T value) = 0;
+  virtual bool Promote(T value) = 0;
   virtual bool Victim(T& value) = 0;
   virtual bool Victim(std::vector<T>& value, T page_num) = 0;
 

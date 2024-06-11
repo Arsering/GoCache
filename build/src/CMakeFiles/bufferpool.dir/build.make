@@ -57,9 +57,22 @@ include src/CMakeFiles/bufferpool.dir/progress.make
 # Include the compile flags for this target's objects.
 include src/CMakeFiles/bufferpool.dir/flags.make
 
+src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: src/CMakeFiles/bufferpool.dir/flags.make
+src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../src/buffer_obj.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o"
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src && /usr/bin/g++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/bufferpool.dir/buffer_obj.cpp.o -c /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_obj.cpp
+
+src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/bufferpool.dir/buffer_obj.cpp.i"
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src && /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_obj.cpp > CMakeFiles/bufferpool.dir/buffer_obj.cpp.i
+
+src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/bufferpool.dir/buffer_obj.cpp.s"
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src && /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_obj.cpp -o CMakeFiles/bufferpool.dir/buffer_obj.cpp.s
+
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: src/CMakeFiles/bufferpool.dir/flags.make
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../src/buffer_pool.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_1) "Building CXX object src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o"
 	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src && /usr/bin/g++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/bufferpool.dir/buffer_pool.cpp.o -c /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool.cpp
 
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.i: cmake_force
@@ -72,7 +85,7 @@ src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.s: cmake_force
 
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: src/CMakeFiles/bufferpool.dir/flags.make
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../src/buffer_pool_manager.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Building CXX object src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o"
 	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src && /usr/bin/g++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o -c /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool_manager.cpp
 
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.i: cmake_force
@@ -85,7 +98,7 @@ src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.s: cmake_force
 
 src/CMakeFiles/bufferpool.dir/config.cpp.o: src/CMakeFiles/bufferpool.dir/flags.make
 src/CMakeFiles/bufferpool.dir/config.cpp.o: ../src/config.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object src/CMakeFiles/bufferpool.dir/config.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object src/CMakeFiles/bufferpool.dir/config.cpp.o"
 	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src && /usr/bin/g++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/bufferpool.dir/config.cpp.o -c /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/config.cpp
 
 src/CMakeFiles/bufferpool.dir/config.cpp.i: cmake_force
@@ -98,7 +111,7 @@ src/CMakeFiles/bufferpool.dir/config.cpp.s: cmake_force
 
 src/CMakeFiles/bufferpool.dir/debug.cpp.o: src/CMakeFiles/bufferpool.dir/flags.make
 src/CMakeFiles/bufferpool.dir/debug.cpp.o: ../src/debug.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object src/CMakeFiles/bufferpool.dir/debug.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object src/CMakeFiles/bufferpool.dir/debug.cpp.o"
 	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src && /usr/bin/g++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/bufferpool.dir/debug.cpp.o -c /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/debug.cpp
 
 src/CMakeFiles/bufferpool.dir/debug.cpp.i: cmake_force
@@ -111,7 +124,7 @@ src/CMakeFiles/bufferpool.dir/debug.cpp.s: cmake_force
 
 src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.o: src/CMakeFiles/bufferpool.dir/flags.make
 src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.o: ../src/extendible_hash.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.o"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.o"
 	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src && /usr/bin/g++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/bufferpool.dir/extendible_hash.cpp.o -c /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/extendible_hash.cpp
 
 src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.i: cmake_force
@@ -121,19 +134,6 @@ src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.i: cmake_force
 src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/bufferpool.dir/extendible_hash.cpp.s"
 	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src && /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/extendible_hash.cpp -o CMakeFiles/bufferpool.dir/extendible_hash.cpp.s
-
-src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.o: src/CMakeFiles/bufferpool.dir/flags.make
-src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.o: ../src/fifo_replacer.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.o"
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src && /usr/bin/g++  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles/bufferpool.dir/fifo_replacer.cpp.o -c /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/fifo_replacer.cpp
-
-src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/bufferpool.dir/fifo_replacer.cpp.i"
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src && /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/fifo_replacer.cpp > CMakeFiles/bufferpool.dir/fifo_replacer.cpp.i
-
-src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/bufferpool.dir/fifo_replacer.cpp.s"
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/src && /usr/bin/g++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/fifo_replacer.cpp -o CMakeFiles/bufferpool.dir/fifo_replacer.cpp.s
 
 src/CMakeFiles/bufferpool.dir/logger.cc.o: src/CMakeFiles/bufferpool.dir/flags.make
 src/CMakeFiles/bufferpool.dir/logger.cc.o: ../src/logger.cc
@@ -163,24 +163,24 @@ src/CMakeFiles/bufferpool.dir/utils.cpp.s: cmake_force
 
 # Object files for target bufferpool
 bufferpool_OBJECTS = \
+"CMakeFiles/bufferpool.dir/buffer_obj.cpp.o" \
 "CMakeFiles/bufferpool.dir/buffer_pool.cpp.o" \
 "CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o" \
 "CMakeFiles/bufferpool.dir/config.cpp.o" \
 "CMakeFiles/bufferpool.dir/debug.cpp.o" \
 "CMakeFiles/bufferpool.dir/extendible_hash.cpp.o" \
-"CMakeFiles/bufferpool.dir/fifo_replacer.cpp.o" \
 "CMakeFiles/bufferpool.dir/logger.cc.o" \
 "CMakeFiles/bufferpool.dir/utils.cpp.o"
 
 # External object files for target bufferpool
 bufferpool_EXTERNAL_OBJECTS =
 
+../lib/libbufferpool.so: src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o
 ../lib/libbufferpool.so: src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o
 ../lib/libbufferpool.so: src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o
 ../lib/libbufferpool.so: src/CMakeFiles/bufferpool.dir/config.cpp.o
 ../lib/libbufferpool.so: src/CMakeFiles/bufferpool.dir/debug.cpp.o
 ../lib/libbufferpool.so: src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.o
-../lib/libbufferpool.so: src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.o
 ../lib/libbufferpool.so: src/CMakeFiles/bufferpool.dir/logger.cc.o
 ../lib/libbufferpool.so: src/CMakeFiles/bufferpool.dir/utils.cpp.o
 ../lib/libbufferpool.so: src/CMakeFiles/bufferpool.dir/build.make

@@ -34,13 +34,15 @@ class LRUReplacer : public Replacer<mpage_id_type> {
 
  public:
   // do not change public interface
-  LRUReplacer(PageTable* pages_) {
+  LRUReplacer(PageTable* page_table) {
     head_ = ListNode();
     tail_ = ListNode();
     head_.next = &tail_;
     head_.prev = nullptr;
     tail_.prev = &head_;
     tail_.next = nullptr;
+
+    page_table_ = page_table;
   }
   LRUReplacer(const LRUReplacer& other) = delete;
   LRUReplacer& operator=(const LRUReplacer&) = delete;
@@ -54,37 +56,59 @@ class LRUReplacer : public Replacer<mpage_id_type> {
     }
   }
 
-  void Insert(const mpage_id_type& value) override {
+  FORCE_INLINE bool Insert(mpage_id_type value) override {
     std::lock_guard<std::mutex> lck(latch_);
-    ListNode* cur;
-    if (map_.find(value) != map_.end()) {
-      cur = map_[value];
-      ListNode* prev = cur->prev;
-      ListNode* succ = cur->next;
-      prev->next = succ;
-      succ->prev = prev;
-    } else {
-      cur = new ListNode(value);
-    }
 
-    ListNode* fir = head_.next;
-    cur->next = fir;
-    fir->prev = cur;
-    cur->prev = &head_;
-    head_.next = cur;
-    map_[value] = cur;
-    return;
+    bool ret = false;
+    if (map_.find(value) != map_.end()) {
+      ret = false;
+    } else {
+      ListNode* cur = new ListNode(value);
+      cur->next = head_.next;
+      cur->prev = &head_;
+      head_.next->prev = cur;
+      head_.next = cur;
+
+      map_[value] = cur;
+      ret = true;
+    }
+    return ret;
   }
 
-  bool Victim(mpage_id_type& mpage_id) override {
+  FORCE_INLINE bool Promote(mpage_id_type value) override {
     std::lock_guard<std::mutex> lck(latch_);
 
-    ListNode* victim = tail_.prev;
+    bool ret = false;
+    auto target = map_.find(value);
+    if (target != map_.end()) {
+      ListNode* cur = target->second;
+      cur->prev->next = cur->next;
+      cur->next->prev = cur->prev;
+
+      cur->next = head_.next;
+      cur->prev = &head_;
+      head_.next->prev = cur;
+      head_.next = cur;
+      ret = true;
+    } else {
+      ret = false;
+    }
+    return ret;
+  }
+
+  FORCE_INLINE bool Victim(mpage_id_type& mpage_id) override {
+    std::lock_guard<std::mutex> lck(latch_);
+
+    ListNode* to_evict = tail_.prev;
     while (true) {
-      if (victim == &head_)
+      if (to_evict == &head_)
         return false;
       // assert(victim != &head_);
-      auto* pte = page_table_->FromPageId(victim->val);
+      auto* pte = page_table_->FromPageId(to_evict->val);
+      if (pte->ref_count != 0) {
+        to_evict = to_evict->prev;
+        continue;
+      }
       auto pte_unpacked = pte->ToUnpacked();
 
       auto [locked, mpage_id] =
@@ -94,14 +118,14 @@ class LRUReplacer : public Replacer<mpage_id_type> {
         break;
       if (locked)
         assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
-      victim = victim->prev;
+      to_evict = to_evict->prev;
     }
 
-    tail_.prev = victim->prev;
-    victim->prev->next = &tail_;
-    mpage_id = victim->val;
-    map_.erase(victim->val);
-    delete victim;
+    to_evict->prev->next = to_evict->next;
+    to_evict->next->prev = to_evict->prev;
+    mpage_id = to_evict->val;
+    map_.erase(to_evict->val);
+    delete to_evict;
     return true;
   }
 
@@ -116,7 +140,7 @@ class LRUReplacer : public Replacer<mpage_id_type> {
       while (true) {
         if (victim == &head_)
           return false;
-        assert(victim != &head_);
+
         pte = page_table_->FromPageId(victim->val);
         auto pte_unpacked = pte->ToUnpacked();
 
@@ -182,8 +206,8 @@ class LRUReplacer : public Replacer<mpage_id_type> {
   ListNode tail_;
   std::unordered_map<mpage_id_type, ListNode*> map_;
   mutable std::mutex latch_;
-  PageTable* page_table_;
   // add your member variables here
+  PageTable* page_table_;
 };
 
 }  // namespace gbp

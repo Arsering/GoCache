@@ -7,15 +7,18 @@
  */
 
 #pragma once
-#include <assert.h>
-#include <list>
-#include <mutex>
-#include <vector>
 
+#include <assert.h>
 #include <math.h>
 #include <sys/mman.h>
+#include <list>
+#include <mutex>
 #include <utility>
+#include <vector>
+
+#include "TwoQLRU_replacer.h"
 #include "buffer_obj.h"
+#include "clock_replacer.h"
 #include "config.h"
 #include "debug.h"
 #include "extendible_hash.h"
@@ -23,13 +26,17 @@
 #include "io_backend.h"
 #include "io_server.h"
 #include "logger.h"
+#include "lru_replacer.h"
 #include "memory_pool.h"
 #include "page_table.h"
+#include "partitioner.h"
 #include "rw_lock.h"
+#include "sieve_replacer.h"
 
 #include "eviction_server.h"
 
 namespace gbp {
+// class BufferBlock;
 
 class BufferPool {
   friend class BufferPoolManager;
@@ -38,8 +45,8 @@ class BufferPool {
   BufferPool() = default;
   ~BufferPool();
 
-  void init(u_int32_t pool_ID, mpage_id_type pool_size, IOServer_old* io_server,
-            RoundRobinPartitioner* partitioner,
+  void init(u_int32_t pool_ID, mpage_id_type pool_size, MemoryPool memory_pool,
+            IOServer_old* io_server, RoundRobinPartitioner* partitioner,
             EvictionServer* eviction_server);
 
   bool UnpinPage(mpage_id_type page_id, bool is_dirty,
@@ -114,7 +121,7 @@ class BufferPool {
   void RegisterFile(GBPfile_handle_type fd);
   void CloseFile(GBPfile_handle_type fd);
 
-  pair_min<PTE*, char*> FetchPage(mpage_id_type page_id_f,
+  pair_min<PTE*, char*> FetchPage(fpage_id_type fpage_id,
                                   GBPfile_handle_type fd);
 
   FORCE_INLINE pair_min<PTE*, char*> Pin(fpage_id_type fpage_id_inpool,
@@ -126,14 +133,14 @@ class BufferPool {
       auto tar = page_table_->FromPageId(mpage_id);
       auto [has_inc, pre_ref_count] = tar->IncRefCount(fpage_id_inpool, fd);
       if (has_inc) {
-        return {tar, (char*) buffer_pool_->FromPageId(mpage_id)};
+        return {tar, (char*) memory_pool_.FromPageId(mpage_id)};
       }
     }
     return {nullptr, nullptr};
   }
   std::tuple<size_t, size_t, size_t, size_t, size_t> GetMemoryUsage() {
     size_t memory_pool_usage =
-        (buffer_pool_->GetSize() - free_list_->Size()) * PAGE_SIZE_MEMORY;
+        (memory_pool_.GetSize() - free_list_->Size()) * PAGE_SIZE_MEMORY;
 
     size_t metadata_usage = page_table_->GetMemoryUsage() +
                             replacer_->GetMemoryUsage() +
@@ -149,7 +156,7 @@ class BufferPool {
 
   uint32_t pool_ID_ = std::numeric_limits<uint32_t>::max();
   mpage_id_type pool_size_;  // number of pages in buffer pool
-  MemoryPool* buffer_pool_ = nullptr;
+  MemoryPool memory_pool_;
   PageTable* page_table_ = nullptr;  // array of pages
   IOServer_old* io_server_;
   DiskManager* disk_manager_;

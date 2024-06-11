@@ -14,7 +14,8 @@
 #include <vector>
 
 #include "config.h"
-#include "partitioner.h"
+// #include "partitioner.h"
+#include "logger.h"
 #include "utils.h"
 
 namespace gbp {
@@ -34,9 +35,6 @@ class DiskManager {
   FORCE_INLINE OSfile_handle_type
   GetFileDescriptor(GBPfile_handle_type fd) const {
 #if ASSERT_ENABLE
-    if (!fd >= fd_oss_.size()) {
-      LOG(FATAL) << "cp" << fd << " " << fd_oss_.size();
-    }
     assert(fd < fd_oss_.size());
 #endif
     return fd_oss_[fd].first;
@@ -56,8 +54,7 @@ class DiskManager {
     file_size_inBytes_[fd] = new_size_inByte;
 
 #ifdef DEBUG_BITMAP
-    useds_[fd].resize(ceil(new_size_inByte, PAGE_SIZE_MEMORY));
-    useds_[fd].reset();
+    used_[fd].resize(ceil(new_size_inByte, PAGE_SIZE_MEMORY));
 #endif
     return 0;
   }
@@ -75,9 +72,8 @@ class DiskManager {
         ceil(file_sizes_[file_sizes_.size() - 1], PAGE_SIZE_MEMORY));
 #endif
 #ifdef DEBUG_BITMAP
-    useds_.emplace_back(
+    used_.emplace_back(
         ceil(file_size_inBytes_[fd_oss_.size() - 1], PAGE_SIZE_MEMORY));
-    useds_[fd_oss_.size() - 1].reset();
 #endif
 
     return fd_oss_.size() - 1;
@@ -108,8 +104,12 @@ class DiskManager {
   }
 
 #ifdef DEBUG_BITMAP
-  FORCE_INLINE boost::dynamic_bitset<>& GetUsedMark(GBPfile_handle_type fd) {
-    return useds_[fd];
+  bool GetUsedMark(GBPfile_handle_type fd, fpage_id_type fpage_id) {
+    return used_[fd].get_atomic(fpage_id);
+  }
+
+  void SetUsedMark(GBPfile_handle_type fd, fpage_id_type fpage_id, bool used) {
+    used_[fd].set_atomic(fpage_id, used);
   }
 #endif
 
@@ -117,7 +117,7 @@ class DiskManager {
   std::vector<std::string> file_names_;
   std::vector<size_t> file_size_inBytes_;
 #ifdef DEBUG_BITMAP
-  std::vector<boost::dynamic_bitset<>> useds_;
+  std::vector<bitset_dynamic> used_;
 #endif
 };
 
@@ -401,6 +401,7 @@ class RWSysCall : public IOBackend {
 #endif
     if (unlikely(disk_manager_->file_size_inBytes_[fd] - offset < size))
       disk_manager_->Resize(fd, disk_manager_->file_size_inBytes_[fd]);
+
     ::fdatasync(disk_manager_->fd_oss_[fd]
                     .first);  // needs to flush to keep disk file in sync
 
@@ -476,28 +477,22 @@ class RWSysCall : public IOBackend {
    */
   bool Read(size_t offset, char* data, size_t size, GBPfile_handle_type fd,
             bool* finish = nullptr) override {
-#ifdef DEBUG_BITMAP
-    if (gbp::warmup_mark().load() == 1) {
-      fpage_id_type fpage_id = offset / PAGE_SIZE_FILE;
-      if (disk_manager_->GetUsedMark(fd)[fpage_id] == true)
-        assert(false);
-      disk_manager_->GetUsedMark(fd).set(fpage_id, true);
-      assert(disk_manager_->GetUsedMark(fd)[fpage_id] == true);
-    }
-#endif
-
 #if ASSERT_ENABLE
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
+
     assert(offset <=
            disk_manager_
                ->file_size_inBytes_[fd]);  // check if read beyond file length
 #endif
+
     if constexpr (DEBUG) {
       gbp::PerformanceLogServer::GetPerformanceLogger()
           .GetClientReadThroughputByte()
           .fetch_add(size);
+      gbp::get_counter_global(10).fetch_add(size);
     }
+
     auto ret = ::pread(disk_manager_->fd_oss_[fd].first, data, size, offset);
     // if (ret == 0) {
     //   std::cout << "ret= " << offset / 4096 << " " << size << std::endl;

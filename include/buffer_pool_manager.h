@@ -31,6 +31,7 @@ namespace gbp {
 // template<typename IOBackendType>
 
 // FIXME: 未实现读写的并发
+// class BufferBlock;
 class BufferPoolManager {
  public:
   BufferPoolManager() = default;
@@ -106,6 +107,11 @@ class BufferPoolManager {
   bool LoadFile(GBPfile_handle_type fd = 0);
   bool Flush();
 
+  bool ReadWrite(size_t offset, size_t file_size, char* buf, size_t buf_size,
+                 GBPfile_handle_type fd, bool is_read = true);
+  bool LoadPage(pair_min<PTE*, char*> mpage);
+  bool Clean();
+
   std::tuple<size_t, size_t, size_t, size_t, size_t> GetMemoryUsage() {
     size_t memory_pool_usage = 0;
     size_t metadata_usage = 0;
@@ -132,6 +138,7 @@ class BufferPoolManager {
   uint16_t pool_num_;
   size_t
       pool_size_inpage_per_instance_;  // number of pages in buffer pool (Byte)
+  MemoryPool* memory_pool_global_ = nullptr;
   DiskManager* disk_manager_;
   RoundRobinPartitioner* partitioner_;
   std::vector<IOServer_old*> io_servers_;

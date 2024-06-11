@@ -1,4 +1,5 @@
 #include "../include/buffer_pool_manager.h"
+#include "../include/buffer_obj.h"
 
 #include <sys/mman.h>
 #include <utility>
@@ -9,14 +10,14 @@ BufferPoolManager::~BufferPoolManager() {
   if (!initialized_)
     return;
 
-#ifdef DEBUG_BITMAP
-  size_t page_used_num = 0;
-  for (auto pool : pools_)
-    page_used_num += pool->buffer_pool_->GetUsedMark().count();
-#ifdef GRAPHSCOPE
-  LOG(INFO) << "page_used_num = " << page_used_num;
-#endif
-#endif
+  // #ifdef DEBUG_BITMAP
+  //   size_t page_used_num = 0;
+  //   for (auto pool : pools_)
+  //     page_used_num += pool->memory_pool_.GetUsedMark().count();
+  // #ifdef GRAPHSCOPE
+  //   LOG(INFO) << "page_used_num = " << page_used_num;
+  // #endif
+  // #endif
 
   if constexpr (PERSISTENT)
     Flush();
@@ -39,11 +40,13 @@ void BufferPoolManager::init(uint16_t pool_num,
                              size_t pool_size_inpage_per_instance,
                              uint16_t io_server_num,
                              const std::string& file_path) {
-  LOG(INFO) << "pool_size_inpage_per_instance = "
-            << pool_size_inpage_per_instance;
   pool_num_ = pool_num;
   get_pool_num().store(pool_num);
   pool_size_inpage_per_instance_ = pool_size_inpage_per_instance;
+
+  memory_pool_global_ =
+      new MemoryPool(pool_size_inpage_per_instance * pool_num_);
+
   disk_manager_ = new DiskManager(file_path);
   partitioner_ = new RoundRobinPartitioner(pool_num);
   if constexpr (EVICTION_SERVER_ENABLE)
@@ -55,9 +58,11 @@ void BufferPoolManager::init(uint16_t pool_num,
 
   for (int idx = 0; idx < pool_num; idx++) {
     pools_.push_back(new BufferPool());
-    pools_[idx]->init(idx, pool_size_inpage_per_instance_,
-                      io_servers_[idx % io_server_num], partitioner_,
-                      eviction_server_);
+    pools_[idx]->init(
+        idx, pool_size_inpage_per_instance_,
+        memory_pool_global_->GetSubPool(pool_size_inpage_per_instance * idx,
+                                        pool_size_inpage_per_instance),
+        io_servers_[idx % io_server_num], partitioner_, eviction_server_);
   }
   initialized_ = true;
 }
@@ -124,6 +129,80 @@ void BufferPoolManager::RegisterFile(GBPfile_handle_type fd) {
   for (auto pool : pools_) {
     pool->RegisterFile(fd);
   }
+}
+
+bool BufferPoolManager::ReadWrite(size_t offset, size_t file_size, char* buf,
+                                  size_t buf_size, GBPfile_handle_type fd,
+                                  bool is_read) {
+  auto io_server =
+      io_servers_[partitioner_->GetPartitionId(offset / PAGE_SIZE_FILE) %
+                  io_servers_.size()];
+
+  if constexpr (USING_FIBER_ASYNC_RESPONSE) {
+    context_type context = context_type::GetRawObject();
+    async_request_fiber_type* req = new async_request_fiber_type(
+        buf, buf_size, offset, file_size, fd, context, is_read);
+    assert(io_server->SendRequest(req));
+
+    size_t loops = 0;
+    while (!req->success) {
+      // hybrid_spin(loops);
+      std::this_thread::yield();
+    }
+    delete req;
+    return true;
+  } else {
+    if (is_read)
+      return io_server->io_backend_->Read(offset, buf, buf_size, fd);
+    else
+      return io_server->io_backend_->Write(offset, buf, buf_size, fd);
+  }
+}
+
+bool BufferPoolManager::LoadPage(pair_min<PTE*, char*> mpage) {
+  while (!mpage.first->initialized) {
+    if (mpage.first->Lock()) {
+      if (mpage.first->initialized) {
+        assert(mpage.first->UnLock());
+        return true;
+      }
+      assert(ReadWrite(
+          *reinterpret_cast<fpage_id_type*>(mpage.second) * PAGE_SIZE_FILE,
+          PAGE_SIZE_FILE, mpage.second, PAGE_SIZE_MEMORY, mpage.first->fd,
+          true));
+      mpage.first->initialized = true;
+      assert(mpage.first->UnLock());
+    } else {
+      std::this_thread::yield();
+    }
+  }
+  return true;
+}
+
+bool BufferPoolManager::Clean() {
+  Flush();
+  size_t pool_id = 0;
+  size_t fd, fpage_id;
+  for (auto pool : pools_) {
+    for (size_t idx = 0; idx < pool->pool_size_; idx++) {
+      fd = pool->page_table_->FromPageId(idx)->fd;
+      fpage_id = pool->partitioner_->GetFPageIdGlobal(
+          pool_id, pool->page_table_->FromPageId(idx)->fpage_id);
+#ifdef DEBUG_BITMAP
+
+      if (pool->page_table_->FromPageId(idx)->initialized) {
+        assert(disk_manager_->GetUsedMark(fd, fpage_id) == true);
+        disk_manager_->SetUsedMark(fd, fpage_id, false);
+        assert(disk_manager_->GetUsedMark(fd, fpage_id) == false);
+      }
+#endif
+      pool->page_table_->FromPageId(idx)->initialized = false;
+      *reinterpret_cast<fpage_id_type*>(pool->memory_pool_.FromPageId(idx)) =
+          fpage_id;
+    }
+    pool_id++;
+  }
+  return true;
 }
 
 int BufferPoolManager::GetBlock(char* buf, size_t file_offset,
@@ -244,9 +323,10 @@ const BufferBlock BufferPoolManager::GetBlock(size_t file_offset,
 #endif
     auto mpage =
         pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(mpage.first != nullptr && mpage.second != nullptr);
 #endif
+
     ret.InsertPage(page_id, mpage.second + fpage_offset, mpage.first);
     page_id++;
     num_page--;
@@ -258,6 +338,7 @@ const BufferBlock BufferPoolManager::GetBlock(size_t file_offset,
     gbp::get_counter(12)++;
 #endif
   }
+  // gbp::get_counter_global(11).fetch_add(ret.PageNum());
 
   return ret;
 }
