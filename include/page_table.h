@@ -21,27 +21,23 @@
 #include "utils.h"
 
 namespace gbp {
-class BufferPool;
+// class BufferPool;
 
 class PageTableInner {
-  friend class BufferPool;
+  // friend class BufferPool;
 
  public:
   struct UnpackedPTE {
     uint16_t ref_count;
     GBPfile_handle_type fd;
+    bool initialized;
     bool dirty;
     bool busy;
     fpage_id_type fpage_id;
   };
 
-  struct alignas(sizeof(uint64_t)) PTE {
-    uint16_t ref_count : 16;
-    GBPfile_handle_type fd : 14;
-    bool dirty : 1;
-    bool busy : 1;
-    fpage_id_type fpage_id : 32;
-
+  class alignas(sizeof(uint64_t)) PTE {
+   public:
     FORCE_INLINE uint64_t& AsPacked() { return (uint64_t&) *this; }
 
     FORCE_INLINE const uint64_t& AsPacked() const {
@@ -68,7 +64,8 @@ class PageTableInner {
       auto packed_header =
           as_atomic(AsPacked()).load(std::memory_order_relaxed);
       auto pte = PTE::FromPacked(packed_header);
-      return {pte.ref_count, pte.fd, pte.dirty, pte.busy, pte.fpage_id};
+      return {pte.ref_count, pte.fd,   pte.initialized,
+              pte.dirty,     pte.busy, pte.fpage_id};
     }
 
     // 需要获得文件页的相关信息，因为该内存页可能被用于存储其他文件页
@@ -168,7 +165,8 @@ class PageTableInner {
         new_packed = old_packed;
         auto& new_header = PTE::FromPacked(new_packed);
 
-        if (new_header.ref_count != 0 || new_header.busy)
+        if ((new_header.ref_count != 0 && new_header.initialized) ||
+            new_header.busy)
           return false;
         new_header.busy = true;
 
@@ -199,6 +197,14 @@ class PageTableInner {
 
       return true;
     }
+
+   public:
+    uint16_t ref_count : 16;
+    GBPfile_handle_type fd : 13;
+    bool initialized : 1;
+    bool dirty : 1;
+    bool busy : 1;
+    fpage_id_type fpage_id : 32;
   };
 
   static_assert(sizeof(PTE) == sizeof(uint64_t));
@@ -206,8 +212,8 @@ class PageTableInner {
     PTE ptes[8];
 
     constexpr static size_t NUM_PACK_PAGES = 8;
-    constexpr static PTE EMPTY_PTE = {0, INVALID_FILE_HANDLE >> 2, 0, 0,
-                                      INVALID_PAGE_ID};
+    constexpr static PTE EMPTY_PTE = {0, INVALID_FILE_HANDLE >> 3, 0, 0,
+                                      0, INVALID_PAGE_ID};
   };
 
   static_assert(sizeof(PackedPTECacheLine) == CACHELINE_SIZE);
@@ -252,16 +258,24 @@ class PageTableInner {
   }
 
   PTE* FromPageId(mpage_id_type page_id) const {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
+    if (page_id >= num_pages_) {
+#ifdef GRAPHSCOPE
+      LOG(FATAL) << page_id << " " << num_pages_;
+#endif
+    }
     assert(page_id < num_pages_);
 #endif
     return pool_ + page_id;
   }
 
   mpage_id_type ToPageId(const PTE* page) const {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(page != nullptr);
 #endif
+    // auto ret = (page - pool_);
+    // if (ret > num_pages_)
+    //   assert(false);
     return (page - pool_);
   }
   size_t GetMemoryUsage() { return num_pages_ * sizeof(PTE); }
@@ -283,12 +297,13 @@ class PageMapping {
   static_assert(CACHELINE_SIZE % sizeof(mpage_id_type) == 0);
 
   struct alignas(sizeof(mpage_id_type)) Mapping {
-    mpage_id_type mpage_id;
+    mpage_id_type mpage_id : 31;
+    bool visited : 1;
 
     constexpr static mpage_id_type EMPTY_VALUE =
-        std::numeric_limits<mpage_id_type>::max();
+        std::numeric_limits<mpage_id_type>::max() >> 1;
     constexpr static mpage_id_type BUSY_VALUE =
-        std::numeric_limits<mpage_id_type>::max() - 1;
+        (std::numeric_limits<mpage_id_type>::max() >> 1) - 1;
 
     bool Clean() {
       *this = PackedMappingCacheLine::EMPTY_PTE;
@@ -302,7 +317,7 @@ class PageMapping {
   struct alignas(CACHELINE_SIZE) PackedMappingCacheLine {
     Mapping ptes[NUM_PER_CACHELINE];
 
-    constexpr static Mapping EMPTY_PTE = {Mapping::EMPTY_VALUE};
+    constexpr static Mapping EMPTY_PTE = {Mapping::EMPTY_VALUE, false};
   };
   static_assert(sizeof(PackedMappingCacheLine) == CACHELINE_SIZE);
 
@@ -337,12 +352,17 @@ class PageMapping {
 #endif
     std::atomic<mpage_id_type>& atomic_data =
         as_atomic((mpage_id_type&) mappings_[fpage_id]);
-    mpage_id_type old_data = atomic_data.load(std::memory_order_relaxed);
+    mpage_id_type old_data = atomic_data.load(std::memory_order_relaxed),
+                  new_data;
 
     do {
+      new_data = old_data;
+      auto& unpacked_data = Mapping::FromPacked(new_data);
       if (Mapping::FromPacked(old_data).mpage_id != Mapping::BUSY_VALUE)
         return false;
-    } while (!atomic_data.compare_exchange_weak(old_data, mpage_id,
+      unpacked_data.mpage_id = mpage_id;
+      unpacked_data.visited = false;
+    } while (!atomic_data.compare_exchange_weak(old_data, new_data,
                                                 std::memory_order_release,
                                                 std::memory_order_relaxed));
 
@@ -355,13 +375,18 @@ class PageMapping {
 #endif
     std::atomic<mpage_id_type>& atomic_data =
         as_atomic((mpage_id_type&) mappings_[fpage_id]);
-    mpage_id_type old_data = atomic_data.load(std::memory_order_relaxed);
+    mpage_id_type old_data = atomic_data.load(std::memory_order_relaxed),
+                  new_data;
 
     do {
-      if (Mapping::FromPacked(old_data).mpage_id != Mapping::BUSY_VALUE)
-        return false;
+      new_data = old_data;
+      auto& new_packed = Mapping::FromPacked(new_data);
 
-    } while (!atomic_data.compare_exchange_weak(old_data, Mapping::EMPTY_VALUE,
+      if (Mapping::FromPacked(old_data).mpage_id != Mapping::BUSY_VALUE) {
+        return false;
+      }
+      new_packed.mpage_id = Mapping::EMPTY_VALUE;
+    } while (!atomic_data.compare_exchange_weak(old_data, new_data,
                                                 std::memory_order_release,
                                                 std::memory_order_relaxed));
 
@@ -374,10 +399,12 @@ class PageMapping {
 #endif
     std::atomic<mpage_id_type>& atomic_data =
         as_atomic((mpage_id_type&) mappings_[fpage_id]);
-    mpage_id_type old_data = atomic_data.load(std::memory_order_relaxed);
+    mpage_id_type old_data = atomic_data.load(std::memory_order_relaxed),
+                  new_data;
 
     do {
-      auto& unpacked_data = Mapping::FromPacked(old_data);
+      new_data = old_data;
+      auto& unpacked_data = Mapping::FromPacked(new_data);
 
       if (unpacked_data.mpage_id == Mapping::BUSY_VALUE) {
         return {false, unpacked_data.mpage_id};
@@ -385,8 +412,8 @@ class PageMapping {
       // if (for_modify && unpacked_data.mpage_id != Mapping::EMPTY_VALUE) {
       //   return { false, unpacked_data.mpage_id };
       // }
-
-    } while (!atomic_data.compare_exchange_weak(old_data, Mapping::BUSY_VALUE,
+      unpacked_data.mpage_id = Mapping::BUSY_VALUE;
+    } while (!atomic_data.compare_exchange_weak(old_data, new_data,
                                                 std::memory_order_release,
                                                 std::memory_order_relaxed));
 

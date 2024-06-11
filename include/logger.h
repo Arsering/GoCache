@@ -68,7 +68,7 @@ struct LogData {
   }
 };
 
-class ThreadLog {
+class ThreadLo {
  private:
   int thread_id_;
   std::string filename_;
@@ -78,9 +78,9 @@ class ThreadLog {
   std::ofstream log_file_;
 
  public:
-  ThreadLog() : thread_id_(-1) {}
-  // ThreadLog(int tid) { open_log_file(tid); }
-  ~ThreadLog() { close_log_file(); }
+  ThreadLo() : thread_id_(-1) {}
+  // ThreadLo(int tid) { open_log_file(tid); }
+  ~ThreadLo() { close_log_file(); }
 
   void open_log_file(int tid) {
     thread_id_ = tid;
@@ -243,10 +243,14 @@ class PerformanceLogServer {
   std::thread server_;
 };
 
-inline size_t GetMemoryUsage();
+size_t GetMemoryUsage();
 uint64_t readTLBShootdownCount();
 uint64_t readIObytesOne();
 std::tuple<size_t, size_t> SSD_io_bytes(
     const std::string& device_name = "nvme0n1");
 size_t GetMemoryUsageMMAP(std::string& mmap_monitored_dir);
+std::tuple<size_t, size_t> GetCPUTime();
+std::vector<std::tuple<void**, int, size_t>>& GetMAS();
+void CleanMAS();
+
 }  // namespace gbp

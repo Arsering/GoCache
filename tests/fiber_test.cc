@@ -380,8 +380,10 @@ void fiber_pread_1(gbp::DiskManager* disk_manager, size_t file_size_inByte,
           assert(*reinterpret_cast<gbp::fpage_id_type*>(
                      req.value()->io_vec[0].iov_base) ==
                  req.value()->fpage_id_start);
-          Client_Read_throughput().fetch_add(req.value()->page_num *
-                                             gbp::PAGE_SIZE_FILE);
+
+          gbp::PerformanceLogServer::GetPerformanceLogger()
+              .GetClientReadThroughputByte()
+              .fetch_add(req.value()->page_num * gbp::PAGE_SIZE_FILE);
 
           fpage_id = rnd(gen);
           context_type context = context_type::GetRawObject(&io_backend);
@@ -474,7 +476,11 @@ void fiber_pread_1_1(gbp::DiskManager* disk_manager, size_t file_size_inByte,
         assert(*reinterpret_cast<gbp::fpage_id_type*>(
                    req.value()->io_vec[0].iov_base) ==
                req.value()->fpage_id_start);
-        Client_Read_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
+
+        gbp::PerformanceLogServer::GetPerformanceLogger()
+            .GetClientReadThroughputByte()
+            .fetch_add(1 * gbp::PAGE_SIZE_FILE);
+
         fpage_id = rnd(gen);
         context_type context = context_type::GetRawObject(&io_backend);
         async_request_fiber_type* req_new = new async_request_fiber_type(
@@ -529,7 +535,11 @@ void fiber_pread_1_2(gbp::DiskManager* disk_manager, size_t file_size_inByte,
         assert(*reinterpret_cast<gbp::fpage_id_type*>(
                    req.value()->io_vec[0].iov_base) ==
                req.value()->file_offset / 4096);
-        Client_Read_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
+
+        gbp::PerformanceLogServer::GetPerformanceLogger()
+            .GetClientReadThroughputByte()
+            .fetch_add(1 * gbp::PAGE_SIZE_FILE);
+
         fpage_id = rnd(gen);
         gbp::context_type context = gbp::context_type::GetRawObject();
         gbp::async_request_fiber_type* req_new =
@@ -584,7 +594,10 @@ void fiber_pread_2(gbp::DiskManager* disk_manager, size_t file_size_inByte,
         assert(*reinterpret_cast<gbp::fpage_id_type*>(
                    req.value()->io_vec[0].iov_base) ==
                req.value()->file_offset / 4096);
-        Client_Read_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
+
+        gbp::PerformanceLogServer::GetPerformanceLogger()
+            .GetClientReadThroughputByte()
+            .fetch_add(1 * gbp::PAGE_SIZE_FILE);
 
         fpage_id = rnd(gen);
         auto [success, req_new] = io_server.SendRequest(
@@ -637,7 +650,10 @@ void fiber_pread_3(gbp::IOServer_old* io_server, size_t file_size_inByte,
         assert(*reinterpret_cast<gbp::fpage_id_type*>(
                    req.value()->io_vec[0].iov_base) ==
                req.value()->file_offset / 4096);
-        Client_Read_throughput().fetch_add(1 * gbp::PAGE_SIZE_FILE);
+
+        gbp::PerformanceLogServer::GetPerformanceLogger()
+            .GetClientReadThroughputByte()
+            .fetch_add(1 * gbp::PAGE_SIZE_FILE);
 
         buffer_pool.push_back((char*) req.value()->io_vec[0].iov_base);
         req.reset();
@@ -667,7 +683,10 @@ void fiber_pread_4(gbp::IOServer_old* io_server, size_t file_size_inByte,
     if (success) {
       while (!req->success)
         ;
-      Client_Read_throughput().fetch_add(io_size);
+
+      gbp::PerformanceLogServer::GetPerformanceLogger()
+          .GetClientReadThroughputByte()
+          .fetch_add(io_size);
     }
   }
 }

@@ -7,7 +7,8 @@
 #pragma once
 
 #define GRAPHSCOPE
-#define DEBUG_BITMAP
+
+// #define DEBUG_BITMAP
 #define ASSERT_ENABLE true
 // #define USING_EDGE_ITER
 
@@ -48,8 +49,9 @@ using partition_id_type = uint32_t;
 
 constexpr bool PERSISTENT = true;
 // constexpr bool ASSERT_ENABLE = false;
-constexpr bool DEBUG = false;
+constexpr bool DEBUG = true;
 constexpr bool EVICTION_SERVER_ENABLE = false;
+constexpr bool LAZY_SSD_IO = false;
 
 constexpr uint32_t INVALID_PAGE_ID =
     std::numeric_limits<uint32_t>::max();  // representing an invalid page id

@@ -4,6 +4,7 @@
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/buffer_obj.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/buffer_pool.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/buffer_pool_manager.h
+CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/clock_replacer.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/config.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/debug.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/eviction_server.h
@@ -13,6 +14,7 @@ CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/hash_table.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/io_backend.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/io_server.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/logger.h
+CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/lru_replacer.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/memory_pool.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/orgin_mmap.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/page_table.h

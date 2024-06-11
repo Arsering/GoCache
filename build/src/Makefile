@@ -171,6 +171,33 @@ bufferpool/fast:
 	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/build
 .PHONY : bufferpool/fast
 
+buffer_obj.o: buffer_obj.cpp.o
+
+.PHONY : buffer_obj.o
+
+# target to build an object file
+buffer_obj.cpp.o:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o
+.PHONY : buffer_obj.cpp.o
+
+buffer_obj.i: buffer_obj.cpp.i
+
+.PHONY : buffer_obj.i
+
+# target to preprocess a source file
+buffer_obj.cpp.i:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.i
+.PHONY : buffer_obj.cpp.i
+
+buffer_obj.s: buffer_obj.cpp.s
+
+.PHONY : buffer_obj.s
+
+# target to generate assembly for a file
+buffer_obj.cpp.s:
+	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.s
+.PHONY : buffer_obj.cpp.s
+
 buffer_pool.o: buffer_pool.cpp.o
 
 .PHONY : buffer_pool.o
@@ -306,33 +333,6 @@ extendible_hash.cpp.s:
 	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.s
 .PHONY : extendible_hash.cpp.s
 
-fifo_replacer.o: fifo_replacer.cpp.o
-
-.PHONY : fifo_replacer.o
-
-# target to build an object file
-fifo_replacer.cpp.o:
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.o
-.PHONY : fifo_replacer.cpp.o
-
-fifo_replacer.i: fifo_replacer.cpp.i
-
-.PHONY : fifo_replacer.i
-
-# target to preprocess a source file
-fifo_replacer.cpp.i:
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.i
-.PHONY : fifo_replacer.cpp.i
-
-fifo_replacer.s: fifo_replacer.cpp.s
-
-.PHONY : fifo_replacer.s
-
-# target to generate assembly for a file
-fifo_replacer.cpp.s:
-	cd /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build && $(MAKE) -f src/CMakeFiles/bufferpool.dir/build.make src/CMakeFiles/bufferpool.dir/fifo_replacer.cpp.s
-.PHONY : fifo_replacer.cpp.s
-
 logger.o: logger.cc.o
 
 .PHONY : logger.o
@@ -400,6 +400,9 @@ help:
 	@echo "... list_install_components"
 	@echo "... rebuild_cache"
 	@echo "... bufferpool"
+	@echo "... buffer_obj.o"
+	@echo "... buffer_obj.i"
+	@echo "... buffer_obj.s"
 	@echo "... buffer_pool.o"
 	@echo "... buffer_pool.i"
 	@echo "... buffer_pool.s"
@@ -415,9 +418,6 @@ help:
 	@echo "... extendible_hash.o"
 	@echo "... extendible_hash.i"
 	@echo "... extendible_hash.s"
-	@echo "... fifo_replacer.o"
-	@echo "... fifo_replacer.i"
-	@echo "... fifo_replacer.s"
 	@echo "... logger.o"
 	@echo "... logger.i"
 	@echo "... logger.s"

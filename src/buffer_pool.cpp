@@ -1,4 +1,5 @@
 #include "../include/buffer_pool.h"
+#include "../include/buffer_obj.h"
 
 namespace gbp {
 /*
@@ -7,7 +8,7 @@ namespace gbp {
  * WARNING: Do Not Edit This Function
  */
 void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
-                      IOServer_old* io_server,
+                      MemoryPool memory_pool, IOServer_old* io_server,
                       RoundRobinPartitioner* partitioner,
                       EvictionServer* eviction_server) {
   pool_ID_ = pool_ID;
@@ -19,11 +20,15 @@ void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
   eviction_server_ = eviction_server;
 
   // a consecutive memory space for buffer pool
-  buffer_pool_ = new MemoryPool(pool_size_);
+  memory_pool_ = memory_pool;
   page_table_ = new PageTable(pool_size_);
 
   // page_table_ = new std::vector<ExtendibleHash<page_id_infile, PTE *>>();
-  replacer_ = new FIFOReplacer(page_table_);
+  // replacer_ = new FIFOReplacer(page_table_);
+  // replacer_ = new ClockReplacer(page_table_);
+  // replacer_ = new LRUReplacer(page_table_);
+  replacer_ = new TwoQLRUReplacer(page_table_);
+  // replacer_ = new SieveReplacer(page_table_);
 
   for (int i = 0; i < disk_manager_->fd_oss_.size(); i++) {
     uint32_t file_size_in_page =
@@ -45,7 +50,6 @@ BufferPool::~BufferPool() {
   delete page_table_;
 
   delete replacer_;
-  delete buffer_pool_;
   // delete io_server_;
   delete free_list_;
 }
@@ -69,22 +73,25 @@ bool BufferPool::FlushPage(fpage_id_type fpage_id, GBPfile_handle_type fd) {
   fpage_id_type fpage_id_inpool = partitioner_->GetFPageIdInPartition(fpage_id);
 
   auto [locked, mpage_id] = page_table_->LockMapping(fd, fpage_id_inpool);
-  assert(locked);
   if (!locked)
     return false;
-
-  if (mpage_id == PageMapping::Mapping::EMPTY_VALUE)
-    return true;
-
-  auto* tar = page_table_->FromPageId(mpage_id);
-  if (tar->dirty) {
-    assert(
-        ReadWrite(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_FILE,
-                  (char*) buffer_pool_->FromPageId(page_table_->ToPageId(tar)),
-                  PAGE_SIZE_MEMORY, tar->GetFileHandler(), false));
-    tar->dirty = false;
+  // if ("/nvme0n1/lgraph_db/sf30_db_t/runtime/tmp/ie_PERSON_KNOWS_PERSON.adj"
+  // ==
+  //     disk_manager_->file_names_[fd]) {
+  //   LOG(INFO) << "fpage_id = " << fpage_id << " " << fd;
+  //   assert(!(mpage_id == PageMapping::Mapping::EMPTY_VALUE));
+  // }
+  if (!(mpage_id == PageMapping::Mapping::EMPTY_VALUE)) {
+    auto* tar = page_table_->FromPageId(mpage_id);
+    if (tar->dirty) {
+      assert(
+          ReadWrite(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_FILE,
+                    (char*) memory_pool_.FromPageId(page_table_->ToPageId(tar)),
+                    PAGE_SIZE_MEMORY, tar->GetFileHandler(), false));
+      tar->dirty = false;
+    }
   }
-  page_table_->UnLockMapping(fd, fpage_id_inpool, mpage_id);
+  assert(page_table_->UnLockMapping(fd, fpage_id_inpool, mpage_id));
   return true;
 }
 
@@ -234,8 +241,10 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
     switch (stat) {
     case context_type::Phase::Begin: {
       ret = Pin(fpage_id_inpool, fd);
+
       if (ret.first) {  // 1.1
         stat = context_type::Phase::End;
+        replacer_->Promote(page_table_->ToPageId(ret.first));
         break;
       }
       auto [locked, mpage_id] = page_table_->LockMapping(fd, fpage_id_inpool);
@@ -255,16 +264,27 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
         stat = context_type::Phase::Loading;
       } else {
         if (!replacer_->Victim(mpage_id)) {
-          // assert(false);
+          assert(false);
           break;
         }
+
         stat = context_type::Phase::Evicting;
       }
+
       ret.first = page_table_->FromPageId(mpage_id);
-      ret.second = (char*) buffer_pool_->FromPageId(mpage_id);
+      ret.second = (char*) memory_pool_.FromPageId(mpage_id);
       break;
     }
     case context_type::Phase::Evicting: {  // 2
+#ifdef DEBUG_BITMAP
+      size_t fd_old = ret.first->fd;
+      size_t fpage_id_old =
+          partitioner_->GetFPageIdGlobal(pool_ID_, ret.first->fpage_id);
+
+      assert(disk_manager_->GetUsedMark(fd_old, fpage_id_old) == true);
+      disk_manager_->SetUsedMark(fd_old, fpage_id_old, false);
+      assert(disk_manager_->GetUsedMark(fd_old, fpage_id_old) == false);
+#endif
       if (ret.first->dirty) {
         assert(ReadWrite(
             partitioner_->GetFPageIdGlobal(pool_ID_, ret.first->fpage_id) *
@@ -272,19 +292,33 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
             PAGE_SIZE_FILE, ret.second, PAGE_SIZE_MEMORY, ret.first->fd,
             false));
       }
+
       assert(page_table_->DeleteMapping(ret.first->fd, ret.first->fpage_id));
+
       stat = context_type::Phase::Loading;
       break;
     }
     case context_type::Phase::Loading: {  // 4
-      assert(ReadWrite(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY, ret.second,
-                       PAGE_SIZE_MEMORY, fd, true));
-
       ret.first->Clean();
+      if constexpr (LAZY_SSD_IO) {
+        *reinterpret_cast<fpage_id_type*>(ret.second) = fpage_id;
+        ret.first->initialized = false;
+      } else {
+#ifdef DEBUG_BITMAP
+        assert(disk_manager_->GetUsedMark(fd, fpage_id) == false);
+        disk_manager_->SetUsedMark(fd, fpage_id, true);
+        assert(disk_manager_->GetUsedMark(fd, fpage_id) == true);
+#endif
+        assert(ReadWrite(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
+                         ret.second, PAGE_SIZE_MEMORY, fd, true));
+        ret.first->initialized = true;
+      }
+
       ret.first->ref_count = 1;
       ret.first->fpage_id = fpage_id_inpool;
       ret.first->fd = fd;
       std::atomic_thread_fence(std::memory_order_release);
+
       assert(page_table_->CreateMapping(fd, fpage_id_inpool,
                                         page_table_->ToPageId(ret.first)));
 
@@ -293,11 +327,7 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
       stat = context_type::Phase::End;
     }
     case context_type::Phase::End: {
-#ifdef DEBUG_BITMAP
-      if (gbp::warmup_mark().load() == 1)
-        buffer_pool_->GetUsedMark().set(buffer_pool_->ToPageId(ret.second),
-                                        true);
-#endif
+      // get_thread_logfile() << (uintptr_t) ret.second << std::endl;
       return ret;
     }
     }

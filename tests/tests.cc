@@ -1,6 +1,4 @@
-#define _GNU_SOURCE
 #include <fcntl.h>
-#include <pthread.h>
 #include <sched.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,16 +37,10 @@ void set_cpu_affinity(int cpu) {
     exit(EXIT_FAILURE);
   }
 }
-
-std::atomic<size_t>& Client_Read_throughput() {
-  static std::atomic<size_t> data;
-  return data;
+std::vector<std::vector<size_t>>& get_trace_global() {
+  static std::vector<std::vector<size_t>> traces;
+  return traces;
 }
-std::atomic<size_t>& Client_Write_throughput() {
-  static std::atomic<size_t> data;
-  return data;
-}
-std::string log_directory = "a";
 
 void write_mmap(char* data_file_mmaped, size_t file_size_inByte, size_t io_size,
                 size_t start_offset, size_t thread_id) {
@@ -69,13 +61,15 @@ void write_mmap(char* data_file_mmaped, size_t file_size_inByte, size_t io_size,
     assert(*reinterpret_cast<size_t*>(data_file_mmaped + curr_io_fileoffset) ==
            data);
 
-    Client_Write_throughput().fetch_add(sizeof(size_t));
+    gbp::PerformanceLogServer::GetPerformanceLogger()
+        .GetClientWriteThroughputByte()
+        .fetch_add(sizeof(size_t));
   }
 }
 void read_mmap(char* data_file_mmaped, size_t file_size_inByte,
                size_t io_size_in, size_t start_offset, size_t thread_id) {
-  std::ofstream latency_log(log_directory + "/" + std::to_string(thread_id) +
-                            ".log");
+  std::ofstream latency_log(gbp::get_log_dir() + "/" +
+                            std::to_string(thread_id) + ".log");
   latency_log << "read_mmap" << std::endl;
   size_t io_num = file_size_inByte / sizeof(size_t);
 
@@ -85,27 +79,48 @@ void read_mmap(char* data_file_mmaped, size_t file_size_inByte,
   std::uniform_int_distribution<uint64_t> rnd_io_size(1, 1024 * 5);
 
   size_t curr_io_fileoffset, ret, offset_tmp;
-
   size_t st, io_id, io_size;
-
-  size_t query_count = 1000LU;
-  int count = 2;
+  int count = 1;
   while (count != 0) {
     count--;
-    for (io_id = 0; io_id < io_num; io_id += io_size_in / sizeof(size_t)) {
-      io_size = io_size_in;
-      // while (query_count != 0) {
-      //   // query_count--;
-      //   io_id = rnd(gen);
+    // size_t query_count = get_trace_global()[thread_id].size();
+    size_t query_count = 50000000;
+
+    // for (io_id = 0; io_id < io_num; io_id += io_size_in / sizeof(size_t)) {
+    while (query_count != 0) {
+      query_count--;
+      // io_id = rnd(gen);
+      // io_id = ZipfianGenerator::GetGen().generate() *
+      //             (io_num / ZipfianGenerator::GetGen().GetN()) +
+      //         rnd(gen) % (io_num / ZipfianGenerator::GetGen().GetN());
+      // io_id = fileoffsetgenerator::GetGen().generate_offset() /
+      // sizeof(size_t);
+      // io_id = rnd(gen);
       //   // io_size = rnd_io_size(gen) * sizeof(size_t);
       //   io_size = 8 * 512;
+      io_size = io_size_in;
+      io_id = io_id / 512 * 512;
 
-      curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
+      // curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
+      curr_io_fileoffset =
+          get_trace_global()[thread_id][query_count] - 139874067804160;
       io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
+
+#ifdef DEBUG_1
       st = gbp::GetSystemTime();
+#endif
       {
         if constexpr (true) {
           for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
+            // if ((*reinterpret_cast<size_t*>(data_file_mmaped +
+            //                                 curr_io_fileoffset +
+            //                                 i * sizeof(size_t)) !=
+            //      (curr_io_fileoffset / sizeof(size_t) + i)))
+            //   std::cout << *reinterpret_cast<size_t*>(data_file_mmaped +
+            //                                           curr_io_fileoffset +
+            //                                           i * sizeof(size_t))
+            //             << " | " << (curr_io_fileoffset / sizeof(size_t) + i)
+            //             << std::endl;
             assert(*reinterpret_cast<size_t*>(data_file_mmaped +
                                               curr_io_fileoffset +
                                               i * sizeof(size_t)) ==
@@ -113,9 +128,13 @@ void read_mmap(char* data_file_mmaped, size_t file_size_inByte,
           }
         }
       }
+#ifdef DEBUG_1
       st = gbp::GetSystemTime() - st;
       latency_log << st << std::endl;
-      Client_Read_throughput().fetch_add(io_size);
+#endif
+      gbp::PerformanceLogServer::GetPerformanceLogger()
+          .GetClientReadThroughputByte()
+          .fetch_add(io_size);
     }
   }
   latency_log.flush();
@@ -127,44 +146,59 @@ void read_mmap(char* data_file_mmaped, size_t file_size_inByte,
 void read_bufferpool(size_t start_offset, size_t file_size_inByte,
                      size_t io_size_in, size_t thread_id) {
   assert(io_size_in % sizeof(size_t) == 0);
-  // std::filesystem::create_directory()
-  std::ofstream latency_log(log_directory + "/" + std::to_string(thread_id) +
-                            ".log");
+  std::ofstream latency_log(gbp::get_log_dir() + "/" +
+                            std::to_string(thread_id) + ".log");
   latency_log << "read_bufferpool" << std::endl;
 
   size_t io_num = file_size_inByte / sizeof(size_t) - 10;
 
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::uniform_int_distribution<uint64_t> rnd(0, io_num);
+  std::uniform_int_distribution<uint64_t> rnd(0, io_num - 10);
   std::uniform_int_distribution<uint64_t> rnd_io_size(1, 1024 * 5);
 
   auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
 
   size_t curr_io_fileoffset, ret, io_size;
   size_t st, io_id;
-  size_t query_count = 1000LU;
-  int count = 2;
+  int count = 1;
   while (count != 0) {
     count--;
-    for (io_id = 0; io_id < io_num; io_id += io_size_in / sizeof(size_t)) {
-      // io_size = sizeof(size_t);
-      io_size = io_size_in;
-      // while (query_count != 0) {
-      //   // query_count--;
-      //   io_id = rnd(gen);
+    // size_t query_count = get_trace_global()[thread_id].size();
+    size_t query_count = 50000000;
+
+    // for (io_id = 0; io_id < io_num; io_id += io_size_in / sizeof(size_t)) {
+    // io_size = sizeof(size_t);
+
+    while (query_count != 0) {
+      // query_count--;
+      io_id = rnd(gen);
+
+      // io_id = ZipfianGenerator::GetGen().generate() *
+      //             (io_num / ZipfianGenerator::GetGen().GetN()) +
+      //         rnd(gen) % (io_num / ZipfianGenerator::GetGen().GetN());
+      // io_id = fileoffsetgenerator::GetGen().generate_offset() /
+      // sizeof(size_t);
       //   // io_size = rnd_io_size(gen) * sizeof(size_t);
       //   io_size = 9 * 512;
-      {
-        gbp::get_counter(1) = 0;
-        gbp::get_counter(2) = 0;
-        gbp::get_counter(11) = 0;
-        gbp::get_counter(12) = 0;
-      }
-      curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
-      io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
+      io_size = io_size_in;
+      io_id = io_id / 512 * 512;
 
-      st = gbp::GetSystemTime();
+#ifdef DEBUG_1
+      for (size_t i = 0; i < 14; i++)
+        gbp::get_counter(i) = 0;
+#endif
+
+      curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
+
+      // curr_io_fileoffset =
+      //     get_trace_global()[thread_id][query_count] - 139874067804160;
+
+      // curr_io_fileoffset = 27354042368;
+      io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
+      // std::cout << "ff = " << curr_io_fileoffset << std::endl;
+
+      // st = gbp::GetSystemTime();
       {
         auto ret = bpm.GetBlock(curr_io_fileoffset, io_size);
 
@@ -172,6 +206,11 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
           // auto ret_new = bpm.GetObject(curr_io_fileoffset, io_size);
           // auto iter = gbp::BufferBlockIter<size_t>(ret_new);
           for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
+            if (gbp::BufferBlock::Ref<size_t>(ret, i) !=
+                (curr_io_fileoffset / sizeof(size_t) + i))
+              std::cout << gbp::BufferBlock::Ref<size_t>(ret, i) << " "
+                        << (curr_io_fileoffset / sizeof(size_t) + i)
+                        << std::endl;
             assert(gbp::BufferBlock::Ref<size_t>(ret, i) ==
                    (curr_io_fileoffset / sizeof(size_t) + i));
             // assert(*(iter.current()) ==
@@ -181,12 +220,19 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
           // assert(iter.current() == nullptr);
         }
       }
-      st = gbp::GetSystemTime() - st;
-      latency_log << st << " | " << gbp::get_counter(1) << " | "
-                  << gbp::get_counter(2) << " | " << gbp::get_counter(11)
-                  << " | " << gbp::get_counter(12) << std::endl;
+      // st = gbp::GetSystemTime() - st;
+      // latency_log << st << " | " << gbp::get_counter(1) << " | "
+      //             << gbp::get_counter(2) << " | " << gbp::get_counter(11)
+      //             << " | " << gbp::get_counter(12) << std::endl;
 
-      Client_Read_throughput().fetch_add(io_size);
+#ifdef DEBUG_1
+      for (size_t i = 0; i < 14; i++)
+        latency_log << gbp::get_counter(i) << " | ";
+      latency_log << std::endl;
+#endif
+      gbp::PerformanceLogServer::GetPerformanceLogger()
+          .GetClientReadThroughputByte()
+          .fetch_add(io_size);
     }
   }
   latency_log.flush();
@@ -249,7 +295,9 @@ void write_bufferpool(size_t start_offset, size_t file_size_inByte,
     // if (*reinterpret_cast<size_t*>(ret.Data()) != io_id)
     // std::cout << *reinterpret_cast<size_t*>(out_buf) << " | " << io_id <<
     // std::endl;
-    Client_Write_throughput().fetch_add(io_size);
+    gbp::PerformanceLogServer::GetPerformanceLogger()
+        .GetClientWriteThroughputByte()
+        .fetch_add(io_size);
   }
   // std::cout << "thread_id = " << thread_id << std::endl;
 }
@@ -312,14 +360,16 @@ void randwrite_bufferpool(size_t start_offset, size_t file_size_inByte,
     // if (*reinterpret_cast<size_t*>(ret.Data()) != io_id)
     //   std::cout << *reinterpret_cast<size_t*>(ret.Data()) << " | " << io_id
     //   << std::endl;
-    Client_Write_throughput().fetch_add(io_size);
+    gbp::PerformanceLogServer::GetPerformanceLogger()
+        .GetClientWriteThroughputByte()
+        .fetch_add(io_size);
   }
 }
 
 void read_pread(gbp::IOBackend* io_backend, size_t file_size_inByte,
                 size_t io_size_in, size_t start_offset, size_t thread_id) {
-  std::ofstream latency_log(log_directory + "/" + std::to_string(thread_id) +
-                            ".log");
+  std::ofstream latency_log(gbp::get_log_dir() + "/" +
+                            std::to_string(thread_id) + ".log");
   latency_log << "read_pread" << std::endl;
   size_t io_num = file_size_inByte / sizeof(size_t);
 
@@ -334,19 +384,21 @@ void read_pread(gbp::IOBackend* io_backend, size_t file_size_inByte,
   char* buf = (char*) aligned_alloc(4096, io_size_in);
   size_t query_count = 1000LU;
   int count = 1;
+
   while (count != 0) {
     count--;
-    for (io_id = 0; io_id < io_num; io_id += io_size_in / sizeof(size_t)) {
-      io_size = io_size_in;
-      // while (query_count != 0) {
+    // for (io_id = 0; io_id < io_num; io_id += io_size_in / sizeof(size_t)) {
+    while (query_count != 0) {
       //   // query_count--;
-      //   io_id = rnd(gen);
+      io_id = rnd(gen);
+      io_id = io_id / 512 * 512;
       //   // io_size = rnd_io_size(gen) * sizeof(size_t);
       //   io_size = 8 * 512;
+      io_size = io_size_in;
 
       curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
       io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
-      st = gbp::GetSystemTime();
+      // st = gbp::GetSystemTime();
       {
         io_backend->Read(curr_io_fileoffset, buf, io_size, 0);
         if constexpr (true) {
@@ -356,9 +408,12 @@ void read_pread(gbp::IOBackend* io_backend, size_t file_size_inByte,
           }
         }
       }
-      st = gbp::GetSystemTime() - st;
-      latency_log << st << std::endl;
-      Client_Read_throughput().fetch_add(io_size);
+      // st = gbp::GetSystemTime() - st;
+      // latency_log << st << std::endl;
+
+      gbp::PerformanceLogServer::GetPerformanceLogger()
+          .GetClientReadThroughputByte()
+          .fetch_add(io_size);
     }
   }
   latency_log.flush();
@@ -392,7 +447,9 @@ void write_pwrite(gbp::IOBackend* io_backend, size_t file_size_inByte,
     io_backend->Write(curr_io_fileoffset, {out_buf, io_size}, 0);
     // assert(ret == io_size);
 
-    Client_Write_throughput().fetch_add(io_size);
+    gbp::PerformanceLogServer::GetPerformanceLogger()
+        .GetClientWriteThroughputByte()
+        .fetch_add(io_size);
   }
   // std::cout << thread_id << std::endl;
 }
@@ -467,66 +524,52 @@ void warmup(char* data_file_mmaped, size_t file_size_inByte, size_t io_size) {
   std::cout << "warm up finish" << std::endl;
 }
 
-void logging() {
-  uint64_t shootdowns;
-  uint64_t SSD_read_bytes, SSD_write_bytes, last_SSD_read_bytes,
-      last_SSD_write_bytes;
-  uint64_t cur_Client_Read_throughput, cur_Client_Write_throughput;
-
-  const size_t B2GB = 1024.0 * 1024 * 1024;
-  auto last_shootdowns = readTLBShootdownCount();
-  std::tie(last_SSD_read_bytes, last_SSD_write_bytes) = SSD_io_bytes();
-  auto last_Client_Read_throughput = Client_Read_throughput().load();
-  auto last_Client_Write_throughput = Client_Write_throughput().load();
-
-  // auto last_eviction_operation_count =
-  //     gbp::debug::get_counter_eviction().load();
-  // auto last_fetch_count = gbp::debug::get_counter_fetch().load();
-  // auto last_contention_count = gbp::debug::get_counter_contention().load();
-
-  printf("%-25s%-25s%-25s%-25s%-25s%-25s%-25s\n", "Client_Read_Throughput",
-         "Client_Write_Throughput", "SSD_Read_Throughput",
-         "SSD_write_Throughput", "TLB_shootdown", "Memory_usage",
-         "Eviction_count");
+void extra_fun(bool& stop) {
+  std::cout << "extra_fun: start" << std::endl;
+  size_t buf_size = 1024LU * 1024LU * 1024LU * 120;
+  char* buf = (char*) malloc(buf_size);
+  volatile size_t sum = 0;
+  for (size_t i = 0; i < buf_size; i += 1) {
+    buf[i] = i;
+  }
+  std::cout << "extra_fun: init finished" << std::endl;
 
   while (true) {
     sleep(1);
-    shootdowns = readTLBShootdownCount();
-    std::tie(SSD_read_bytes, SSD_write_bytes) = SSD_io_bytes();
-    cur_Client_Read_throughput = Client_Read_throughput().load();
-    cur_Client_Write_throughput = Client_Write_throughput().load();
-
-    // auto cur_eviction_operation_count =
-    //   gbp::debug::get_counter_eviction().load();
-    // auto cur_fetch_count = gbp::debug::get_counter_fetch().load();
-    // auto cur_contention_count =
-    // gbp::debug::get_counter_contention().load();
-
-    printf("%-25lf%-25lf%-25lf%-25lf%-25lu%-25lf\n",
-           (cur_Client_Read_throughput - last_Client_Read_throughput) /
-               (double) B2GB,
-           (cur_Client_Write_throughput - last_Client_Write_throughput) /
-               (double) B2GB,
-           (SSD_read_bytes - last_SSD_read_bytes) / (double) B2GB,
-           (SSD_write_bytes - last_SSD_write_bytes) / (double) B2GB,
-           (shootdowns - last_shootdowns), GetMemoryUsage() / (1024.0 * 1024));
-    // printf("%lu%-20lf%-20lu%-20lf%-20lu\n", cur_IO_throughput,
-    // (SSD_IO_bytes
-    // - last_SSD_IO_bytes) / 1, (shootdowns - last_shootdowns),
-    // GetMemoryUsage() * 4 / 1024.0 / 1024, cur_IO_throughput);
-    last_shootdowns = shootdowns;
-    last_SSD_read_bytes = SSD_read_bytes;
-    last_SSD_write_bytes = SSD_write_bytes;
-    last_Client_Read_throughput = cur_Client_Read_throughput;
-    last_Client_Write_throughput = cur_Client_Write_throughput;
-
-    // last_eviction_operation_count = cur_eviction_operation_count;
-    // last_fetch_count = cur_fetch_count;
-    // last_contention_count = cur_contention_count;
-
-    if (!log_thread_run)
-      break;
+    if (stop) {
+      std::cout << "extra_fun: stop" << std::endl;
+      return;
+    }
   }
+}
+std::vector<std::vector<size_t>> read_trace(const std::string& trace_dir,
+                                            size_t work_num) {
+  std::vector<std::vector<size_t>> vecs(30, std::vector<size_t>());
+
+  std::vector<std::thread> thread_pool;
+  for (int thread_id = 1; thread_id < work_num + 1; thread_id++) {
+    thread_pool.emplace_back([&, thread_id]() {
+      std::string trace_file_path =
+          trace_dir + "/thread_log_" + std::to_string(thread_id) + ".log";
+      std::cout << __FILE__ << ":" << __LINE__ << ": " << trace_file_path
+                << std::endl;
+      std::ifstream trace_file(trace_file_path);
+      assert(!!trace_file);
+
+      for (std::string line; std::getline(trace_file, line);) {
+        std::vector<std::string> strs;
+        boost::split(strs, line, boost::is_any_of(" "),
+                     boost::token_compress_on);
+        vecs[thread_id - 1].emplace_back(std::stoull(strs[0]));
+      }
+      std::cout << __FILE__ << ":" << __LINE__ << ": "
+                << vecs[thread_id - 1].size() << std::endl;
+    });
+  }
+  for (auto& thread : thread_pool) {
+    thread.join();
+  }
+  return std::move(vecs);
 }
 
 int test_concurrency(int argc, char** argv) {
@@ -537,10 +580,7 @@ int test_concurrency(int argc, char** argv) {
   size_t io_server_num = std::stoull(argv[5]);
   size_t io_size = std::stoull(argv[6]);
 
-  set_cpu_affinity(2);
-
-  std::filesystem::create_directory(std::string{argv[7]} + "/latency");
-  log_directory = std::string{argv[7]} + "/latency";
+  // set_cpu_affinity(2);
 
   // std::cout << log_directory << std::endl;
   // std::string file_path = "tests/db/test1.db";
@@ -548,6 +588,11 @@ int test_concurrency(int argc, char** argv) {
   // std::string file_path = "/home/spdk/p4510/zhengyang/test_read.db";
 
   std::string file_path = "/nvme0n1/test_write.db";
+  std::string trace_dir =
+      "/data/zhengyang/data/experiment_space/LDBC_SNB/logs/2024-06-06-20:05:02/"
+      "server/graphscope_logs";
+  // get_trace_global() = read_trace(trace_dir, worker_num);
+
   // std::string file_path = "/nvme0n1/test_read.db";
 
   size_t file_size_inByte = 1024LU * 1024LU * file_size_MB;
@@ -588,12 +633,21 @@ int test_concurrency(int argc, char** argv) {
       file_size_MB, worker_num, pool_num, pool_size_MB, io_server_num, io_size);
   // warmup(data_file_mmaped, file_size_inByte, io_size);
 
-  Client_Read_throughput().store(0);
-  Client_Write_throughput().store(0);
-  // std::thread log_thread(logging);
-  sleep(1);
+  std::filesystem::create_directory(std::string{argv[7]} + "/latency");
+  gbp::get_log_dir() = std::string{argv[7]} + "/latency";
+  gbp::get_db_dir() = file_path;
+
+  // ZipfianGenerator::GetGen().Init(1.6, 256 * 1024);
+  // fileoffsetgenerator::GetGen().Init(file_size_inByte, 5, 512 * 128 * 1024,
+  //                                    0.9);
+  bool extra_thread_stop = false;
+  // std::thread extra_thread(extra_fun, std::ref(extra_thread_stop));
+  sleep(10);
+  gbp::PerformanceLogServer::GetPerformanceLogger().Start(
+      std::string{argv[7]} + "/performance.log", "nvme0n1");
 
   std::vector<std::thread> thread_pool;
+  size_t ssd_io_byte = std::get<0>(gbp::SSD_io_bytes());
   for (size_t i = 0; i < worker_num; i++) {
     // thread_pool.emplace_back(write_mmap, data_file_mmaped,
     //                          (1024LU * 1024LU * 1024LU * 1), io_size,
@@ -615,9 +669,8 @@ int test_concurrency(int argc, char** argv) {
     //   thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte,
     //   io_size, i);
     // else
-    // thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size,
-    // i);
-    read_bufferpool(0, file_size_inByte, io_size, i);
+    thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size, i);
+
     //  thread_pool.emplace_back(randwrite_bufferpool, 0, file_size_inByte,
     //  io_size, i);
     // thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte,
@@ -626,11 +679,12 @@ int test_concurrency(int argc, char** argv) {
   for (auto& thread : thread_pool) {
     thread.join();
   }
-  // ::sleep(100);
-  log_thread_run = false;
-  // if (log_thread.joinable())
-  //   log_thread.join();
+  ssd_io_byte = std::get<0>(gbp::SSD_io_bytes()) - ssd_io_byte;
+  std::cout << "SSD IO = " << ssd_io_byte << "B" << std::endl;
 
+  extra_thread_stop = true;
+  // if (extra_thread.joinable())
+  //   extra_thread.join();
   return 0;
 }
 }  // namespace test

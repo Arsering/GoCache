@@ -5,6 +5,7 @@
 #include <boost/fiber/context.hpp>
 #include <boost/fiber/operations.hpp>
 #include <boost/lockfree/queue.hpp>
+#include <cstring>
 
 #include "config.h"
 
@@ -219,5 +220,62 @@ struct pair_min {
 };
 
 size_t GetSystemTime();
+
+class bitset_dynamic {
+ public:
+  bitset_dynamic() : size_(0) {}
+  bitset_dynamic(size_t size) : size_(size) {
+    bits_ = (char*) calloc(ceil(size_, 8), 1);
+  }
+  bool resize(size_t new_size) {
+    if (new_size <= size_)
+      return true;
+
+    char* bits_new = (char*) calloc(ceil(new_size, 8), 1);
+    ::memcpy(bits_new, bits_, ceil(size_, 8));
+
+    free(bits_);
+    bits_ = bits_new;
+    size_ = new_size;
+    return true;
+  }
+  bool get(size_t idx) {
+    assert(idx < size_);
+
+    return (bits_[idx / 8] & ((uint8_t) 1 << (idx % 8))) >> (idx % 8);
+  }
+
+  bool set(size_t idx, bool mark) {
+    assert(idx < size_);
+
+    if (mark)
+      bits_[idx / 8] = bits_[idx / 8] | ((uint8_t) 1 << (idx % 8));
+    else
+      bits_[idx / 8] = bits_[idx / 8] & ~((uint8_t) 1 << (idx % 8));
+
+    return true;
+  }
+
+  bool get_atomic(size_t idx) {
+    assert(idx < size_);
+
+    return (as_atomic(bits_[idx / 8]).load() & ((uint8_t) 1 << (idx % 8))) >>
+           (idx % 8);
+  }
+
+  bool set_atomic(size_t idx, bool mark) {
+    assert(idx < size_);
+
+    if (mark)
+      as_atomic(bits_[idx / 8]).fetch_or(((uint8_t) 1 << (idx % 8)));
+    else
+      as_atomic(bits_[idx / 8]).fetch_and(~((uint8_t) 1 << (idx % 8)));
+    return true;
+  }
+
+ private:
+  size_t size_;
+  char* bits_;
+};
 
 }  // namespace gbp
