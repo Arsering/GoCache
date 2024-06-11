@@ -27,6 +27,7 @@
 #include <string>
 #include <vector>
 
+// #include "buffer_pool_manager.h"
 #include "config.h"
 #include "logger.h"
 #include "page_table.h"
@@ -775,15 +776,15 @@ class BufferBlockImp5 {
     ptes_ = nullptr;
     type_ = ObjectType::gbpClass;
 
-    bitset_ = nullptr;
-    com_mark_ = false;
+    // bitset_ = nullptr;
+    // com_mark_ = false;
   }
 
   BufferBlockImp5(size_t size, size_t page_num)
       : page_num_(page_num), size_(size) {
     data_ = (char**) LBMalloc(page_num_ * sizeof(char*));
     ptes_ = (PTE**) LBMalloc(page_num_ * sizeof(PTE*));
-    bitset_ = (char*) LBCalloc(ceil(page_num_, 8), 1);
+    // bitset_ = (char*) LBCalloc(ceil(page_num_, 8), 1);
     // if (gbp::warmup_mark().load() == 1) {
     //   aa_ = gbp::get_stack_trace();
     // }
@@ -797,7 +798,7 @@ class BufferBlockImp5 {
   BufferBlockImp5(size_t size, char* data) : size_(size) {
     data_ = (char**) LBMalloc(1 * sizeof(char*));
     ptes_ = nullptr;
-    bitset_ = nullptr;
+    // bitset_ = nullptr;
 #if (ASSERT_ENABLE)
     assert(data_ != nullptr);
 #endif
@@ -809,7 +810,7 @@ class BufferBlockImp5 {
   BufferBlockImp5(size_t size) : size_(size) {
     data_ = (char**) LBMalloc(1 * sizeof(char*));
     ptes_ = nullptr;
-    bitset_ = nullptr;
+    // bitset_ = nullptr;
 
 #if (ASSERT_ENABLE)
     assert(data_ != nullptr);
@@ -939,6 +940,7 @@ class BufferBlockImp5 {
         loc_inpage =
             PAGE_SIZE_MEMORY - (uintptr_t) rhs.data_[i] % PAGE_SIZE_MEMORY;
         slice_len = loc_inpage < size_old ? loc_inpage : size_old;
+        assert(rhs.InitPage(i));
         memcpy((char*) ret.data_[0] + size_new, rhs.data_[i], slice_len);
         size_new += slice_len;
         size_old -= slice_len;
@@ -973,8 +975,8 @@ class BufferBlockImp5 {
         loc_inpage = PAGE_SIZE_MEMORY -
                      (uintptr_t) (data_[idx] + offset_t) % PAGE_SIZE_MEMORY;
         slice_len = loc_inpage < size_old ? loc_inpage : size_old;
+        assert(InitPage(idx));
         memcpy(buf + size_new, data_[idx] + offset_t, slice_len);
-        bitset_[idx / 8] |= 1 << (idx % 8);
         size_new += slice_len;
         size_old -= slice_len;
         offset = 0;
@@ -993,11 +995,11 @@ class BufferBlockImp5 {
     dst.ptes_ = src.ptes_;
     dst.type_ = src.type_;
     dst.size_ = src.size_;
-    dst.bitset_ = src.bitset_;
-    if (gbp::warmup_mark().load() == 1) {
-      // dst.aa_ = src.aa_;
-      dst.com_mark_ = src.com_mark_;
-    }
+    // dst.bitset_ = src.bitset_;
+    // if (gbp::warmup_mark().load() == 1) {
+    //   // dst.aa_ = src.aa_;
+    //   dst.com_mark_ = src.com_mark_;
+    // }
 
     const_cast<BufferBlockImp5&>(src).data_ = nullptr;
     const_cast<BufferBlockImp5&>(src).ptes_ = nullptr;
@@ -1010,6 +1012,7 @@ class BufferBlockImp5 {
       std::cerr << "size_!=sizeof(INNER_T)" << std::endl;
       exit(-1);
     }
+    assert(InitPage(0));
     return *reinterpret_cast<INNER_T*>(data_[0]);
   }
 
@@ -1017,36 +1020,37 @@ class BufferBlockImp5 {
     // 如果ptes不为空，则free
     if (data_ != nullptr) {
       if (ptes_ != nullptr) {
-        if (gbp::warmup_mark().load() == 1) {
-          if (true) {
-            unsigned int count = 0;
-            int n, t = bitset_[0];
-            for (int i = 0; i < ceil(page_num_, 8); i++) {
-              n = 8;
-              while (n) {
-                count += bitset_[i] & 1;
-                bitset_[i] >>= 1;
-                n--;
-              }
-            }
-            assert(page_num_ >= count);
-            gbp::get_counter_global(30).fetch_add(page_num_ - count);
+        // if (gbp::warmup_mark().load() == 1) {
+        //   if (true) {
+        //     unsigned int count = 0;
+        //     int n, t = bitset_[0];
+        //     for (int i = 0; i < ceil(page_num_, 8); i++) {
+        //       n = 8;
+        //       while (n) {
+        //         count += bitset_[i] & 1;
+        //         bitset_[i] >>= 1;
+        //         n--;
+        //       }
+        //     }
+        //     assert(page_num_ >= count);
+        //     gbp::get_counter_global(30).fetch_add(page_num_ - count);
 
-            if (count != page_num_ && com_mark_ == false) {
-              LOG(INFO) << count << " " << page_num_ << " "
-                        << gbp::get_query_id() << " "
-                        << std::bitset<sizeof(int) * 8>(t);
-              // LOG(FATAL) << aa_;
-              // LOG(FATAL) << "fuck";
-            }
-          }
-        }
+        //     if (count != page_num_ && com_mark_ == false) {
+        //       // LOG(INFO) << count << " " << page_num_ << " "
+        //       //           << gbp::get_query_id() << " " << ptes_[0]->fd << "
+        //       "
+        //       //           << ptes_[0]->fpage_id;
+        //       // LOG(FATAL) << aa_;
+        //       // LOG(FATAL) << "fuck";
+        //     }
+        //   }
+        // }
 
         while (page_num_ != 0) {
           ptes_[--page_num_]->DecRefCount();
         }
         LBFree(ptes_);
-        LBFree(bitset_);
+        // LBFree(bitset_);
       } else {
         LBFree(data_[0]);
       }
@@ -1106,7 +1110,7 @@ class BufferBlockImp5 {
     assert(data_ != nullptr);
     assert(offset < size_);
 #endif
-    com_mark_ = true;
+    // com_mark_ = true;
 
     size_t size_left = std::min((size_ - offset), right.size()),
            offset_t = offset;
@@ -1127,9 +1131,10 @@ class BufferBlockImp5 {
         loc_inpage = PAGE_SIZE_MEMORY -
                      (uintptr_t) (data_[idx] + offset_t) % PAGE_SIZE_MEMORY;
         slice_len = loc_inpage < size_left ? loc_inpage : size_left;
+        assert(InitPage(idx));
         ret = ::strncmp(data_[idx] + offset_t, right.data() + size_cum,
                         slice_len);
-        bitset_[idx / 8] |= 1 << (idx % 8);
+
         if (ret != 0) {
           break;
         }
@@ -1152,8 +1157,8 @@ class BufferBlockImp5 {
     assert(data_ != nullptr);
 #endif
     int ret = 0;
-    right.com_mark_ = true;
-    com_mark_ = true;
+    // right.com_mark_ = true;
+    // com_mark_ = true;
 
     if (ptes_ != nullptr && right.ptes_ != nullptr) {
       size_t slice_len, loc_inpage, len_right = 0;
@@ -1162,8 +1167,8 @@ class BufferBlockImp5 {
         loc_inpage = PAGE_SIZE_MEMORY -
                      (uintptr_t) right.data_[idx_right] % PAGE_SIZE_MEMORY;
         loc_inpage = std::min(loc_inpage, right.Size() - len_right);
+        assert(right.InitPage(idx_right));
         ret = Compare_inner({right.data_[idx_right], loc_inpage}, len_right);
-        right.bitset_[idx_right / 8] |= 1 << (idx_right % 8);
 
         if (ret != 0) {
           break;
@@ -1182,6 +1187,8 @@ class BufferBlockImp5 {
   }
 
  private:
+  bool LoadPage(size_t page_id) const;
+
   FORCE_INLINE int Compare_inner(const std::string_view right,
                                  size_t offset = 0) const {
 #if (ASSERT_ENABLE)
@@ -1192,7 +1199,8 @@ class BufferBlockImp5 {
     int ret = 0;
 
     if (ptes_ != nullptr) {
-      size_t size_cum = 0, slice_len, loc_inpage, idx;
+      size_t size_cum = 0, slice_len;
+      uint32_t idx, loc_inpage;
       for (idx = 0; idx < page_num_; idx++) {
         loc_inpage =
             PAGE_SIZE_MEMORY - (uintptr_t) data_[idx] % PAGE_SIZE_MEMORY;
@@ -1206,9 +1214,9 @@ class BufferBlockImp5 {
         loc_inpage = PAGE_SIZE_MEMORY -
                      (uintptr_t) (data_[idx] + offset_t) % PAGE_SIZE_MEMORY;
         slice_len = loc_inpage < size_left ? loc_inpage : size_left;
+        assert(InitPage(idx));
         ret = ::strncmp(data_[idx] + offset_t, right.data() + size_cum,
                         slice_len);
-        bitset_[idx / 8] |= 1 << (idx % 8);
         if (ret != 0) {
           break;
         }
@@ -1236,24 +1244,23 @@ class BufferBlockImp5 {
 
   template <class T>
   FORCE_INLINE pair_min<T*, PTE*> Decode(size_t idx = 0) const {
-    // static_assert(PAGE_SIZE_MEMORY % sizeof(T) == 0);
-
 #ifdef DEBUG_
     size_t st = gbp::GetSystemTime();
 #endif
 
     constexpr size_t OBJ_NUM_PERPAGE = PAGE_SIZE_MEMORY / sizeof(T);
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     // FIXME: 不够准确
     assert(sizeof(T) * (idx + 1) <= size_);
 #endif
     char* ret = nullptr;
-    uint16_t pte_id;
+    uint32_t pte_id;
 
     if (unlikely(ptes_ == nullptr)) {
       ret = data_[0] + idx * sizeof(T);
     } else {
       if (likely(idx == 0)) {
+        assert(InitPage(0));
         ret = data_[0];
         pte_id = 0;
       } else {
@@ -1262,11 +1269,13 @@ class BufferBlockImp5 {
             sizeof(T);
 
         if (obj_num_curpage > idx) {
+          assert(InitPage(0));
           ret = data_[0] + idx * sizeof(T);
           pte_id = 0;
         } else {
           idx -= obj_num_curpage;
           auto page_id = idx / OBJ_NUM_PERPAGE + 1;
+          assert(InitPage(page_id));
           ret = data_[page_id] + (idx % OBJ_NUM_PERPAGE) * sizeof(T);
           pte_id = page_id;
         }
@@ -1284,20 +1293,27 @@ class BufferBlockImp5 {
 #if ASSERT_ENABLE
     assert(ret != nullptr);
 #endif
-    bitset_[pte_id / 8] |= 1 << (pte_id % 8);
     return {reinterpret_cast<T*>(ret), ptes_[pte_id]};
   }
 
  private:
+  FORCE_INLINE bool InitPage(size_t page_id) const {
+    // bitset_[page_id / 8] |= 1 << (page_id % 8);
+    if (!ptes_[page_id]->initialized) {
+      return LoadPage(page_id);
+    }
+    return true;
+  }
+
   char** data_ = nullptr;
   PTE** ptes_ = nullptr;
   size_t size_;
 
   size_t page_num_ = 0;
   ObjectType type_;
-  char* bitset_;
+  // char* bitset_;
   // std::string aa_;
-  mutable bool com_mark_ = false;
+  // mutable bool com_mark_ = false;
 };
 
 class BufferObjectImp3 {

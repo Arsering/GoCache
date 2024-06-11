@@ -18,10 +18,10 @@ cd ..
 CUR_DIR=.
 
 export FILE_SIZE_MB=$((1024*30))
-export WORKER_NUM=1
+export WORKER_NUM=50
 export POOL_NUM=10
 export IO_SERVER_NUM=1
-export POOL_SIZE_MB=$((1024*50))
+export POOL_SIZE_MB=$((331))
 export IO_SIZE_Byte=$((8*512))
 # export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD
 
@@ -34,7 +34,7 @@ cp -r ./$0 ${LOG_DIR}/run.sh
 
 echo 1 > /proc/sys/vm/drop_caches
 
-./bin/graphscope_bufferpool ${FILE_SIZE_MB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_MB} ${IO_SERVER_NUM} ${IO_SIZE_Byte} ${LOG_DIR} > ${LOG_DIR}/log.log 
+./bin/graphscope_bufferpool ${FILE_SIZE_MB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_MB} ${IO_SERVER_NUM} ${IO_SIZE_Byte} ${LOG_DIR} > ${LOG_DIR}/log.log
 # cgexec -g memory:yz_15g
 
 # ./bin/graphscope_bufferpool ${FILE_SIZE_MB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_MB} ${IO_SERVER_NUM} ${IO_SIZE_Byte} ${LOG_DIR} > ${LOG_DIR}/log.log

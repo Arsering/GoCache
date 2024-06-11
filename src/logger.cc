@@ -1,6 +1,9 @@
 #include "../include/logger.h"
 #include "../include/utils.h"
 
+#include <sys/resource.h>
+#include <sys/time.h>
+
 namespace gbp {
 
 size_t get_thread_id() {
@@ -85,7 +88,7 @@ void PerformanceLogServer::Logging() {
   } else {
     mmap_monitored_dir = "";  // 如果没有父路径（比如根目录），返回空字符串
   }
-  LOG(INFO) << mmap_monitored_dir;
+
   char* buf = (char*) malloc(4096);
   size_t size = 0;
 
@@ -94,12 +97,15 @@ void PerformanceLogServer::Logging() {
       last_SSD_write_bytes;
   uint64_t cur_Client_Read_throughput, last_Client_Read_throughput,
       cur_Client_Write_throughput, last_Client_Write_throughput;
+  size_t cur_user_cpu_time, cur_sys_cpu_time, last_user_cpu_time,
+      last_sys_cpu_time;
 
   last_shootdowns = readTLBShootdownCount();
   std::tie(last_SSD_read_bytes, last_SSD_write_bytes) =
       SSD_io_bytes(device_name_);
   last_Client_Read_throughput = client_read_throughput_Byte_.load();
   last_Client_Write_throughput = client_write_throughput_Byte_.load();
+  std::tie(last_user_cpu_time, last_sys_cpu_time) = GetCPUTime();
 
   // auto last_eviction_operation_count =
   //   gbp::debug::get_counter_eviction().load();
@@ -107,10 +113,11 @@ void PerformanceLogServer::Logging() {
   // auto last_contention_count = gbp::debug::get_counter_contention().load();
 
   size =
-      ::snprintf(buf, 4096, "%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s\n",
+      ::snprintf(buf, 4096, "%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s\n",
                  "Client_Read_Throughput", "Client_Write_Throughput",
                  "SSD_Read_Throughput", "SSD_write_Throughput", "TLB_shootdown",
-                 "Memory_usage", "Memory_usage_MMAP", "Eviction_count");
+                 "Memory_usage", "Memory_usage_MMAP", "User CPU Time (us)",
+                 "Sys CPU Time (us)");
   log_file_.write(buf, size);
 
   while (true) {
@@ -119,13 +126,13 @@ void PerformanceLogServer::Logging() {
     std::tie(SSD_read_bytes, SSD_write_bytes) = SSD_io_bytes(device_name_);
     cur_Client_Read_throughput = client_read_throughput_Byte_.load();
     cur_Client_Write_throughput = client_write_throughput_Byte_.load();
-
+    std::tie(cur_user_cpu_time, cur_sys_cpu_time) = GetCPUTime();
     // auto cur_eviction_operation_count = debug::get_counter_eviction().load();
     // auto cur_fetch_count = debug::get_counter_fetch().load();
     // auto cur_contention_count = debug::get_counter_contention().load();
 
     size = ::snprintf(
-        buf, 4096, "%-25lf%-25lf%-25lf%-25lf%-25lu%-25lf%-25lf\n",
+        buf, 4096, "%-25lf%-25lf%-25lf%-25lf%-25lu%-25lf%-25lf%-25lu%-25lu\n",
         (cur_Client_Read_throughput - last_Client_Read_throughput) /
             (double) B2GB,
         (cur_Client_Write_throughput - last_Client_Write_throughput) /
@@ -133,7 +140,9 @@ void PerformanceLogServer::Logging() {
         (SSD_read_bytes - last_SSD_read_bytes) / (double) B2GB,
         (SSD_write_bytes - last_SSD_write_bytes) / (double) B2GB,
         (shootdowns - last_shootdowns), GetMemoryUsage() / (1024.0 * 1024),
-        GetMemoryUsageMMAP(mmap_monitored_dir) / (1024.0 * 1024));
+        GetMemoryUsageMMAP(mmap_monitored_dir) / (1024.0 * 1024),
+        cur_user_cpu_time - last_user_cpu_time,
+        cur_sys_cpu_time - last_sys_cpu_time);
     log_file_.write(buf, size);
     log_file_.flush();
     // printf("%lu%-20lf%-20lu%-20lf%-20lu\n", cur_IO_throughput,
@@ -145,7 +154,8 @@ void PerformanceLogServer::Logging() {
     last_SSD_write_bytes = SSD_write_bytes;
     last_Client_Read_throughput = cur_Client_Read_throughput;
     last_Client_Write_throughput = cur_Client_Write_throughput;
-
+    last_user_cpu_time = cur_user_cpu_time;
+    last_sys_cpu_time = cur_sys_cpu_time;
     // last_eviction_operation_count = cur_eviction_operation_count;
     // last_fetch_count = cur_fetch_count;
     // last_contention_count = cur_contention_count;
@@ -181,7 +191,7 @@ std::string& get_db_dir() {
   return db_dir;
 }
 
-inline size_t GetMemoryUsage() {
+size_t GetMemoryUsage() {
   std::ifstream proc_status("/proc/self/status");
   // std::ifstream
   // proc_status("/data/experiment_space/graphscope_bufferpool/status");
@@ -191,7 +201,6 @@ inline size_t GetMemoryUsage() {
       std::vector<std::string> strs;
       boost::split(strs, line, boost::is_any_of("\t "),
                    boost::token_compress_on);
-      std::stringstream ss(strs[1]);
       auto ret = std::stoull(strs[1]);
       return ret;
     }
@@ -278,4 +287,62 @@ size_t GetMemoryUsageMMAP(std::string& mmap_monitored_dir) {
   return total_mmap_rss;
 }
 
+std::tuple<size_t, size_t> GetCPUTime() {
+  struct rusage usage;
+  assert(::getrusage(RUSAGE_SELF, &usage) == 0);
+
+  return {usage.ru_utime.tv_sec * 1000000 + usage.ru_utime.tv_usec,
+          usage.ru_stime.tv_sec * 1000000 + usage.ru_stime.tv_usec};
+}
+
+void clearPageCache() {
+  // 调用 sync 系统调用
+  if (system("sync") != 0) {
+    std::cerr << "sync command failed" << std::endl;
+    return;
+  }
+
+  // 清空页面缓存
+  std::ofstream drop_caches("/proc/sys/vm/drop_caches");
+  if (drop_caches) {
+    drop_caches << "3" << std::endl;  // 3 表示清空页面缓存、dentries和inodes
+    if (!drop_caches) {
+      std::cerr << "Failed to write to /proc/sys/vm/drop_caches" << std::endl;
+    }
+  } else {
+    std::cerr << "Failed to open /proc/sys/vm/drop_caches" << std::endl;
+  }
+}
+
+std::vector<std::tuple<void**, int, size_t>>& GetMAS() {
+  static std::vector<std::tuple<void**, int, size_t>> mas;
+  return mas;
+};
+void CleanMAS() {
+  std::vector<std::tuple<void**, int, size_t>>& mas_ = gbp::GetMAS();
+  // for (size_t i = 0; i < mas_.size(); i++) {
+  //   if (std::get<1>(mas_[i]) != -1) {
+  //     ::munmap(std::get<0>(mas_[i])[0], std::get<2>(mas_[i]));
+  //     // volatile size_t sum = 0;
+  //     // LOG(INFO) << std::get<2>(mas_[i]);
+  //     // for (size_t k = 0; k < 10 * 4096 && k < std::get<2>(mas_[i]); k +=
+  //     // 4096) {
+  //     //   sum += ((char*) aa)[k];
+  //     // }
+  //   }
+  // }
+  sleep(10);
+  clearPageCache();
+  sleep(10);
+  // for (size_t i = 0; i < mas_.size(); i++) {
+  //   if (std::get<1>(mas_[i]) != -1) {
+  //     void* aa = ::mmap(NULL, std::get<2>(mas_[i]), PROT_READ, MAP_SHARED,
+  //                       std::get<1>(mas_[i]), 0);
+  //     madvise(aa, std::get<2>(mas_[i]),
+  //             MADV_RANDOM);  // Turn off readahead
+  //     assert(aa != nullptr);
+  //     *std::get<0>(mas_[i]) = aa;
+  //   }
+  // }
+}
 }  // namespace gbp
