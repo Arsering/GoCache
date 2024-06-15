@@ -49,7 +49,7 @@ void BufferPoolManager::init(uint16_t pool_num,
 
   disk_manager_ = new DiskManager(file_path);
   partitioner_ = new RoundRobinPartitioner(pool_num);
-  if constexpr (EVICTION_SERVER_ENABLE)
+  if constexpr (EVICTION_BATCH_ENABLE)
     eviction_server_ = new EvictionServer();
 
   for (int idx = 0; idx < io_server_num; idx++) {

@@ -32,6 +32,7 @@
 #include "partitioner.h"
 #include "rw_lock.h"
 #include "sieve_replacer.h"
+#include "sieve_replacer_v3.h"
 
 #include "eviction_server.h"
 
@@ -124,8 +125,10 @@ class BufferPool {
   pair_min<PTE*, char*> FetchPage(fpage_id_type fpage_id,
                                   GBPfile_handle_type fd);
 
-  FORCE_INLINE pair_min<PTE*, char*> Pin(fpage_id_type fpage_id_inpool,
-                                         GBPfile_handle_type fd) {
+  pair_min<PTE*, char*> Pin(fpage_id_type fpage_id, GBPfile_handle_type fd) {
+    fpage_id_type fpage_id_inpool =
+        partitioner_->GetFPageIdInPartition(fpage_id);
+
     // 1.1
     auto [success, mpage_id] = page_table_->FindMapping(fd, fpage_id_inpool);
 

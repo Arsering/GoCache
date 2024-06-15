@@ -27,8 +27,9 @@ void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
   // replacer_ = new FIFOReplacer(page_table_);
   // replacer_ = new ClockReplacer(page_table_);
   // replacer_ = new LRUReplacer(page_table_);
-  replacer_ = new TwoQLRUReplacer(page_table_);
+  // replacer_ = new TwoQLRUReplacer(page_table_);
   // replacer_ = new SieveReplacer(page_table_);
+  replacer_ = new SieveReplacer_v3(page_table_);
 
   for (int i = 0; i < disk_manager_->fd_oss_.size(); i++) {
     uint32_t file_size_in_page =
@@ -75,12 +76,7 @@ bool BufferPool::FlushPage(fpage_id_type fpage_id, GBPfile_handle_type fd) {
   auto [locked, mpage_id] = page_table_->LockMapping(fd, fpage_id_inpool);
   if (!locked)
     return false;
-  // if ("/nvme0n1/lgraph_db/sf30_db_t/runtime/tmp/ie_PERSON_KNOWS_PERSON.adj"
-  // ==
-  //     disk_manager_->file_names_[fd]) {
-  //   LOG(INFO) << "fpage_id = " << fpage_id << " " << fd;
-  //   assert(!(mpage_id == PageMapping::Mapping::EMPTY_VALUE));
-  // }
+
   if (!(mpage_id == PageMapping::Mapping::EMPTY_VALUE)) {
     auto* tar = page_table_->FromPageId(mpage_id);
     if (tar->dirty) {
@@ -240,11 +236,11 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
   while (true) {
     switch (stat) {
     case context_type::Phase::Begin: {
-      ret = Pin(fpage_id_inpool, fd);
+      ret = Pin(fpage_id, fd);
 
       if (ret.first) {  // 1.1
         stat = context_type::Phase::End;
-        replacer_->Promote(page_table_->ToPageId(ret.first));
+        assert(replacer_->Promote(page_table_->ToPageId(ret.first)));
         break;
       }
       auto [locked, mpage_id] = page_table_->LockMapping(fd, fpage_id_inpool);
@@ -254,7 +250,10 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
           stat = context_type::Phase::Initing;
         else {
           page_table_->UnLockMapping(fd, fpage_id_inpool, mpage_id);
+          std::this_thread::yield();
         }
+      } else {
+        std::this_thread::yield();
       }
       break;
     }
@@ -263,11 +262,26 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
       if (free_list_->Poll(mpage_id)) {
         stat = context_type::Phase::Loading;
       } else {
-        if (!replacer_->Victim(mpage_id)) {
-          assert(false);
+        if constexpr (EVICTION_BATCH_ENABLE) {
+          if (!replacer_
+                   ->GetFinishMark())  // 单个replacer只允许一个async requst存在
+            break;
+          assert(eviction_server_->SendRequest(
+              replacer_, free_list_, EVICTION_BATCH_SIZE,
+              &replacer_->GetFinishMark(), true));
+          // while (!replacer_->GetFinishMark()) {
+          //   // FIXME: 此处会导致本次query latency变大，导致整个workload的tail
+          //   // latency变大
+          //   std::this_thread::yield();
+          // }
+          std::this_thread::yield();
           break;
+        } else {
+          if (!replacer_->Victim(mpage_id)) {
+            assert(false);
+            break;
+          }
         }
-
         stat = context_type::Phase::Evicting;
       }
 
@@ -317,14 +331,13 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
       ret.first->ref_count = 1;
       ret.first->fpage_id = fpage_id_inpool;
       ret.first->fd = fd;
+
+      assert(replacer_->Insert(page_table_->ToPageId(ret.first)));
+      stat = context_type::Phase::End;
       std::atomic_thread_fence(std::memory_order_release);
 
       assert(page_table_->CreateMapping(fd, fpage_id_inpool,
                                         page_table_->ToPageId(ret.first)));
-
-      replacer_->Insert(page_table_->ToPageId(ret.first));
-
-      stat = context_type::Phase::End;
     }
     case context_type::Phase::End: {
       // get_thread_logfile() << (uintptr_t) ret.second << std::endl;

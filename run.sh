@@ -1,4 +1,5 @@
 set -x
+export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 
 cd build
 
@@ -18,10 +19,10 @@ cd ..
 CUR_DIR=.
 
 export FILE_SIZE_MB=$((1024*30))
-export WORKER_NUM=50
-export POOL_NUM=10
+export WORKER_NUM=60
+export POOL_NUM=1
 export IO_SERVER_NUM=1
-export POOL_SIZE_MB=$((331))
+export POOL_SIZE_MB=$((1024*31))
 export IO_SIZE_Byte=$((8*512))
 # export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD
 

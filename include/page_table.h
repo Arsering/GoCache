@@ -549,6 +549,7 @@ class PageTable {
     assert(mappings_[fd] != nullptr);
 #endif
     auto [success, mpage_id] = mappings_[fd]->LockMapping(fpage_id);
+
     if (!success)
       return {false, 0};
     if (mpage_id == PageMapping::Mapping::EMPTY_VALUE)

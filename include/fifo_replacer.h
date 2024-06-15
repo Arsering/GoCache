@@ -113,37 +113,43 @@ class FIFOReplacer : public Replacer<mpage_id_type> {
               mpage_id_type page_num) override {
     std::lock_guard<std::mutex> lck(latch_);
 
-    ListNode* victim;
+    ListNode* to_evict;
     PTE* pte;
+
     while (page_num != 0) {
-      victim = tail_.prev;
+      to_evict = tail_.prev;
       while (true) {
-        if (victim == &head_)
+        if (to_evict == &head_) {
+          if (mpage_ids.size() != 0)
+            return true;
           return false;
-        assert(victim != &head_);
-        pte = page_table_->FromPageId(victim->val);
+        }
+
+        pte = page_table_->FromPageId(to_evict->val);
         auto pte_unpacked = pte->ToUnpacked();
 
         auto [locked, mpage_id] =
             page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id);
         if (locked && !pte->dirty && pte->ref_count == 0 &&
-            mpage_id != PageMapping::Mapping::EMPTY_VALUE)
+            mpage_id != PageMapping::Mapping::EMPTY_VALUE) {
+          assert(page_table_->DeleteMapping(pte->fd, pte->fpage_id));
           break;
+        }
+
         if (locked)
           assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
 
-        victim = victim->prev;
+        to_evict = to_evict->prev;
       }
-      page_table_->DeleteMapping(pte->fd, pte->fpage_id);
-      // pte->Clean();
-      tail_.prev = victim->prev;
-      victim->prev->next = &tail_;
-
-      mpage_ids.push_back(victim->val);
+      mpage_ids.push_back(to_evict->val);
       page_num--;
-      map_.erase(victim->val);
-      delete victim;
+
+      to_evict->prev->next = to_evict->next;
+      to_evict->next->prev = to_evict->prev;
+      map_.erase(to_evict->val);
+      delete to_evict;
     }
+
     return true;
   }
 
