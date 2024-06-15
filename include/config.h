@@ -6,7 +6,7 @@
 
 #pragma once
 
-#define GRAPHSCOPE
+// #define GRAPHSCOPE
 
 // #define DEBUG_BITMAP
 #define ASSERT_ENABLE true
@@ -50,7 +50,10 @@ using partition_id_type = uint32_t;
 constexpr bool PERSISTENT = true;
 // constexpr bool ASSERT_ENABLE = false;
 constexpr bool DEBUG = true;
-constexpr bool EVICTION_SERVER_ENABLE = false;
+
+constexpr bool EVICTION_BATCH_ENABLE = true;
+constexpr size_t EVICTION_BATCH_SIZE = 40;
+
 constexpr bool LAZY_SSD_IO = false;
 
 constexpr uint32_t INVALID_PAGE_ID =
@@ -59,9 +62,11 @@ constexpr uint16_t INVALID_FILE_HANDLE = std::numeric_limits<uint16_t>::max();
 constexpr size_t PAGE_SIZE_MEMORY = 4096;  // size of a memory page in byte
 constexpr size_t PAGE_SIZE_FILE = 4096;
 constexpr size_t CACHELINE_SIZE = 64;
-constexpr static size_t IOURing_MAX_DEPTH = 0;  // 64 * 2
+constexpr static size_t IOURing_MAX_DEPTH = 16;  // 64 * 2
 constexpr size_t FIBER_BATCH_SIZE = IOURing_MAX_DEPTH * 2;
 constexpr static size_t FIBER_CHANNEL_DEPTH = FIBER_BATCH_SIZE * 2;
+
+constexpr static size_t EVICTION_FIBER_CHANNEL_DEPTH = 10;
 
 constexpr int IO_BACKEND_TYPE = 1;  // 1: pread; 2: IO_Uring
 constexpr bool USING_FIBER_ASYNC_RESPONSE = false;

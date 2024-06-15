@@ -75,6 +75,7 @@
         "typeindex": "cpp",
         "charconv": "cpp",
         "shared_mutex": "cpp",
-        "regex": "cpp"
+        "regex": "cpp",
+        "source_location": "cpp"
     }
 }

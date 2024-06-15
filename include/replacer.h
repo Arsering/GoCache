@@ -14,7 +14,7 @@ namespace gbp {
 template <typename T>
 class Replacer {
  public:
-  Replacer() {}
+  Replacer() : finish_mark_async_(true) {}
   virtual ~Replacer() {}
   virtual bool Insert(T value) = 0;
   virtual bool Promote(T value) = 0;
@@ -23,7 +23,12 @@ class Replacer {
 
   virtual bool Erase(const T& value) = 0;
   virtual size_t Size() const = 0;
+  std::atomic<bool>& GetFinishMark() { return finish_mark_async_; }
+
   virtual size_t GetMemoryUsage() const = 0;
+
+ private:
+  std::atomic<bool> finish_mark_async_ = true;
 };
 
 }  // namespace gbp

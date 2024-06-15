@@ -49,11 +49,8 @@ class TwoQLRUReplacer : public Replacer<mpage_id_type> {
       // 查找页面，如果在非活跃链表中，移动到活跃链表头部并返回true
       it = inactiveMap.find(page_id);
       if (it != inactiveMap.end()) {
-        LOG(INFO) << "cp";
         inactiveList.erase(it->second);
-        LOG(INFO) << "cp";
         inactiveMap.erase(it);
-        LOG(INFO) << "cp";
 
         activeList.push_front(page_id);
         activeMap[page_id] = activeList.begin();
@@ -88,6 +85,7 @@ class TwoQLRUReplacer : public Replacer<mpage_id_type> {
     if (to_evict != inactiveList.rend()) {
       page_id = *to_evict;
       inactiveList.erase(--(to_evict.base()));
+      inactiveMap.erase(page_id);
       ret = true;
     } else {
       for (to_evict = activeList.rbegin(); to_evict != activeList.rend();
@@ -107,6 +105,7 @@ class TwoQLRUReplacer : public Replacer<mpage_id_type> {
       if (to_evict != activeList.rend()) {
         page_id = *to_evict;
         activeList.erase(--(to_evict.base()));
+        activeMap.erase(page_id);
         ret = true;
       }
     }
