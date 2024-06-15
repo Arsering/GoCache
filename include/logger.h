@@ -252,5 +252,6 @@ size_t GetMemoryUsageMMAP(std::string& mmap_monitored_dir);
 std::tuple<size_t, size_t> GetCPUTime();
 std::vector<std::tuple<void**, int, size_t>>& GetMAS();
 void CleanMAS();
+std::mutex& get_lock_global();
 
 }  // namespace gbp

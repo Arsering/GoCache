@@ -154,7 +154,7 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
 
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::uniform_int_distribution<uint64_t> rnd(0, io_num - 10);
+  std::uniform_int_distribution<uint64_t> rnd(0, io_num);
   std::uniform_int_distribution<uint64_t> rnd_io_size(1, 1024 * 5);
 
   auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
@@ -220,6 +220,7 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
           // assert(iter.current() == nullptr);
         }
       }
+
       // st = gbp::GetSystemTime() - st;
       // latency_log << st << " | " << gbp::get_counter(1) << " | "
       //             << gbp::get_counter(2) << " | " << gbp::get_counter(11)

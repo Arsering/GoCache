@@ -50,20 +50,22 @@ struct async_eviction_request_type {
 
 class EvictionServer {
  public:
-  EvictionServer() : stop_(false) {}
+  EvictionServer() : stop_(false) {
+    if (!server_.joinable())
+      server_ = std::thread([this]() { Run(); });
+  }
   ~EvictionServer() {
     stop_ = true;
     if (server_.joinable())
       server_.join();
   }
-  void Start() {
-    if (!server_.joinable())
-      server_ = std::thread([this]() { Run(); });
-  }
   bool SendRequest(Replacer<mpage_id_type>* replacer,
                    lockfree_queue_type<mpage_id_type>* free_list,
                    mpage_id_type page_num, std::atomic<bool>* finish,
                    bool blocked = true) {
+    if (!server_.joinable())
+      return false;
+
     auto* req =
         new async_eviction_request_type(replacer, free_list, page_num, finish);
 
@@ -84,8 +86,6 @@ class EvictionServer {
     req.replacer->Victim(pages, req.page_num);
     for (auto& page : pages) {
       assert(req.free_list->Push(page));
-      std::string tmp = "a" + std::to_string(page);
-      // Log_mine(tmp);
     }
     req.page_num -= pages.size();
     if (unlikely(req.page_num == 0)) {
@@ -101,36 +101,38 @@ class EvictionServer {
         async_requests(gbp::FIBER_CHANNEL_DEPTH);
 
     async_eviction_request_type* async_request;
+    while (!async_requests.full())
+      async_requests.push_back(std::nullopt);
+
+    size_t req_id = 0;
     while (true) {
-      while (true == request_channel_.pop(async_request)) {
-        async_requests.push_back(async_request);
-        while (!async_requests.empty()) {
-          while (!async_requests.full() &&
-                 true == request_channel_.pop(async_request))
-            async_requests.push_back(async_request);
-
-          for (auto& req : async_requests) {
-            if (!req.has_value())
-              continue;
-            if (ProcessFunc(*req.value())) {
-              req.value()->finish->store(true);
-              ::delete req.value();
-              req.reset();
-            }
+      req_id = 0;
+      while (req_id != gbp::EVICTION_FIBER_CHANNEL_DEPTH) {
+        auto& req = async_requests[req_id];
+        if (!req.has_value()) {
+          if (request_channel_.pop(async_request)) {
+            req.emplace(async_request);
+          } else {
+            req_id++;
+            continue;
           }
-
-          while (!async_requests.empty() &&
-                 !async_requests.front().has_value()) {
-            num_async_fiber_processing_--;
-            async_requests.pop_front();
+        }
+        if (ProcessFunc(*req.value())) {
+          req.value()->finish->store(true);
+          delete req.value();
+          if (request_channel_.pop(async_request)) {
+            req.emplace(async_request);
+          } else {
+            req_id++;
+            req.reset();
           }
-          // save_fence();
-          // boost::this_fiber::yield();
+        } else {
+          req_id++;
         }
       }
       if (stop_)
         break;
-      hybrid_spin(loops);
+      // hybrid_spin(loops);
     }
   }
 

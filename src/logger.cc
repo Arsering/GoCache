@@ -345,4 +345,9 @@ void CleanMAS() {
   //   }
   // }
 }
+
+std::mutex& get_lock_global() {
+  static std::mutex latch;
+  return latch;
+}
 }  // namespace gbp

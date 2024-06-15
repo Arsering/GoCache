@@ -14,7 +14,7 @@ namespace gbp {
 class SieveReplacer : public Replacer<mpage_id_type> {
   struct ListNode {
     ListNode(){};
-    ListNode(mpage_id_type val) : val(val){};
+    ListNode(mpage_id_type _val) : val(_val){};
 
     mpage_id_type val;
     ListNode* prev;
@@ -45,8 +45,10 @@ class SieveReplacer : public Replacer<mpage_id_type> {
       map_[value] = cur;
       cur->freq = 0;
       prepend_obj_to_head(&head_, &tail_, cur);
+      assert(map_.find(value) != map_.end());
       ret = true;
     }
+
     return ret;
   }
 
@@ -59,22 +61,27 @@ class SieveReplacer : public Replacer<mpage_id_type> {
       target->second->freq = 1;
       ret = true;
     }
+
     return ret;
   }
 
   bool Victim(mpage_id_type& mpage_id) override {
     std::lock_guard<std::mutex> lck(latch_);
 
+    PTE* pte;
     ListNode* target = pointer_ == nullptr ? tail_ : pointer_;
     if (target == nullptr) {
       return false;
     }
+    size_t count = map_.size() * 3;
     while (true) {
+      if (count == 0)
+        return false;
       while (target->freq > 0) {
         target->freq -= 1;
         target = target->prev == nullptr ? tail_ : target->prev;
       }
-      auto* pte = page_table_->FromPageId(target->val);
+      pte = page_table_->FromPageId(target->val);
       auto pte_unpacked = pte->ToUnpacked();
 
       auto [locked, mpage_id] =
@@ -86,7 +93,7 @@ class SieveReplacer : public Replacer<mpage_id_type> {
 
       if (locked)
         assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
-
+      count--;
       target = target->prev == nullptr ? tail_ : target->prev;
     }
     pointer_ = target->prev;
@@ -102,22 +109,55 @@ class SieveReplacer : public Replacer<mpage_id_type> {
               mpage_id_type page_num) override {
     std::lock_guard<std::mutex> lck(latch_);
 
-    while (page_num > 0) {
-      ListNode* target = pointer_ == nullptr ? tail_ : pointer_;
-      if (pointer_ == nullptr) {
-        return false;
-      }
-      while (target->freq > 0) {
-        target->freq -= 1;
-        target = target->prev == nullptr ? tail_ : target->prev;
-      }
-      pointer_ = target->prev;
-      remove_obj_from_list(&head_, &tail_, target);
-      erase_from_map(target->val);
-      mpage_ids.push_back(target->val);
-      delete target;
-      page_num--;
+    PTE* pte;
+    ListNode* to_evict = pointer_ == nullptr ? tail_ : pointer_;
+    if (to_evict == nullptr) {
+      assert(false);
+      return false;
     }
+
+    while (page_num > 0) {
+      size_t count = map_.size() * 3;
+      while (true) {
+        if (count == 0) {
+          if (mpage_ids.size() != 0) {
+            return true;
+          }
+          return false;
+        }
+        while (to_evict->freq > 0) {
+          to_evict->freq -= 1;
+          to_evict = to_evict->prev == nullptr ? tail_ : to_evict->prev;
+        }
+
+        pte = page_table_->FromPageId(to_evict->val);
+        auto pte_unpacked = pte->ToUnpacked();
+
+        auto [locked, mpage_id] =
+            page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id);
+
+        if (locked && pte->ref_count == 0 && !pte->dirty &&
+            mpage_id != PageMapping::Mapping::EMPTY_VALUE) {
+          assert(page_table_->DeleteMapping(pte_unpacked.fd,
+                                            pte_unpacked.fpage_id));
+          break;
+        }
+
+        if (locked)
+          assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
+        count--;
+        to_evict = to_evict->prev == nullptr ? tail_ : to_evict->prev;
+      }
+      mpage_ids.push_back(to_evict->val);
+      page_num--;
+
+      pointer_ = to_evict->prev;
+      remove_obj_from_list(&head_, &tail_, to_evict);
+      erase_from_map(to_evict->val);
+      delete to_evict;
+      to_evict = pointer_ == nullptr ? tail_ : pointer_;
+    }
+
     return true;
   }
 
