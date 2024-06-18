@@ -200,7 +200,7 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
 
       // st = gbp::GetSystemTime();
       {
-        auto ret = bpm.GetBlock(curr_io_fileoffset, io_size);
+        auto ret = bpm.GetBlockSync(curr_io_fileoffset, io_size);
 
         if constexpr (true) {
           // auto ret_new = bpm.GetObject(curr_io_fileoffset, io_size);
@@ -275,7 +275,7 @@ void write_bufferpool(size_t start_offset, size_t file_size_inByte,
     // {
     //   io_id = rnd(gen);
     //   curr_io_fileoffset = io_id * io_size;
-    auto ret_obj = bpm.GetBlock(curr_io_fileoffset, io_size);
+    auto ret_obj = bpm.GetBlockSync(curr_io_fileoffset, io_size);
     size_t buf_offset =
         4096 -
         (curr_io_fileoffset % 4096 == 0 ? 4096 : curr_io_fileoffset % 4096);
@@ -344,7 +344,7 @@ void randwrite_bufferpool(size_t start_offset, size_t file_size_inByte,
 
     auto ret =
         bpm.SetBlock(test_str.data(), curr_io_fileoffset, io_size, 0, false);
-    auto ret_str = bpm.GetBlock(curr_io_fileoffset, io_size);
+    auto ret_str = bpm.GetBlockSync(curr_io_fileoffset, io_size);
     bpm.GetBlock(out_buf_1, curr_io_fileoffset, io_size);
     assert(strncmp(test_str.data(), out_buf_1, io_size) == 0);
     assert(ret_str == test_str);
@@ -491,7 +491,7 @@ void warmup_bufferpool_inner(char* data_file_mmaped, size_t file_size_inByte,
     curr_io_fileoffset = curr_io_fileoffset + io_size < file_size_inByte
                              ? start_offset + curr_io_fileoffset
                              : start_offset + file_size_inByte - io_size;
-    auto ret = bpm.GetBlock(curr_io_fileoffset, io_size);
+    auto ret = bpm.GetBlockSync(curr_io_fileoffset, io_size);
     // for (size_t i = 0; i < io_size; i += 4096)
     // {
     //   sum += ret.Data()[i];
@@ -660,8 +660,10 @@ int test_concurrency(int argc, char** argv) {
     //                          0, i);
     // thread_pool.emplace_back(write_pwrite, io_backend, file_size_inByte,
     //                          io_size, i);
-    // thread_pool.emplace_back(fiber_pread_1_2, disk_manager,
-    // file_size_inByte, io_size, i); thread_pool.emplace_back(read_mmap,
+    // thread_pool.emplace_back(fiber_pread_1_2, &disk_manager,
+    // file_size_inByte,
+    //                          io_size, i);
+    // thread_pool.emplace_back(read_mmap,
     // data_file_mmaped, file_size_inByte, io_size, i);
     // thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size,
     // i); thread_pool.emplace_back(write_bufferpool, file_size_inByte * i,

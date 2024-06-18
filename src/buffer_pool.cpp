@@ -8,7 +8,7 @@ namespace gbp {
  * WARNING: Do Not Edit This Function
  */
 void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
-                      MemoryPool memory_pool, IOServer_old* io_server,
+                      MemoryPool memory_pool, IOServer* io_server,
                       RoundRobinPartitioner* partitioner,
                       EvictionServer* eviction_server) {
   pool_ID_ = pool_ID;
@@ -23,13 +23,16 @@ void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
   memory_pool_ = memory_pool;
   page_table_ = new PageTable(pool_size_);
 
-  // page_table_ = new std::vector<ExtendibleHash<page_id_infile, PTE *>>();
-  // replacer_ = new FIFOReplacer(page_table_);
+  replacer_ = new FIFOReplacer(page_table_);
+  // replacer_ = new FIFOReplacer_v2(page_table_, pool_size_);
   // replacer_ = new ClockReplacer(page_table_);
   // replacer_ = new LRUReplacer(page_table_);
+  // replacer_ = new LRUReplacer_v2(page_table_, pool_size_);
+
   // replacer_ = new TwoQLRUReplacer(page_table_);
   // replacer_ = new SieveReplacer(page_table_);
-  replacer_ = new SieveReplacer_v3(page_table_);
+  // replacer_ = new SieveReplacer_v2(page_table_, pool_size_);
+  // replacer_ = new SieveReplacer_v3(page_table_, pool_size_);
 
   for (int i = 0; i < disk_manager_->fd_oss_.size(); i++) {
     uint32_t file_size_in_page =
@@ -80,10 +83,10 @@ bool BufferPool::FlushPage(fpage_id_type fpage_id, GBPfile_handle_type fd) {
   if (!(mpage_id == PageMapping::Mapping::EMPTY_VALUE)) {
     auto* tar = page_table_->FromPageId(mpage_id);
     if (tar->dirty) {
-      assert(
-          ReadWrite(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_FILE,
-                    (char*) memory_pool_.FromPageId(page_table_->ToPageId(tar)),
-                    PAGE_SIZE_MEMORY, tar->GetFileHandler(), false));
+      assert(ReadWriteSync(
+          fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_FILE,
+          (char*) memory_pool_.FromPageId(page_table_->ToPageId(tar)),
+          PAGE_SIZE_MEMORY, tar->GetFileHandler(), false));
       tar->dirty = false;
     }
   }
@@ -91,21 +94,21 @@ bool BufferPool::FlushPage(fpage_id_type fpage_id, GBPfile_handle_type fd) {
   return true;
 }
 
-bool BufferPool::ReadWrite(size_t offset, size_t file_size, char* buf,
-                           size_t buf_size, GBPfile_handle_type fd,
-                           bool is_read) {
+bool BufferPool::ReadWriteSync(size_t offset, size_t file_size, char* buf,
+                               size_t buf_size, GBPfile_handle_type fd,
+                               bool is_read) {
   if constexpr (USING_FIBER_ASYNC_RESPONSE) {
-    context_type context = context_type::GetRawObject();
-    async_request_fiber_type* req = new async_request_fiber_type(
-        buf, buf_size, offset, file_size, fd, context, is_read);
-    assert(io_server_->SendRequest(req));
+    AsyncMesg ssd_io_finished;
+    assert(io_server_->SendRequest(fd, offset, file_size, buf, &ssd_io_finished,
+                                   is_read));
 
     size_t loops = 0;
-    while (!req->success) {
+    while (!ssd_io_finished.FinishedSync()) {
       // hybrid_spin(loops);
+      // std::this_thread::sleep_for(
+      //     std::chrono::nanoseconds(ASYNC_SSDIO_SLEEP_TIME_MICROSECOND));
       std::this_thread::yield();
     }
-    delete req;
     return true;
   } else {
     if (is_read)
@@ -216,15 +219,15 @@ PTE* BufferPool::GetVictimPage() {
  * This function must mark the Page as pinned and remove its entry from
  * LRUReplacer before it is returned to the caller.
  */
-pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
-                                            GBPfile_handle_type fd) {
+pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
+                                                GBPfile_handle_type fd) {
 #if ASSERT_ENABLE
   auto file_size = disk_manager_->GetFileSizeShort(fd);
   assert(fpage_id < CEIL(file_size, PAGE_SIZE_MEMORY));
 #endif
 
   // std::lock_guard<std::mutex> lck(latch_);
-  auto stat = context_type::Phase::Begin;
+  auto stat = async_BPM_request_type::Phase::Begin;
 
 #if ASSERT_ENABLE
   assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
@@ -235,11 +238,11 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
 
   while (true) {
     switch (stat) {
-    case context_type::Phase::Begin: {
+    case async_BPM_request_type::Phase::Begin: {
       ret = Pin(fpage_id, fd);
 
       if (ret.first) {  // 1.1
-        stat = context_type::Phase::End;
+        stat = async_BPM_request_type::Phase::End;
         assert(replacer_->Promote(page_table_->ToPageId(ret.first)));
         break;
       }
@@ -247,20 +250,24 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
 
       if (locked) {
         if (mpage_id == PageMapping::Mapping::EMPTY_VALUE)
-          stat = context_type::Phase::Initing;
+          stat = async_BPM_request_type::Phase::Initing;
         else {
           page_table_->UnLockMapping(fd, fpage_id_inpool, mpage_id);
-          std::this_thread::yield();
+          // std::this_thread::yield();
+          // std::this_thread::sleep_for(
+          //     std::chrono::microseconds(ASYNC_SSDIO_SLEEP_TIME_MICROSECOND));
         }
       } else {
-        std::this_thread::yield();
+        // std::this_thread::yield();
+        // std::this_thread::sleep_for(
+        //   std::chrono::microseconds(ASYNC_SSDIO_SLEEP_TIME_MICROSECOND));
       }
       break;
     }
-    case context_type::Phase::Initing: {  // 1.2
+    case async_BPM_request_type::Phase::Initing: {  // 1.2
       mpage_id_type mpage_id = 10;
       if (free_list_->Poll(mpage_id)) {
-        stat = context_type::Phase::Loading;
+        stat = async_BPM_request_type::Phase::Loading;
       } else {
         if constexpr (EVICTION_BATCH_ENABLE) {
           if (!replacer_
@@ -282,14 +289,14 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
             break;
           }
         }
-        stat = context_type::Phase::Evicting;
+        stat = async_BPM_request_type::Phase::Evicting;
       }
 
       ret.first = page_table_->FromPageId(mpage_id);
       ret.second = (char*) memory_pool_.FromPageId(mpage_id);
       break;
     }
-    case context_type::Phase::Evicting: {  // 2
+    case async_BPM_request_type::Phase::Evicting: {  // 2
 #ifdef DEBUG_BITMAP
       size_t fd_old = ret.first->fd;
       size_t fpage_id_old =
@@ -300,7 +307,7 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
       assert(disk_manager_->GetUsedMark(fd_old, fpage_id_old) == false);
 #endif
       if (ret.first->dirty) {
-        assert(ReadWrite(
+        assert(ReadWriteSync(
             partitioner_->GetFPageIdGlobal(pool_ID_, ret.first->fpage_id) *
                 PAGE_SIZE_FILE,
             PAGE_SIZE_FILE, ret.second, PAGE_SIZE_MEMORY, ret.first->fd,
@@ -309,10 +316,10 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
 
       assert(page_table_->DeleteMapping(ret.first->fd, ret.first->fpage_id));
 
-      stat = context_type::Phase::Loading;
+      stat = async_BPM_request_type::Phase::Loading;
       break;
     }
-    case context_type::Phase::Loading: {  // 4
+    case async_BPM_request_type::Phase::Loading: {  // 4
       ret.first->Clean();
       if constexpr (LAZY_SSD_IO) {
         *reinterpret_cast<fpage_id_type*>(ret.second) = fpage_id;
@@ -323,8 +330,8 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
         disk_manager_->SetUsedMark(fd, fpage_id, true);
         assert(disk_manager_->GetUsedMark(fd, fpage_id) == true);
 #endif
-        assert(ReadWrite(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
-                         ret.second, PAGE_SIZE_MEMORY, fd, true));
+        assert(ReadWriteSync(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
+                             ret.second, PAGE_SIZE_MEMORY, fd, true));
         ret.first->initialized = true;
       }
 
@@ -333,15 +340,150 @@ pair_min<PTE*, char*> BufferPool::FetchPage(fpage_id_type fpage_id,
       ret.first->fd = fd;
 
       assert(replacer_->Insert(page_table_->ToPageId(ret.first)));
-      stat = context_type::Phase::End;
+      stat = async_BPM_request_type::Phase::End;
       std::atomic_thread_fence(std::memory_order_release);
 
       assert(page_table_->CreateMapping(fd, fpage_id_inpool,
                                         page_table_->ToPageId(ret.first)));
     }
-    case context_type::Phase::End: {
+    case async_BPM_request_type::Phase::End: {
       // get_thread_logfile() << (uintptr_t) ret.second << std::endl;
       return ret;
+    }
+    }
+  }
+  assert(false);
+}
+
+bool BufferPool::FetchPageAsyncInner(async_BPM_request_type& req) {
+#if ASSERT_ENABLE
+  auto file_size = disk_manager_->GetFileSizeShort(req.fd);
+  assert(req.fpage_id < CEIL(file_size, PAGE_SIZE_MEMORY));
+#endif
+
+#if ASSERT_ENABLE
+  assert(partitioner_->GetPartitionId(req.fpage_id) == pool_ID_);
+#endif
+
+  fpage_id_type fpage_id_inpool =
+      partitioner_->GetFPageIdInPartition(req.fpage_id);
+
+  while (true) {
+    switch (req.runtime_phase) {
+    case async_BPM_request_type::Phase::Begin: {
+      auto [locked, mpage_id] =
+          page_table_->LockMapping(req.fd, fpage_id_inpool);
+
+      if (locked) {
+        if (mpage_id == PageMapping::Mapping::EMPTY_VALUE)
+          req.runtime_phase = async_BPM_request_type::Phase::Initing;
+        else {
+          page_table_->UnLockMapping(req.fd, fpage_id_inpool, mpage_id);
+          req.runtime_phase = async_BPM_request_type::Phase::Rebegin;
+          return false;
+        }
+      } else {
+        req.runtime_phase = async_BPM_request_type::Phase::Rebegin;
+        return false;
+      }
+      break;
+    }
+    case async_BPM_request_type::Phase::Rebegin: {
+      *req.response = Pin(req.fpage_id, req.fd);
+
+      if (req.response->first) {  // 1.1
+        req.runtime_phase = async_BPM_request_type::Phase::End;
+        assert(replacer_->Promote(page_table_->ToPageId(req.response->first)));
+        break;
+      }
+      return false;
+    }
+    case async_BPM_request_type::Phase::Initing: {  // 1.2
+      mpage_id_type mpage_id = 10;
+      if (free_list_->Poll(mpage_id)) {
+        req.runtime_phase = async_BPM_request_type::Phase::Loading;
+      } else {
+        if (!replacer_->Victim(mpage_id)) {
+          assert(false);
+          return false;
+          break;
+        }
+        req.runtime_phase = async_BPM_request_type::Phase::Evicting;
+      }
+
+      req.response->first = page_table_->FromPageId(mpage_id);
+      req.response->second = (char*) memory_pool_.FromPageId(mpage_id);
+      break;
+    }
+    case async_BPM_request_type::Phase::Evicting: {  // 2
+#ifdef DEBUG_BITMAP
+      size_t fd_old = ret.first->fd;
+      size_t fpage_id_old =
+          partitioner_->GetFPageIdGlobal(pool_ID_, ret.first->fpage_id);
+
+      assert(disk_manager_->GetUsedMark(fd_old, fpage_id_old) == true);
+      disk_manager_->SetUsedMark(fd_old, fpage_id_old, false);
+      assert(disk_manager_->GetUsedMark(fd_old, fpage_id_old) == false);
+#endif
+      if (req.response->first->dirty) {
+        assert(io_server_->SendRequest(
+            req.response->first->fd,
+            partitioner_->GetFPageIdGlobal(pool_ID_,
+                                           req.response->first->fpage_id) *
+                PAGE_SIZE_FILE,
+            PAGE_SIZE_FILE, req.response->second, &req.ssd_io_finish, false));
+        req.runtime_phase = async_BPM_request_type::Phase::EvictingFinish;
+      }
+      break;
+    }
+    case async_BPM_request_type::Phase::EvictingFinish: {
+      if (!req.ssd_io_finish.FinishedAsync())
+        return false;
+
+      assert(page_table_->DeleteMapping(req.response->first->fd,
+                                        req.response->first->fpage_id));
+      req.runtime_phase = async_BPM_request_type::Phase::Loading;
+      break;
+    }
+    case async_BPM_request_type::Phase::Loading: {  // 4
+      req.response->first->Clean();
+      if constexpr (LAZY_SSD_IO) {
+        *reinterpret_cast<fpage_id_type*>(req.response->second) =
+            req.fpage_id;  // 传递参数
+        req.response->first->initialized = false;
+      } else {
+#ifdef DEBUG_BITMAP
+        assert(disk_manager_->GetUsedMark(fd, fpage_id) == false);
+        disk_manager_->SetUsedMark(fd, fpage_id, true);
+        assert(disk_manager_->GetUsedMark(fd, fpage_id) == true);
+#endif
+        req.ssd_io_finish.Reset();
+        assert(io_server_->SendRequest(req.fd, req.fpage_id * PAGE_SIZE_FILE,
+                                       PAGE_SIZE_FILE, req.response->second,
+                                       &req.ssd_io_finish, true));
+        req.response->first->initialized = true;
+      }
+      req.runtime_phase = async_BPM_request_type::Phase::LoadingFinish;
+      return false;
+    }
+    case async_BPM_request_type::Phase::LoadingFinish: {
+      if (!req.ssd_io_finish.FinishedAsync())
+        return false;
+      req.response->first->ref_count = 1;
+      req.response->first->fpage_id = fpage_id_inpool;
+      req.response->first->fd = req.fd;
+
+      assert(replacer_->Insert(page_table_->ToPageId(req.response->first)));
+      req.runtime_phase = async_BPM_request_type::Phase::End;
+      std::atomic_thread_fence(std::memory_order_release);
+
+      assert(page_table_->CreateMapping(
+          req.fd, fpage_id_inpool, page_table_->ToPageId(req.response->first)));
+      break;
+    }
+    case async_BPM_request_type::Phase::End: {
+      // get_thread_logfile() << (uintptr_t) ret.second << std::endl;
+      return true;
     }
     }
   }
@@ -355,7 +497,7 @@ int BufferPool::GetObject(char* buf, size_t file_offset, size_t object_size,
   size_t object_size_t = 0;
   size_t st, latency;
   while (object_size > 0) {
-    auto mpage = FetchPage(page_id, fd);
+    auto mpage = FetchPageSync(page_id, fd);
 
     object_size_t =
         PageTableInner::SetObject(buf, mpage.second, page_offset, object_size);
@@ -377,7 +519,7 @@ int BufferPool::SetObject(const char* buf, size_t file_offset,
   size_t object_size_t = 0;
 
   while (object_size > 0) {
-    auto mpage = FetchPage(fpage_id, fd);
+    auto mpage = FetchPageSync(fpage_id, fd);
     object_size_t =
         PageTableInner::SetObject(buf, mpage.second, page_offset, object_size);
     mpage.first->DecRefCount(true);

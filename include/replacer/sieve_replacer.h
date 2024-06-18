@@ -1,5 +1,4 @@
 #include <assert.h>
-#include <boost/unordered/concurrent_flat_map.hpp>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -7,12 +6,11 @@
 #include <unordered_map>
 #include <utility>
 
-#include "page_table.h"
 #include "replacer.h"
 
 namespace gbp {
 
-class SieveReplacer_v3 : public Replacer<mpage_id_type> {
+class SieveReplacer : public Replacer<mpage_id_type> {
   struct ListNode {
     ListNode(){};
     ListNode(mpage_id_type _val) : val(_val){};
@@ -20,55 +18,67 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
     mpage_id_type val;
     ListNode* prev;
     ListNode* next;
-    std::atomic<uint32_t> freq;
+    uint32_t freq;
   };
 
  public:
   // do not change public interface
-  SieveReplacer_v3(PageTable* page_table) {
+  SieveReplacer(PageTable* page_table) {
     head_ = nullptr;
     tail_ = nullptr;
     pointer_ = nullptr;
 
     page_table_ = page_table;
   }
-  SieveReplacer_v3(const SieveReplacer_v3& other) = delete;
-  SieveReplacer_v3& operator=(const SieveReplacer_v3&) = delete;
+  SieveReplacer(const SieveReplacer& other) = delete;
+  SieveReplacer& operator=(const SieveReplacer&) = delete;
 
-  //   ~SieveReplacer_v3() {}
+  //   ~SieveReplacer() {}
 
   bool Insert(mpage_id_type value) override {
+#if BPM_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
+#endif
     ListNode* cur;
     bool ret = false;
-    if (!map_new.contains(value)) {
+    if (map_.find(value) == map_.end()) {
       cur = new ListNode(value);
+      map_[value] = cur;
       cur->freq = 0;
       prepend_obj_to_head(&head_, &tail_, cur);
-      ret = map_new.emplace(value, cur);
+      assert(map_.find(value) != map_.end());
+      ret = true;
     }
+
     return ret;
   }
 
   FORCE_INLINE bool Promote(mpage_id_type value) override {
-    // std::lock_guard<std::mutex> lck(latch_);
+#if BPM_SYNC_ENABLE
+    std::lock_guard<std::mutex> lck(latch_);
+#endif
 
-    auto ret =
-        map_new.visit(value, [](const std::pair<mpage_id_type, ListNode*>& kv) {
-          kv.second->freq.store(1);
-        });
-    return ret == 1 ? true : false;
+    bool ret = false;
+    auto target = map_.find(value);
+    if (target != map_.end()) {
+      target->second->freq = 1;
+      ret = true;
+    }
+
+    return ret;
   }
 
   bool Victim(mpage_id_type& mpage_id) override {
+#if BPM_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
+#endif
 
     PTE* pte;
     ListNode* target = pointer_ == nullptr ? tail_ : pointer_;
     if (target == nullptr) {
       return false;
     }
-    size_t count = map_new.size() * 3;
+    size_t count = map_.size() * 3;
     while (true) {
       if (count == 0)
         return false;
@@ -102,7 +112,9 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
 
   bool Victim(std::vector<mpage_id_type>& mpage_ids,
               mpage_id_type page_num) override {
+#if BPM_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
+#endif
 
     PTE* pte;
     ListNode* to_evict = pointer_ == nullptr ? tail_ : pointer_;
@@ -112,7 +124,7 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
     }
 
     while (page_num > 0) {
-      size_t count = map_new.size() * 3;
+      size_t count = map_.size() * 3;
       while (true) {
         if (count == 0) {
           if (mpage_ids.size() != 0) {
@@ -156,55 +168,53 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
     return true;
   }
 
-  bool Erase(const mpage_id_type& value) override {
-    // std::lock_guard<std::mutex> lck(latch_);
-    // auto iter = map_.find(value);
-    // if (iter != map_.end()) {
-    //   ListNode* cur = iter->second;
-    //   if (cur == pointer_) {
-    //     pointer_ = cur->prev;
-    //   }
-    //   remove_obj_from_list(&head_, &tail_, cur);
-    //   erase_from_map(cur->val);
-    //   delete cur;
-    //   return true;
-    // } else {
-    //   return false;
-    // }
-    assert(false);
-    return false;
+  bool Erase(mpage_id_type value) override {
+#if BPM_SYNC_ENABLE
+    std::lock_guard<std::mutex> lck(latch_);
+#endif
+
+    auto iter = map_.find(value);
+    if (iter != map_.end()) {
+      ListNode* cur = iter->second;
+      if (cur == pointer_) {
+        pointer_ = cur->prev;
+      }
+      remove_obj_from_list(&head_, &tail_, cur);
+      erase_from_map(cur->val);
+      delete cur;
+      return true;
+    } else {
+      return false;
+    }
   }
 
   size_t Size() const override {
+#if BPM_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
-    return map_new.size();
+#endif
+    return map_.size();
   }
 
   size_t GetMemoryUsage() const override {
-    // size_t element_size = sizeof(std::pair<mpage_id_type, ListNode*>);
-    // size_t num_elements = map_new.size();
-    // size_t bucket_count = map_.bucket_count();
-    // size_t bucket_size = sizeof(void*);
+    size_t element_size = sizeof(std::pair<mpage_id_type, ListNode*>);
+    size_t num_elements = map_.size();
+    size_t bucket_count = map_.bucket_count();
+    size_t bucket_size = sizeof(void*);
 
-    // size_t elements_memory = element_size * num_elements;
-    // size_t buckets_memory = bucket_size * bucket_count;
+    size_t elements_memory = element_size * num_elements;
+    size_t buckets_memory = bucket_size * bucket_count;
 
-    // // Add some extra overhead for internal structures
-    // size_t overhead = sizeof(map_) + (sizeof(void*) * 2);  // Example
-    // overhead
+    // Add some extra overhead for internal structures
+    size_t overhead = sizeof(map_) + (sizeof(void*) * 2);  // Example overhead
 
-    // return elements_memory + buckets_memory + overhead;
-
-    return 0;
+    return elements_memory + buckets_memory + overhead;
   }
 
  private:
   ListNode* head_;
   ListNode* tail_;
   ListNode* pointer_;
-  // std::unordered_map<mpage_id_type, ListNode*> map_;
-  boost::unordered::concurrent_flat_map<mpage_id_type, ListNode*> map_new;
-
+  std::unordered_map<mpage_id_type, ListNode*> map_;
   mutable std::mutex latch_;
   // add your member variables here
   PageTable* page_table_;
@@ -258,6 +268,6 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
     target->next = NULL;
   }
 
-  void erase_from_map(mpage_id_type mpage_id) { map_new.erase(mpage_id); }
+  void erase_from_map(mpage_id_type mpage_id) { map_.erase(mpage_id); }
 };
 }  // namespace gbp

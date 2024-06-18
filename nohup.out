@@ -2231,3 +2231,257 @@ In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_buffe
 + echo 1
 + ./bin/graphscope_bufferpool 30720 30 10 331 1 4096 ./logs/2024-06-12-22:15:43
 Terminated
++ export LD_LIBRARY_PATH=/usr/local/lib:
++ LD_LIBRARY_PATH=/usr/local/lib:
++ cd build
++ rm -rf ./CMakeCache.txt ./CMakeFiles ./cmake_install.cmake ./Makefile ./src ./tests
++ cmake ..
+-- The C compiler identification is GNU 9.4.0
+-- The CXX compiler identification is GNU 9.4.0
+-- Check for working C compiler: /usr/bin/gcc
+-- Check for working C compiler: /usr/bin/gcc -- works
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Check for working CXX compiler: /usr/bin/g++
+-- Check for working CXX compiler: /usr/bin/g++ -- works
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found Boost: /usr/local/lib/cmake/Boost-1.84.0/BoostConfig.cmake (found suitable version "1.84.0", minimum required is "1.84") found components: system filesystem fiber program_options regex thread 
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build
++ make -j
+Scanning dependencies of target tests
+Scanning dependencies of target bufferpool
+[  7%] Building CXX object src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o
+[ 21%] Building CXX object src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o
+[ 21%] Building CXX object src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o
+[ 28%] Building CXX object src/CMakeFiles/bufferpool.dir/config.cpp.o
+[ 35%] Building CXX object src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.o
+[ 42%] Building CXX object src/CMakeFiles/bufferpool.dir/logger.cc.o
+[ 50%] Building CXX object tests/CMakeFiles/tests.dir/fiber_test.cc.o
+[ 57%] Building CXX object tests/CMakeFiles/tests.dir/tests.cc.o
+[ 64%] Building CXX object src/CMakeFiles/bufferpool.dir/utils.cpp.o
+[ 71%] Building CXX object src/CMakeFiles/bufferpool.dir/debug.cpp.o
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.cc: In function ‘std::string test::random_str(size_t)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.cc:307:20: warning: ISO C++ forbids converting a string constant to ‘char*’ [-Wwrite-strings]
+  307 |   char* test_str = "abcdefghi";
+      |                    ^~~~~~~~~~~
+[ 78%] Linking CXX shared library ../../lib/libtests.so
+[ 78%] Built target tests
+[ 85%] Linking CXX shared library ../../lib/libbufferpool.so
+[ 85%] Built target bufferpool
+Scanning dependencies of target graphscope_bufferpool
+[ 92%] Building CXX object CMakeFiles/graphscope_bufferpool.dir/main.cpp.o
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/orgin_mmap.h:34,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:22:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/value.h:23: warning: "LBMalloc" redefined
+   23 | #define LBMalloc(size) malloc(size)
+      | 
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_obj.h:31,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool_manager.h:18,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:19:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/config.h:32: note: this is the location of the previous definition
+   32 | #define LBMalloc(size) ::malloc(size)
+      | 
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/orgin_mmap.h:34,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:22:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/value.h:24: warning: "LBFree" redefined
+   24 | #define LBFree(p) free(p)
+      | 
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_obj.h:31,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool_manager.h:18,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:19:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/config.h:33: note: this is the location of the previous definition
+   33 | #define LBFree(p) ::free(p)
+      | 
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/orgin_mmap.h:34,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:22:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/value.h:25: warning: "LBRealloc" redefined
+   25 | #define LBRealloc(p, size) realloc((p), (size))
+      | 
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_obj.h:31,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool_manager.h:18,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:19:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/config.h:34: note: this is the location of the previous definition
+   34 | #define LBRealloc(p, size) ::realloc((p), (size))
+      | 
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp: In function ‘int test_read(gbp::BufferPoolManager&, size_t)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:53:1: warning: no return statement in function returning non-void [-Wreturn-type]
+   53 | }
+      | ^
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp: In function ‘void test_string()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:278:23: warning: format ‘%d’ expects argument of type ‘int’, but argument 2 has type ‘long unsigned int’ [-Wformat=]
+  278 |   printf("begin a is %d\n", a);
+      |                      ~^     ~
+      |                       |     |
+      |                       int   long unsigned int
+      |                      %ld
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp: In function ‘int test_atomic()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:362:1: warning: no return statement in function returning non-void [-Wreturn-type]
+  362 | }
+      | ^
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp: In function ‘int test_aa(const string&)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:504:1: warning: control reaches end of non-void function [-Wreturn-type]
+  504 | }
+      | ^
+[100%] Linking CXX executable ../bin/graphscope_bufferpool
+[100%] Built target graphscope_bufferpool
++ '[' 0 -ne 0 ']'
++ echo -e '\033[41;36m Compile succeed \033[0m'
+[41;36m Compile succeed [0m
++ cd ..
++ CUR_DIR=.
++ export FILE_SIZE_MB=30720
++ FILE_SIZE_MB=30720
++ export WORKER_NUM=1
++ WORKER_NUM=1
++ export POOL_NUM=1
++ POOL_NUM=1
++ export IO_SERVER_NUM=1
++ IO_SERVER_NUM=1
++ export POOL_SIZE_MB=1024
++ POOL_SIZE_MB=1024
++ export IO_SIZE_Byte=4096
++ IO_SIZE_Byte=4096
+++ date +%Y-%m-%d-%H:%M:%S
++ export time=2024-06-17-22:12:16
++ time=2024-06-17-22:12:16
++ export LOG_DIR=./logs/2024-06-17-22:12:16
++ LOG_DIR=./logs/2024-06-17-22:12:16
++ mkdir -p ./logs/2024-06-17-22:12:16
++ cp -r ./run.sh ./logs/2024-06-17-22:12:16/run.sh
++ echo 1
++ ./bin/graphscope_bufferpool 30720 1 1 1024 1 4096 ./logs/2024-06-17-22:12:16
+Terminated
++ export LD_LIBRARY_PATH=/usr/local/lib:
++ LD_LIBRARY_PATH=/usr/local/lib:
++ cd build
++ rm -rf ./CMakeCache.txt ./CMakeFiles ./cmake_install.cmake ./Makefile ./src ./tests
++ cmake ..
+-- The C compiler identification is GNU 9.4.0
+-- The CXX compiler identification is GNU 9.4.0
+-- Check for working C compiler: /usr/bin/gcc
+-- Check for working C compiler: /usr/bin/gcc -- works
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Check for working CXX compiler: /usr/bin/g++
+-- Check for working CXX compiler: /usr/bin/g++ -- works
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found Boost: /usr/local/lib/cmake/Boost-1.84.0/BoostConfig.cmake (found suitable version "1.84.0", minimum required is "1.84") found components: system filesystem fiber program_options regex thread 
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build
++ make -j
+Scanning dependencies of target tests
+Scanning dependencies of target bufferpool
+[  7%] Building CXX object tests/CMakeFiles/tests.dir/tests.cc.o
+[ 14%] Building CXX object src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o
+[ 21%] Building CXX object src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o
+[ 28%] Building CXX object tests/CMakeFiles/tests.dir/fiber_test.cc.o
+[ 35%] Building CXX object src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o
+[ 42%] Building CXX object src/CMakeFiles/bufferpool.dir/config.cpp.o
+[ 50%] Building CXX object src/CMakeFiles/bufferpool.dir/debug.cpp.o
+[ 57%] Building CXX object src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.o
+[ 64%] Building CXX object src/CMakeFiles/bufferpool.dir/utils.cpp.o
+[ 71%] Building CXX object src/CMakeFiles/bufferpool.dir/logger.cc.o
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.cc: In function ‘std::string test::random_str(size_t)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.cc:307:20: warning: ISO C++ forbids converting a string constant to ‘char*’ [-Wwrite-strings]
+  307 |   char* test_str = "abcdefghi";
+      |                    ^~~~~~~~~~~
+[ 78%] Linking CXX shared library ../../lib/libtests.so
+[ 78%] Built target tests
+[ 85%] Linking CXX shared library ../../lib/libbufferpool.so
+[ 85%] Built target bufferpool
+Scanning dependencies of target graphscope_bufferpool
+[ 92%] Building CXX object CMakeFiles/graphscope_bufferpool.dir/main.cpp.o
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/orgin_mmap.h:34,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:22:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/value.h:23: warning: "LBMalloc" redefined
+   23 | #define LBMalloc(size) malloc(size)
+      | 
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_obj.h:31,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool_manager.h:18,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:19:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/config.h:32: note: this is the location of the previous definition
+   32 | #define LBMalloc(size) ::malloc(size)
+      | 
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/orgin_mmap.h:34,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:22:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/value.h:24: warning: "LBFree" redefined
+   24 | #define LBFree(p) free(p)
+      | 
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_obj.h:31,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool_manager.h:18,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:19:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/config.h:33: note: this is the location of the previous definition
+   33 | #define LBFree(p) ::free(p)
+      | 
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/orgin_mmap.h:34,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:22:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/value.h:25: warning: "LBRealloc" redefined
+   25 | #define LBRealloc(p, size) realloc((p), (size))
+      | 
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_obj.h:31,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool_manager.h:18,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:19:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/config.h:34: note: this is the location of the previous definition
+   34 | #define LBRealloc(p, size) ::realloc((p), (size))
+      | 
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp: In function ‘int test_read(gbp::BufferPoolManager&, size_t)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:53:1: warning: no return statement in function returning non-void [-Wreturn-type]
+   53 | }
+      | ^
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp: In function ‘void test_string()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:278:23: warning: format ‘%d’ expects argument of type ‘int’, but argument 2 has type ‘long unsigned int’ [-Wformat=]
+  278 |   printf("begin a is %d\n", a);
+      |                      ~^     ~
+      |                       |     |
+      |                       int   long unsigned int
+      |                      %ld
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp: In function ‘int test_atomic()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:362:1: warning: no return statement in function returning non-void [-Wreturn-type]
+  362 | }
+      | ^
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp: In function ‘int test_aa(const string&)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:504:1: warning: control reaches end of non-void function [-Wreturn-type]
+  504 | }
+      | ^
+[100%] Linking CXX executable ../bin/graphscope_bufferpool
+[100%] Built target graphscope_bufferpool
++ '[' 0 -ne 0 ']'
++ echo -e '\033[41;36m Compile succeed \033[0m'
+[41;36m Compile succeed [0m
++ cd ..
++ CUR_DIR=.
++ export FILE_SIZE_MB=30720
++ FILE_SIZE_MB=30720
++ export WORKER_NUM=30
++ WORKER_NUM=30
++ export POOL_NUM=1
++ POOL_NUM=1
++ export IO_SERVER_NUM=1
++ IO_SERVER_NUM=1
++ export POOL_SIZE_MB=1024
++ POOL_SIZE_MB=1024
++ export IO_SIZE_Byte=4096
++ IO_SIZE_Byte=4096
+++ date +%Y-%m-%d-%H:%M:%S
++ export time=2024-06-18-11:54:56
++ time=2024-06-18-11:54:56
++ export LOG_DIR=./logs/2024-06-18-11:54:56
++ LOG_DIR=./logs/2024-06-18-11:54:56
++ mkdir -p ./logs/2024-06-18-11:54:56
++ cp -r ./run.sh ./logs/2024-06-18-11:54:56/run.sh
++ echo 1
++ ./bin/graphscope_bufferpool 30720 30 1 1024 1 4096 ./logs/2024-06-18-11:54:56
+Terminated

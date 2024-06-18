@@ -215,6 +215,9 @@ std::tuple<bool, T> atomic_add(std::atomic<T>& data, T add_data,
 }
 template <typename T_1, typename T_2>
 struct pair_min {
+  // pair_min() = default;
+  // ~pair_min() = default;
+
   T_1 first;
   T_2 second;
 };
@@ -277,5 +280,52 @@ class bitset_dynamic {
   size_t size_;
   char* bits_;
 };
+struct EmptyType {};
 
+class AsyncMesg1 {
+ public:
+  AsyncMesg1() : finish_(false) {}
+  ~AsyncMesg1() = default;
+
+  FORCE_INLINE void Notify() { finish_.store(true); }
+  FORCE_INLINE bool FinishedSync() const { return finish_.load(); }
+  FORCE_INLINE bool FinishedAsync() const { return finish_.load(); }
+
+  FORCE_INLINE void Reset() { finish_.store(false); }
+
+ private:
+  std::atomic<bool> finish_;
+};
+
+class AsyncMesg2 {
+ public:
+  AsyncMesg2() : finish_(false) {}
+  ~AsyncMesg2() = default;
+
+  FORCE_INLINE void Notify() {
+    {
+      std::unique_lock<std::mutex> lock(mtx);
+      finish_ = true;
+    }
+    cv.notify_all();
+  }
+  FORCE_INLINE bool FinishedSync() const {
+    std::unique_lock<std::mutex> lock(mtx);
+    while (!finish_)
+      cv.wait(lock);
+    return true;
+  }
+  FORCE_INLINE bool FinishedAsync() const {
+    std::unique_lock<std::mutex> lock(mtx);
+    return finish_;
+  }
+  FORCE_INLINE void Reset() { finish_ = false; }
+
+ private:
+  bool finish_;
+  mutable std::mutex mtx;
+  mutable std::condition_variable cv;
+};
+
+using AsyncMesg = AsyncMesg1;
 }  // namespace gbp

@@ -4,7 +4,6 @@
 #include <optional>
 #include <unordered_map>
 
-#include "page_table.h"
 #include "replacer.h"
 
 namespace gbp {
@@ -137,7 +136,7 @@ class TwoQLRUReplacer : public Replacer<mpage_id_type> {
   }
 
   // 删除指定页面
-  bool Erase(const mpage_id_type& page_id) override {
+  bool Erase(mpage_id_type page_id) override {
     auto it = activeMap.find(page_id);
     if (it != activeMap.end()) {
       activeList.erase(it->second);
