@@ -264,6 +264,8 @@ class PageTableInner {
       LOG(FATAL) << page_id << " " << num_pages_;
 #endif
     }
+    if (page_id >= num_pages_)
+      std::cout << page_id << " " << num_pages_ << std::endl;
     assert(page_id < num_pages_);
 #endif
     return pool_ + page_id;
@@ -545,6 +547,8 @@ class PageTable {
   FORCE_INLINE pair_min<bool, mpage_id_type> LockMapping(
       GBPfile_handle_type fd, fpage_id_type fpage_id) {
 #if ASSERT_ENABLE
+    if (fd >= mappings_.size())
+      std::cout << fd << " " << mappings_.size() << std::endl;
     assert(fd < mappings_.size());
     assert(mappings_[fd] != nullptr);
 #endif

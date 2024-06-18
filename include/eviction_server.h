@@ -21,7 +21,7 @@
 #include "config.h"
 #include "io_backend.h"
 #include "page_table.h"
-#include "replacer.h"
+#include "replacer/replacer.h"
 #include "utils.h"
 
 namespace gbp {

@@ -16,28 +16,70 @@
 #include <utility>
 #include <vector>
 
-#include "TwoQLRU_replacer.h"
 #include "buffer_obj.h"
-#include "clock_replacer.h"
 #include "config.h"
 #include "debug.h"
 #include "extendible_hash.h"
-#include "fifo_replacer.h"
+#include "replacer/TwoQLRU_replacer.h"
+#include "replacer/clock_replacer.h"
+#include "replacer/fifo_replacer.h"
+#include "replacer/fifo_replacer_v2.h"
+
 #include "io_backend.h"
 #include "io_server.h"
 #include "logger.h"
-#include "lru_replacer.h"
+#include "replacer/lru_replacer.h"
+#include "replacer/lru_replacer_v2.h"
+
 #include "memory_pool.h"
 #include "page_table.h"
 #include "partitioner.h"
+#include "replacer/sieve_replacer.h"
+#include "replacer/sieve_replacer_v2.h"
+#include "replacer/sieve_replacer_v3.h"
+
 #include "rw_lock.h"
-#include "sieve_replacer.h"
-#include "sieve_replacer_v3.h"
 
 #include "eviction_server.h"
 
 namespace gbp {
 // class BufferBlock;
+
+struct async_BPM_request_type {
+  enum in_req_type { hit, miss };
+  enum Phase {
+    Begin,
+    Rebegin,
+    Initing,
+    Evicting,
+    EvictingFinish,
+    Loading,
+    LoadingFinish,
+    End
+  };
+
+  in_req_type req_type;
+  const GBPfile_handle_type fd;
+  const fpage_id_type fpage_id;
+  AsyncMesg ssd_io_finish;
+  Phase runtime_phase;
+
+  std::atomic<bool>* bpm_finish;
+  pair_min<PTE*, char*>* response;
+
+  async_BPM_request_type(in_req_type _req_type, GBPfile_handle_type _fd,
+                         fpage_id_type _fpage_id,
+                         pair_min<PTE*, char*>* _response,
+                         std::atomic<bool>* _bpm_finish)
+      : fd(_fd), fpage_id(_fpage_id) {
+    req_type = _req_type;
+    runtime_phase = Phase::Begin;
+
+    bpm_finish = _bpm_finish;
+    response = _response;
+  }
+  ~async_BPM_request_type() = default;
+};
 
 class BufferPool {
   friend class BufferPoolManager;
@@ -47,7 +89,7 @@ class BufferPool {
   ~BufferPool();
 
   void init(u_int32_t pool_ID, mpage_id_type pool_size, MemoryPool memory_pool,
-            IOServer_old* io_server, RoundRobinPartitioner* partitioner,
+            IOServer* io_server, RoundRobinPartitioner* partitioner,
             EvictionServer* eviction_server);
 
   bool UnpinPage(mpage_id_type page_id, bool is_dirty,
@@ -101,7 +143,7 @@ class BufferPool {
           continue;
         count++;
 
-        auto mpage = FetchPage(page_idx_f, fd_gbp);
+        auto mpage = FetchPageSync(page_idx_f, fd_gbp);
         mpage.first->DecRefCount();
 
         if (--free_page_num == 0) {
@@ -122,8 +164,8 @@ class BufferPool {
   void RegisterFile(GBPfile_handle_type fd);
   void CloseFile(GBPfile_handle_type fd);
 
-  pair_min<PTE*, char*> FetchPage(fpage_id_type fpage_id,
-                                  GBPfile_handle_type fd);
+  pair_min<PTE*, char*> FetchPageSync(fpage_id_type fpage_id,
+                                      GBPfile_handle_type fd);
 
   pair_min<PTE*, char*> Pin(fpage_id_type fpage_id, GBPfile_handle_type fd) {
     fpage_id_type fpage_id_inpool =
@@ -141,6 +183,7 @@ class BufferPool {
     }
     return {nullptr, nullptr};
   }
+
   std::tuple<size_t, size_t, size_t, size_t, size_t> GetMemoryUsage() {
     size_t memory_pool_usage =
         (memory_pool_.GetSize() - free_list_->Size()) * PAGE_SIZE_MEMORY;
@@ -153,15 +196,87 @@ class BufferPool {
             replacer_->GetMemoryUsage(), free_list_->GetMemoryUsage()};
   }
 
+  void FetchPageAsync(fpage_id_type fpage_id, GBPfile_handle_type fd,
+                      pair_min<PTE*, char*>* response,
+                      std::atomic<bool>* finish) {
+    *response = Pin(fpage_id, fd);
+    async_BPM_request_type* req = nullptr;
+    if (response->first) {
+      finish->store(true);
+      req = new async_BPM_request_type(async_BPM_request_type::in_req_type::hit,
+                                       fd, fpage_id, response, finish);
+    } else {
+      req =
+          new async_BPM_request_type(async_BPM_request_type::in_req_type::miss,
+                                     fd, fpage_id, response, finish);
+    }
+    while (request_channel_.bounded_push(req))
+      ;
+  }
+
  private:
-  bool ReadWrite(size_t offset, size_t file_size, char* buf, size_t buf_size,
-                 GBPfile_handle_type fd, bool is_read);
+  bool ReadWriteSync(size_t offset, size_t file_size, char* buf,
+                     size_t buf_size, GBPfile_handle_type fd, bool is_read);
+
+  bool FetchPageAsyncInner(async_BPM_request_type& req);
+
+  FORCE_INLINE bool ProcessFunc(async_BPM_request_type& req) {
+    switch (req.req_type) {
+    case async_BPM_request_type::in_req_type::hit: {
+      assert(replacer_->Promote(page_table_->ToPageId(req.response->first)));
+      return true;
+    }
+    case async_BPM_request_type::in_req_type::miss: {
+      return FetchPageAsyncInner(req);
+    }
+    }
+  }
+
+  void Run() {
+    size_t loops = 100;
+    boost::circular_buffer<std::optional<async_BPM_request_type*>>
+        async_requests(gbp::FIBER_CHANNEL_DEPTH);
+
+    async_BPM_request_type* async_request;
+    while (!async_requests.full())
+      async_requests.push_back(std::nullopt);
+
+    size_t req_id = 0;
+    while (true) {
+      req_id = 0;
+      while (req_id != gbp::EVICTION_FIBER_CHANNEL_DEPTH) {
+        auto& req = async_requests[req_id];
+        if (!req.has_value()) {
+          if (request_channel_.pop(async_request)) {
+            req.emplace(async_request);
+          } else {
+            req_id++;
+            continue;
+          }
+        }
+        if (ProcessFunc(*req.value())) {
+          req.value()->bpm_finish->store(true);
+          delete req.value();
+          if (request_channel_.pop(async_request)) {
+            req.emplace(async_request);
+          } else {
+            req_id++;
+            req.reset();
+          }
+        } else {
+          req_id++;
+        }
+      }
+      if (stop_)
+        break;
+    }
+  }
 
   uint32_t pool_ID_ = std::numeric_limits<uint32_t>::max();
   mpage_id_type pool_size_;  // number of pages in buffer pool
   MemoryPool memory_pool_;
   PageTable* page_table_ = nullptr;  // array of pages
-  IOServer_old* io_server_;
+  IOServer* io_server_;
   DiskManager* disk_manager_;
   RoundRobinPartitioner* partitioner_;
   EvictionServer* eviction_server_;
@@ -176,5 +291,12 @@ class BufferPool {
   std::atomic<bool> eviction_marker_ = false;
 
   PTE* GetVictimPage();
+
+  std::thread server_;
+  boost::lockfree::queue<async_BPM_request_type*,
+                         boost::lockfree::capacity<FIBER_CHANNEL_DEPTH>>
+      request_channel_;
+  size_t num_async_fiber_processing_;
+  bool stop_;
 };
 }  // namespace gbp

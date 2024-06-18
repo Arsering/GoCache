@@ -16,16 +16,14 @@
 #include <mutex>
 #include <unordered_map>
 
-#include "memory_pool.h"
-#include "page_table.h"
 #include "replacer.h"
 
 namespace gbp {
 
-class LRUReplacer : public Replacer<mpage_id_type> {
+class FIFOReplacer : public Replacer<mpage_id_type> {
   struct ListNode {
-    ListNode(){};
-    ListNode(mpage_id_type val) : val(val){};
+    ListNode() : val(std::numeric_limits<mpage_id_type>::max()){};
+    ListNode(mpage_id_type _val) : val(_val){};
 
     mpage_id_type val;
     ListNode* prev;
@@ -34,9 +32,9 @@ class LRUReplacer : public Replacer<mpage_id_type> {
 
  public:
   // do not change public interface
-  LRUReplacer(PageTable* page_table) {
-    head_ = ListNode();
-    tail_ = ListNode();
+  FIFOReplacer(PageTable* page_table) {
+    // head_ = ListNode();
+    // tail_ = ListNode();
     head_.next = &tail_;
     head_.prev = nullptr;
     tail_.prev = &head_;
@@ -44,10 +42,13 @@ class LRUReplacer : public Replacer<mpage_id_type> {
 
     page_table_ = page_table;
   }
-  LRUReplacer(const LRUReplacer& other) = delete;
-  LRUReplacer& operator=(const LRUReplacer&) = delete;
+  FIFOReplacer(const FIFOReplacer& other) = delete;
+  FIFOReplacer& operator=(const FIFOReplacer&) = delete;
 
-  ~LRUReplacer() {
+  ~FIFOReplacer() {
+#if BPM_SYNC_ENABLE
+    std::lock_guard<std::mutex> lck(latch_);
+#endif
     ListNode* tmp;
     while (tail_.prev != &head_) {
       tmp = tail_.prev->prev;
@@ -56,8 +57,10 @@ class LRUReplacer : public Replacer<mpage_id_type> {
     }
   }
 
-  FORCE_INLINE bool Insert(mpage_id_type value) override {
+  bool Insert(mpage_id_type value) override {
+#if BPM_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
+#endif
 
     bool ret = false;
     if (map_.find(value) != map_.end()) {
@@ -75,47 +78,28 @@ class LRUReplacer : public Replacer<mpage_id_type> {
     return ret;
   }
 
-  FORCE_INLINE bool Promote(mpage_id_type value) override {
+  bool Promote(mpage_id_type value) override { return true; }
+
+  bool Victim(mpage_id_type& mpage_id) override {
+#if BPM_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
-
-    bool ret = false;
-    auto target = map_.find(value);
-    if (target != map_.end()) {
-      ListNode* cur = target->second;
-      cur->prev->next = cur->next;
-      cur->next->prev = cur->prev;
-
-      cur->next = head_.next;
-      cur->prev = &head_;
-      head_.next->prev = cur;
-      head_.next = cur;
-      ret = true;
-    } else {
-      ret = false;
-    }
-    return ret;
-  }
-
-  FORCE_INLINE bool Victim(mpage_id_type& mpage_id) override {
-    std::lock_guard<std::mutex> lck(latch_);
+#endif
 
     ListNode* to_evict = tail_.prev;
     while (true) {
       if (to_evict == &head_)
         return false;
-      // assert(victim != &head_);
+
       auto* pte = page_table_->FromPageId(to_evict->val);
-      if (pte->ref_count != 0) {
-        to_evict = to_evict->prev;
-        continue;
-      }
       auto pte_unpacked = pte->ToUnpacked();
 
       auto [locked, mpage_id] =
           page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id);
+
       if (locked && pte->ref_count == 0 &&
           mpage_id != PageMapping::Mapping::EMPTY_VALUE)
         break;
+
       if (locked)
         assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
       to_evict = to_evict->prev;
@@ -126,49 +110,61 @@ class LRUReplacer : public Replacer<mpage_id_type> {
     mpage_id = to_evict->val;
     map_.erase(to_evict->val);
     delete to_evict;
+
     return true;
   }
 
   bool Victim(std::vector<mpage_id_type>& mpage_ids,
               mpage_id_type page_num) override {
+#if BPM_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
+#endif
 
-    ListNode* victim;
+    ListNode* to_evict;
     PTE* pte;
-    while (page_num != 0) {
-      victim = tail_.prev;
-      while (true) {
-        if (victim == &head_)
-          return false;
 
-        pte = page_table_->FromPageId(victim->val);
+    while (page_num != 0) {
+      to_evict = tail_.prev;
+      while (true) {
+        if (to_evict == &head_) {
+          if (mpage_ids.size() != 0)
+            return true;
+          return false;
+        }
+
+        pte = page_table_->FromPageId(to_evict->val);
         auto pte_unpacked = pte->ToUnpacked();
 
         auto [locked, mpage_id] =
             page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id);
         if (locked && !pte->dirty && pte->ref_count == 0 &&
-            mpage_id != PageMapping::Mapping::EMPTY_VALUE)
+            mpage_id != PageMapping::Mapping::EMPTY_VALUE) {
+          assert(page_table_->DeleteMapping(pte->fd, pte->fpage_id));
           break;
+        }
+
         if (locked)
           assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
 
-        victim = victim->prev;
+        to_evict = to_evict->prev;
       }
-      page_table_->DeleteMapping(pte->fd, pte->fpage_id);
-      // pte->Clean();
-      tail_.prev = victim->prev;
-      victim->prev->next = &tail_;
-
-      mpage_ids.push_back(victim->val);
+      mpage_ids.push_back(to_evict->val);
       page_num--;
-      map_.erase(victim->val);
-      delete victim;
+
+      to_evict->prev->next = to_evict->next;
+      to_evict->next->prev = to_evict->prev;
+      map_.erase(to_evict->val);
+      delete to_evict;
     }
+
     return true;
   }
 
-  bool Erase(const mpage_id_type& value) override {
+  bool Erase(mpage_id_type value) override {
+#if BPM_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
+#endif
+
     if (map_.find(value) != map_.end()) {
       ListNode* cur = map_[value];
       cur->prev->next = cur->next;
@@ -180,9 +176,10 @@ class LRUReplacer : public Replacer<mpage_id_type> {
       return false;
     }
   }
-
   size_t Size() const override {
+#if BPM_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
+#endif
     return map_.size();
   }
 

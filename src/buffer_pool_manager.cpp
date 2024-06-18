@@ -53,7 +53,7 @@ void BufferPoolManager::init(uint16_t pool_num,
     eviction_server_ = new EvictionServer();
 
   for (int idx = 0; idx < io_server_num; idx++) {
-    io_servers_.push_back(new IOServer_old(disk_manager_));
+    io_servers_.push_back(new IOServer(disk_manager_));
   }
 
   for (int idx = 0; idx < pool_num; idx++) {
@@ -98,8 +98,8 @@ bool BufferPoolManager::LoadFile(GBPfile_handle_type fd) {
       ceil(disk_manager_->file_size_inBytes_[fd], PAGE_SIZE_FILE);
 
   for (size_t fpage_id = 0; fpage_id < fpage_num; fpage_id++) {
-    auto mpage =
-        pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
+    auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
+        fpage_id, fd);
     mpage.first->DecRefCount();
   }
   return ret;
@@ -139,17 +139,15 @@ bool BufferPoolManager::ReadWrite(size_t offset, size_t file_size, char* buf,
                   io_servers_.size()];
 
   if constexpr (USING_FIBER_ASYNC_RESPONSE) {
-    context_type context = context_type::GetRawObject();
-    async_request_fiber_type* req = new async_request_fiber_type(
-        buf, buf_size, offset, file_size, fd, context, is_read);
-    assert(io_server->SendRequest(req));
+    AsyncMesg ssd_io_finished;
+    assert(io_server->SendRequest(fd, offset, file_size, buf, &ssd_io_finished,
+                                  is_read));
 
     size_t loops = 0;
-    while (!req->success) {
+    while (!ssd_io_finished.FinishedAsync()) {
       // hybrid_spin(loops);
       std::this_thread::yield();
     }
-    delete req;
     return true;
   } else {
     if (is_read)
@@ -215,8 +213,8 @@ int BufferPoolManager::GetBlock(char* buf, size_t file_offset,
   size_t st, latency;
 
   while (object_size > 0) {
-    auto mpage =
-        pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
+    auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
+        fpage_id, fd);
 #if (ASSERT_ENABLE)
     assert(mpage.first != nullptr && mpage.second != nullptr);
 #endif
@@ -240,8 +238,8 @@ int BufferPoolManager::SetBlock(const char* buf, size_t file_offset,
   size_t object_size_t = 0;
 
   while (object_size > 0) {
-    auto mpage =
-        pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
+    auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
+        fpage_id, fd);
 
 #if ASSERT_ENABLE
     assert(mpage.first != nullptr && mpage.second != nullptr);
@@ -274,8 +272,8 @@ int BufferPoolManager::SetBlock(const BufferBlock& buf, size_t file_offset,
 
   size_t buf_size = 0, object_size_t = 0;
   while (object_size > 0) {
-    auto mpage =
-        pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
+    auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
+        fpage_id, fd);
 #if (ASSERT_ENABLE)
     assert(mpage.first != nullptr && mpage.second != nullptr);
 #endif
@@ -301,9 +299,8 @@ int BufferPoolManager::SetBlock(const BufferBlock& buf, size_t file_offset,
   return buf_size;
 }
 
-const BufferBlock BufferPoolManager::GetBlock(size_t file_offset,
-                                              size_t object_size,
-                                              GBPfile_handle_type fd) const {
+const BufferBlock BufferPoolManager::GetBlockSync(
+    size_t file_offset, size_t object_size, GBPfile_handle_type fd) const {
   size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
   size_t num_page = 0;
 
@@ -314,22 +311,21 @@ const BufferBlock BufferPoolManager::GetBlock(size_t file_offset,
                   PAGE_SIZE_FILE) +
              1);
   BufferBlock ret(object_size, num_page);
-
+  assert(num_page == 1);
   fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
   size_t page_id = 0;
-  while (num_page > 0) {
+  while (page_id < num_page) {
 #ifdef DEBUG_
     size_t st = gbp::GetSystemTime();
 #endif
-    auto mpage =
-        pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPage(fpage_id, fd);
+    auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
+        fpage_id, fd);
 #if ASSERT_ENABLE
     assert(mpage.first != nullptr && mpage.second != nullptr);
 #endif
 
     ret.InsertPage(page_id, mpage.second + fpage_offset, mpage.first);
     page_id++;
-    num_page--;
     fpage_offset = 0;
     fpage_id++;
 #ifdef DEBUG_
@@ -342,5 +338,58 @@ const BufferBlock BufferPoolManager::GetBlock(size_t file_offset,
 
   return ret;
 }
+const BufferBlock BufferPoolManager::GetBlockAsync(
+    size_t file_offset, size_t object_size, GBPfile_handle_type fd) const {
+  size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
+  size_t num_page = 0;
 
+  num_page =
+      fpage_offset == 0 || (object_size <= (PAGE_SIZE_FILE - fpage_offset))
+          ? CEIL(object_size, PAGE_SIZE_FILE)
+          : (CEIL(object_size - (PAGE_SIZE_FILE - fpage_offset),
+                  PAGE_SIZE_FILE) +
+             1);
+  BufferBlock ret(object_size, num_page);
+
+  std::atomic<bool>* finishs = new std::atomic<bool>[num_page];
+  pair_min<PTE*, char*>* mpages = new pair_min<PTE*, char*>[num_page];
+
+  fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
+  size_t page_id = 0;
+  while (page_id < num_page) {
+#ifdef DEBUG_
+    size_t st = gbp::GetSystemTime();
+#endif
+    pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageAsync(
+        fpage_id, fd, &(mpages[page_id]), &(finishs[page_id]));
+
+    page_id++;
+    fpage_offset = 0;
+    fpage_id++;
+#ifdef DEBUG_
+    st = gbp::GetSystemTime() - st;
+    gbp::get_counter(11) += st;
+    gbp::get_counter(12)++;
+#endif
+  }
+  bool finish_global = false;
+  while (!finish_global) {
+    std::this_thread::yield();
+    for (page_id = 0; page_id < num_page; page_id++) {
+      finish_global &= finishs[page_id];
+    }
+  }
+
+  for (page_id = 0; page_id < num_page; page_id++) {
+#if ASSERT_ENABLE
+    assert(mpages[page_id].first != nullptr &&
+           mpages[page_id].second != nullptr);
+#endif
+    ret.InsertPage(page_id, mpages[page_id].second + fpage_offset,
+                   mpages[page_id].first);
+  }
+  // gbp::get_counter_global(11).fetch_add(ret.PageNum());
+
+  return ret;
+}
 }  // namespace gbp

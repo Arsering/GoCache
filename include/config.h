@@ -9,7 +9,8 @@
 // #define GRAPHSCOPE
 
 // #define DEBUG_BITMAP
-#define ASSERT_ENABLE true
+#define ASSERT_ENABLE false
+#define BPM_SYNC_ENABLE true
 // #define USING_EDGE_ITER
 
 #ifdef GRAPHSCOPE
@@ -49,31 +50,32 @@ using partition_id_type = uint32_t;
 
 constexpr bool PERSISTENT = true;
 // constexpr bool ASSERT_ENABLE = false;
-constexpr bool DEBUG = true;
+constexpr bool DEBUG = false;
 
-constexpr bool EVICTION_BATCH_ENABLE = true;
+constexpr bool EVICTION_BATCH_ENABLE = false;
 constexpr size_t EVICTION_BATCH_SIZE = 40;
+constexpr static size_t EVICTION_FIBER_CHANNEL_DEPTH = 10;
 
 constexpr bool LAZY_SSD_IO = false;
 
 constexpr uint32_t INVALID_PAGE_ID =
     std::numeric_limits<uint32_t>::max();  // representing an invalid page id
 constexpr uint16_t INVALID_FILE_HANDLE = std::numeric_limits<uint16_t>::max();
-constexpr size_t PAGE_SIZE_MEMORY = 4096;  // size of a memory page in byte
-constexpr size_t PAGE_SIZE_FILE = 4096;
-constexpr size_t CACHELINE_SIZE = 64;
-constexpr static size_t IOURing_MAX_DEPTH = 16;  // 64 * 2
-constexpr size_t FIBER_BATCH_SIZE = IOURing_MAX_DEPTH * 2;
-constexpr static size_t FIBER_CHANNEL_DEPTH = FIBER_BATCH_SIZE * 2;
+constexpr static size_t PAGE_SIZE_MEMORY =
+    4096;  // size of a memory page in byte
+constexpr static size_t PAGE_SIZE_FILE = 4096;
+constexpr static size_t CACHELINE_SIZE = 64;
 
-constexpr static size_t EVICTION_FIBER_CHANNEL_DEPTH = 10;
-
+constexpr static size_t ASYNC_SSDIO_SLEEP_TIME_MICROSECOND = 500;
 constexpr int IO_BACKEND_TYPE = 1;  // 1: pread; 2: IO_Uring
 constexpr bool USING_FIBER_ASYNC_RESPONSE = false;
+constexpr static size_t IOURing_MAX_DEPTH = 128;  // 64 * 2
+constexpr static size_t FIBER_BATCH_SIZE = IOURing_MAX_DEPTH * 1.5;
+constexpr static size_t FIBER_CHANNEL_DEPTH = FIBER_BATCH_SIZE * 1.5;
 
 constexpr bool PURE_THREADING = true;
-constexpr size_t HYBRID_SPIN_THRESHOLD =
-    PURE_THREADING ? (1lu << 0) : (1lu << 30);
+constexpr static size_t HYBRID_SPIN_THRESHOLD =
+    PURE_THREADING ? (1lu << 5) : (1lu << 30);
 
 constexpr mpage_id_type INVALID_MPAGE_ID =
     std::numeric_limits<mpage_id_type>::max();
