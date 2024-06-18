@@ -7,7 +7,9 @@
 
 #include <cstdlib>
 
-#include "debug.h"
+#include "../debug.h"
+#include "../page_table.h"
+#include "list_array.h"
 
 namespace gbp {
 
@@ -21,7 +23,7 @@ class Replacer {
   virtual bool Victim(T& value) = 0;
   virtual bool Victim(std::vector<T>& value, T page_num) = 0;
 
-  virtual bool Erase(const T& value) = 0;
+  virtual bool Erase(T value) = 0;
   virtual size_t Size() const = 0;
   std::atomic<bool>& GetFinishMark() { return finish_mark_async_; }
 

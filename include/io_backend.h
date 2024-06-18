@@ -132,18 +132,18 @@ class IOBackend {
   virtual ~IOBackend() = default;
 
   virtual bool Write(size_t offset, std::string_view data,
-                     GBPfile_handle_type fd, bool* finish = nullptr) = 0;
+                     GBPfile_handle_type fd, AsyncMesg* finish = nullptr) = 0;
   virtual bool Write(size_t offset, const char* data, size_t size,
-                     GBPfile_handle_type fd, bool* finish = nullptr) = 0;
+                     GBPfile_handle_type fd, AsyncMesg* finish = nullptr) = 0;
   virtual bool Write(size_t offset, ::iovec* io_info, GBPfile_handle_type fd,
-                     bool* finish = nullptr) = 0;
+                     AsyncMesg* finish = nullptr) = 0;
 
   virtual bool Read(size_t offset, std::string_view data,
-                    GBPfile_handle_type fd, bool* finish = nullptr) = 0;
+                    GBPfile_handle_type fd, AsyncMesg* finish = nullptr) = 0;
   virtual bool Read(size_t offset, char* data, size_t size,
-                    GBPfile_handle_type fd, bool* finish = nullptr) = 0;
+                    GBPfile_handle_type fd, AsyncMesg* finish = nullptr) = 0;
   virtual bool Read(size_t offset, ::iovec* io_info, GBPfile_handle_type fd,
-                    bool* finish = nullptr) = 0;
+                    AsyncMesg* finish = nullptr) = 0;
   virtual bool Progress() = 0;
 
   FORCE_INLINE OSfile_handle_type
@@ -185,13 +185,13 @@ class IOURing : public IOBackend {
   ~IOURing() { io_uring_queue_exit(&ring_); }
 
   bool Write(size_t offset, std::string_view data, GBPfile_handle_type fd,
-             bool* finish = nullptr) override {
+             AsyncMesg* finish = nullptr) override {
     assert(false);
     return false;
   }
 
   bool Write(size_t offset, const char* data, size_t size,
-             GBPfile_handle_type fd, bool* finish = nullptr) override {
+             GBPfile_handle_type fd, AsyncMesg* finish = nullptr) override {
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
     assert(offset < disk_manager_->file_size_inBytes_[fd] &&
@@ -212,7 +212,7 @@ class IOURing : public IOBackend {
   }
 
   bool Write(size_t offset, ::iovec* io_info, GBPfile_handle_type fd,
-             bool* finish = nullptr) override {
+             AsyncMesg* finish = nullptr) override {
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
     assert(offset < disk_manager_->file_size_inBytes_[fd] &&
@@ -258,13 +258,13 @@ class IOURing : public IOBackend {
   // }
 
   bool Read(size_t offset, std::string_view data, GBPfile_handle_type fd,
-            bool* finish = nullptr) override {
+            AsyncMesg* finish = nullptr) override {
     assert(false);
     return false;
   }
 
   bool Read(size_t offset, char* data, size_t size, GBPfile_handle_type fd,
-            bool* finish = nullptr) override {
+            AsyncMesg* finish = nullptr) override {
 #if ASSERT_ENABLE
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
@@ -291,7 +291,7 @@ class IOURing : public IOBackend {
   }
 
   bool Read(size_t offset, ::iovec* io_info, GBPfile_handle_type fd,
-            bool* finish = nullptr) override {
+            AsyncMesg* finish = nullptr) override {
 #if ASSERT_ENABLE
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
@@ -328,9 +328,9 @@ class IOURing : public IOBackend {
 
     auto num_ready = io_uring_peek_batch_cqe(&ring_, cqes_, IOURing_MAX_DEPTH);
     for (int i = 0; i < num_ready; i++) {
-      bool* finish = (bool*) io_uring_cqe_get_data(cqes_[i]);
+      void* finish = io_uring_cqe_get_data(cqes_[i]);
       if (finish)
-        *finish = true;
+        ((AsyncMesg*) finish)->Notify();
     }
     io_uring_cq_advance(&ring_, num_ready);
     num_processing_ -= num_ready;
@@ -358,18 +358,11 @@ class RWSysCall : public IOBackend {
   ~RWSysCall() = default;
 
   bool Write(size_t offset, std::string_view data, GBPfile_handle_type fd,
-             bool* finish = nullptr) override {
+             AsyncMesg* finish = nullptr) override {
 #if ASSERT_ENABLE
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
 #endif
-
-    if constexpr (DEBUG) {
-      gbp::PerformanceLogServer::GetPerformanceLogger()
-          .GetClientWriteThroughputByte()
-          .fetch_add(data.size());
-    }
-
     auto ret = ::pwrite(disk_manager_->fd_oss_[fd].first, data.data(),
                         data.size(), offset);
 #if ASSERT_ENABLE
@@ -379,22 +372,17 @@ class RWSysCall : public IOBackend {
                     .first);  // needs to flush to keep disk file in sync
 
     if (finish != nullptr)
-      *finish = true;
+      ((AsyncMesg*) finish)->Notify();
 
     return false;
   }
 
   bool Write(size_t offset, const char* data, size_t size,
-             GBPfile_handle_type fd, bool* finish = nullptr) override {
+             GBPfile_handle_type fd, AsyncMesg* finish = nullptr) override {
 #if ASSERT_ENABLE
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
 #endif
-    if constexpr (DEBUG) {
-      gbp::PerformanceLogServer::GetPerformanceLogger()
-          .GetClientWriteThroughputByte()
-          .fetch_add(size);
-    }
     auto ret = ::pwrite(disk_manager_->fd_oss_[fd].first, data, size, offset);
 #if ASSERT_ENABLE
     assert(ret == size);  // check for I/O error
@@ -406,23 +394,17 @@ class RWSysCall : public IOBackend {
                     .first);  // needs to flush to keep disk file in sync
 
     if (finish != nullptr)
-      *finish = true;
+      ((AsyncMesg*) finish)->Notify();
 
     return true;
   }
 
   bool Write(size_t offset, ::iovec* io_info, GBPfile_handle_type fd,
-             bool* finish = nullptr) override {
+             AsyncMesg* finish = nullptr) override {
 #if ASSERT_ENABLE
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
 #endif
-
-    if constexpr (DEBUG) {
-      gbp::PerformanceLogServer::GetPerformanceLogger()
-          .GetClientWriteThroughputByte()
-          .fetch_add(io_info[0].iov_len);
-    }
 
     auto ret = ::pwrite(disk_manager_->fd_oss_[fd].first, io_info[0].iov_base,
                         io_info[0].iov_len, offset);
@@ -437,7 +419,7 @@ class RWSysCall : public IOBackend {
               .first);  // needs to flush to keep disk file in sync
 
     if (finish != nullptr)
-      *finish = true;
+      ((AsyncMesg*) finish)->Notify();
 
     return true;
   }
@@ -446,7 +428,7 @@ class RWSysCall : public IOBackend {
    * Read the contents of the specified page into the given memory area
    */
   bool Read(size_t offset, std::string_view data, GBPfile_handle_type fd,
-            bool* finish = nullptr) override {
+            AsyncMesg* finish = nullptr) override {
 #if ASSERT_ENABLE
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
@@ -454,11 +436,6 @@ class RWSysCall : public IOBackend {
            disk_manager_
                ->file_size_inBytes_[fd]);  // check if read beyond file length
 #endif
-    if constexpr (DEBUG) {
-      gbp::PerformanceLogServer::GetPerformanceLogger()
-          .GetClientReadThroughputByte()
-          .fetch_add(data.size());
-    }
     auto ret = ::pread(disk_manager_->fd_oss_[fd].first, (void*) data.data(),
                        data.size(), offset);
 
@@ -468,7 +445,8 @@ class RWSysCall : public IOBackend {
       memset(const_cast<char*>(data.data()) + ret, 0, data.size() - ret);
     }
     if (finish != nullptr)
-      *finish = true;
+      ((AsyncMesg*) finish)->Notify();
+
     return true;
   }
 
@@ -476,7 +454,7 @@ class RWSysCall : public IOBackend {
    * Read the contents of the specified page into the given memory area
    */
   bool Read(size_t offset, char* data, size_t size, GBPfile_handle_type fd,
-            bool* finish = nullptr) override {
+            AsyncMesg* finish = nullptr) override {
 #if ASSERT_ENABLE
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
@@ -485,13 +463,6 @@ class RWSysCall : public IOBackend {
            disk_manager_
                ->file_size_inBytes_[fd]);  // check if read beyond file length
 #endif
-
-    if constexpr (DEBUG) {
-      gbp::PerformanceLogServer::GetPerformanceLogger()
-          .GetClientReadThroughputByte()
-          .fetch_add(size);
-      gbp::get_counter_global(10).fetch_add(size);
-    }
 
     auto ret = ::pread(disk_manager_->fd_oss_[fd].first, data, size, offset);
     // if (ret == 0) {
@@ -506,12 +477,13 @@ class RWSysCall : public IOBackend {
       memset(data + ret, 0, size - ret);
     }
     if (finish != nullptr)
-      *finish = true;
+      ((AsyncMesg*) finish)->Notify();
+
     return true;
   }
 
   bool Read(size_t offset, ::iovec* io_info, GBPfile_handle_type fd,
-            bool* finish = nullptr) override {
+            AsyncMesg* finish = nullptr) override {
 #if ASSERT_ENABLE
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
@@ -531,7 +503,7 @@ class RWSysCall : public IOBackend {
       memset((char*) io_info->iov_base + ret, 0, PAGE_SIZE_FILE - ret);
     }
     if (finish != nullptr)
-      *finish = true;
+      ((AsyncMesg*) finish)->Notify();
 
     return true;
   }

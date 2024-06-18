@@ -20,7 +20,6 @@
 #include "config.h"
 #include "debug.h"
 #include "extendible_hash.h"
-#include "fifo_replacer.h"
 #include "io_backend.h"
 #include "logger.h"
 #include "rw_lock.h"
@@ -28,10 +27,7 @@
 
 namespace gbp {
 
-// template<typename IOBackendType>
-
 // FIXME: 未实现读写的并发
-// class BufferBlock;
 class BufferPoolManager {
  public:
   BufferPoolManager() = default;
@@ -54,8 +50,11 @@ class BufferPoolManager {
   int SetBlock(const char* buf, size_t file_offset, size_t object_size,
                GBPfile_handle_type fd = 0, bool flush = false);
 
-  const BufferBlock GetBlock(size_t file_offset, size_t object_size,
-                             GBPfile_handle_type fd = 0) const;
+  const BufferBlock GetBlockSync(size_t file_offset, size_t object_size,
+                                 GBPfile_handle_type fd = 0) const;
+  const BufferBlock GetBlockAsync(size_t file_offset, size_t object_size,
+                                  GBPfile_handle_type fd = 0) const;
+
   int SetBlock(const BufferBlock& buf, size_t file_offset, size_t object_size,
                GBPfile_handle_type fd = 0, bool flush = false);
 
@@ -141,7 +140,7 @@ class BufferPoolManager {
   MemoryPool* memory_pool_global_ = nullptr;
   DiskManager* disk_manager_;
   RoundRobinPartitioner* partitioner_;
-  std::vector<IOServer_old*> io_servers_;
+  std::vector<IOServer*> io_servers_;
 
   EvictionServer* eviction_server_;
   std::vector<BufferPool*> pools_;
