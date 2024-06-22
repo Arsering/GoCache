@@ -6,7 +6,7 @@
 
 #pragma once
 
-// #define GRAPHSCOPE
+#define GRAPHSCOPE
 
 // #define DEBUG_BITMAP
 #define ASSERT_ENABLE false
@@ -34,13 +34,6 @@
 #define LBRealloc(p, size) ::realloc((p), (size))
 #define LBCalloc(nitems, size) ::calloc(nitems, size)
 
-// #define ASSERT() assert()
-#define ASSERT() \
-  {}
-// #define LBMalloc(size) mi_malloc(size)
-// #define LBFree(p) mi_free(p)
-// #define LBRealloc(p, size) mi_realloc((p), (size))
-
 namespace gbp {
 using fpage_id_type = uint32_t;
 using mpage_id_type = uint32_t;
@@ -48,12 +41,11 @@ using GBPfile_handle_type = uint32_t;
 using OSfile_handle_type = uint32_t;
 using partition_id_type = uint32_t;
 
-constexpr bool PERSISTENT = true;
-// constexpr bool ASSERT_ENABLE = false;
+constexpr bool PERSISTENT = false;
 constexpr bool DEBUG = false;
 
 constexpr bool EVICTION_BATCH_ENABLE = false;
-constexpr size_t EVICTION_BATCH_SIZE = 40;
+constexpr size_t EVICTION_BATCH_SIZE = 10;
 constexpr static size_t EVICTION_FIBER_CHANNEL_DEPTH = 10;
 
 constexpr bool LAZY_SSD_IO = false;
@@ -69,9 +61,16 @@ constexpr static size_t CACHELINE_SIZE = 64;
 constexpr static size_t ASYNC_SSDIO_SLEEP_TIME_MICROSECOND = 500;
 constexpr int IO_BACKEND_TYPE = 1;  // 1: pread; 2: IO_Uring
 constexpr bool USING_FIBER_ASYNC_RESPONSE = false;
-constexpr static size_t IOURing_MAX_DEPTH = 128;  // 64 * 2
-constexpr static size_t FIBER_BATCH_SIZE = IOURing_MAX_DEPTH * 1.5;
-constexpr static size_t FIBER_CHANNEL_DEPTH = FIBER_BATCH_SIZE * 1.5;
+constexpr static size_t IOURing_MAX_DEPTH = 64;  // 64 * 2
+constexpr static size_t BATCH_SIZE_IO_SERVER = IOURing_MAX_DEPTH * 1.5;
+constexpr static size_t FIBER_CHANNEL_IO_SERVER = BATCH_SIZE_IO_SERVER * 1.5;
+
+constexpr static size_t BATCH_SIZE_BUFFER_POOL = IOURing_MAX_DEPTH * 1.5;
+constexpr static size_t FIBER_CHANNEL_BUFFER_POOL = BATCH_SIZE_BUFFER_POOL * 50;
+
+constexpr static size_t BATCH_SIZE_EVICTION_SERVER = 15;
+constexpr static size_t FIBER_CHANNEL_DEPTH_EVICTION_SERVER =
+    BATCH_SIZE_EVICTION_SERVER * 1.2;
 
 constexpr bool PURE_THREADING = true;
 constexpr static size_t HYBRID_SPIN_THRESHOLD =

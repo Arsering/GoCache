@@ -39,6 +39,7 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
 
     bool ret = false;
     if (!list_.inList(value)) {
+      list_.getValue(value) = 0;
       assert(list_.moveToFront(value));
       ret = true;
     }
@@ -63,7 +64,7 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
-    ListArray<mpage_id_type>::index_type nodeIndex = list_.getUsedTail();
+    ListArray<listarray_value_type>::index_type nodeIndex = list_.getUsedTail();
     while (true) {
       if (nodeIndex == list_.usedHead_)
         return false;
@@ -102,8 +103,9 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
   }
 
   void traverse_node() {
-    ListArray<mpage_id_type>::index_type currentIndex = list_.getUsedHead();
-    while (currentIndex != ListArray<mpage_id_type>::INVALID_INDEX) {
+    ListArray<listarray_value_type>::index_type currentIndex =
+        list_.getUsedHead();
+    while (currentIndex != ListArray<listarray_value_type>::INVALID_INDEX) {
       currentIndex = list_.getNextNodeIndex(currentIndex);
     }
   }
@@ -127,7 +129,9 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
   size_t GetMemoryUsage() const override { return list_.GetMemoryUsage(); }
 
  private:
-  ListArray<mpage_id_type> list_;
+  using listarray_value_type = uint8_t;
+
+  ListArray<listarray_value_type> list_;
   mutable std::mutex latch_;
   // add your member variables here
   PageTable* page_table_;
