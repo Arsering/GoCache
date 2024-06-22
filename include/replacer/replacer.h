@@ -22,7 +22,10 @@ class Replacer {
   virtual bool Promote(T value) = 0;
   virtual bool Victim(T& value) = 0;
   virtual bool Victim(std::vector<T>& value, T page_num) = 0;
-
+  virtual bool Replace(T& value) {
+    assert(false);
+    return false;
+  }
   virtual bool Erase(T value) = 0;
   virtual size_t Size() const = 0;
   std::atomic<bool>& GetFinishMark() { return finish_mark_async_; }

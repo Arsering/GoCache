@@ -282,44 +282,56 @@ class bitset_dynamic {
 };
 struct EmptyType {};
 
-class AsyncMesg1 {
+class AsyncMesg {
+ public:
+  AsyncMesg() = default;
+  ~AsyncMesg() = default;
+
+  virtual FORCE_INLINE void Notify() = 0;
+  virtual FORCE_INLINE bool FinishedSync() const = 0;
+  virtual FORCE_INLINE bool FinishedAsync() const = 0;
+
+  virtual FORCE_INLINE void Reset() = 0;
+};
+
+class AsyncMesg1 : public AsyncMesg {
  public:
   AsyncMesg1() : finish_(false) {}
   ~AsyncMesg1() = default;
 
-  FORCE_INLINE void Notify() { finish_.store(true); }
-  FORCE_INLINE bool FinishedSync() const { return finish_.load(); }
-  FORCE_INLINE bool FinishedAsync() const { return finish_.load(); }
+  FORCE_INLINE void Notify() override { finish_.store(true); }
+  FORCE_INLINE bool FinishedSync() const override { return finish_.load(); }
+  FORCE_INLINE bool FinishedAsync() const override { return finish_.load(); }
 
-  FORCE_INLINE void Reset() { finish_.store(false); }
+  FORCE_INLINE void Reset() override { finish_.store(false); }
 
  private:
   std::atomic<bool> finish_;
 };
 
-class AsyncMesg2 {
+class AsyncMesg2 : public AsyncMesg {
  public:
   AsyncMesg2() : finish_(false) {}
   ~AsyncMesg2() = default;
 
-  FORCE_INLINE void Notify() {
+  FORCE_INLINE void Notify() override {
     {
       std::unique_lock<std::mutex> lock(mtx);
       finish_ = true;
     }
     cv.notify_all();
   }
-  FORCE_INLINE bool FinishedSync() const {
+  bool FinishedSync() const override {
     std::unique_lock<std::mutex> lock(mtx);
     while (!finish_)
       cv.wait(lock);
     return true;
   }
-  FORCE_INLINE bool FinishedAsync() const {
+  bool FinishedAsync() const override {
     std::unique_lock<std::mutex> lock(mtx);
     return finish_;
   }
-  FORCE_INLINE void Reset() { finish_ = false; }
+  void Reset() override { finish_ = false; }
 
  private:
   bool finish_;
@@ -327,5 +339,7 @@ class AsyncMesg2 {
   mutable std::condition_variable cv;
 };
 
-using AsyncMesg = AsyncMesg1;
+// using AsyncMesg = AsyncMesg2;
+
+void set_cpu_affinity();
 }  // namespace gbp

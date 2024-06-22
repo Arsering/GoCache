@@ -275,7 +275,7 @@ void test_string() {
   gs::mmap_array<std::string_view> student_list;
   student_list.open("test_string", true);
   auto a = student_list.size();
-  printf("begin a is %d\n", a);
+  printf("begin a is %lu\n", a);
   for (int i = 0; i < student_list.size(); i++) {
     auto s = student_list.get(i);
     std::string ss(s->Data(), s->Size());
@@ -359,6 +359,7 @@ int test_atomic() {
 
   memcpy(buf, &item, sizeof(MutableNbr));
   buf->print();
+  return 0;
 }
 
 template <typename T>

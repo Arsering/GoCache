@@ -31,13 +31,13 @@
 #include "replacer/lru_replacer.h"
 #include "replacer/lru_replacer_v2.h"
 
+#include "lockfree_queue.h"
 #include "memory_pool.h"
 #include "page_table.h"
 #include "partitioner.h"
 #include "replacer/sieve_replacer.h"
 #include "replacer/sieve_replacer_v2.h"
 #include "replacer/sieve_replacer_v3.h"
-
 #include "rw_lock.h"
 
 #include "eviction_server.h"
@@ -61,24 +61,31 @@ struct async_BPM_request_type {
   in_req_type req_type;
   const GBPfile_handle_type fd;
   const fpage_id_type fpage_id;
-  AsyncMesg ssd_io_finish;
+  AsyncMesg* ssd_io_finish;
+  IOServer::async_SSD_IO_request_type* ssd_IO_req = nullptr;
   Phase runtime_phase;
 
-  std::atomic<bool>* bpm_finish;
+  AsyncMesg* bpm_finish;
   pair_min<PTE*, char*>* response;
 
   async_BPM_request_type(in_req_type _req_type, GBPfile_handle_type _fd,
                          fpage_id_type _fpage_id,
                          pair_min<PTE*, char*>* _response,
-                         std::atomic<bool>* _bpm_finish)
+                         AsyncMesg* _bpm_finish)
       : fd(_fd), fpage_id(_fpage_id) {
     req_type = _req_type;
     runtime_phase = Phase::Begin;
-
     bpm_finish = _bpm_finish;
     response = _response;
+    ssd_IO_req = nullptr;
+    ssd_io_finish = new AsyncMesg1();
   }
-  ~async_BPM_request_type() = default;
+  ~async_BPM_request_type() {
+    if (ssd_IO_req) {
+      delete ssd_IO_req;
+    }
+    delete ssd_io_finish;
+  }
 };
 
 class BufferPool {
@@ -196,22 +203,27 @@ class BufferPool {
             replacer_->GetMemoryUsage(), free_list_->GetMemoryUsage()};
   }
 
-  void FetchPageAsync(fpage_id_type fpage_id, GBPfile_handle_type fd,
-                      pair_min<PTE*, char*>* response,
-                      std::atomic<bool>* finish) {
+  bool FetchPageAsync(fpage_id_type fpage_id, GBPfile_handle_type fd,
+                      pair_min<PTE*, char*>* response, AsyncMesg* finish) {
+    bool ret = false;
     *response = Pin(fpage_id, fd);
     async_BPM_request_type* req = nullptr;
     if (response->first) {
-      finish->store(true);
-      req = new async_BPM_request_type(async_BPM_request_type::in_req_type::hit,
-                                       fd, fpage_id, response, finish);
+      finish->Notify();
+      req = new async_BPM_request_type(
+          async_BPM_request_type::in_req_type::hit, fd,
+          page_table_->ToPageId(response->first), nullptr,
+          finish);  // FIXME:
+      // 当type为hit时，req.fpage_id中存放的是mpage_id
+      ret = true;
     } else {
       req =
           new async_BPM_request_type(async_BPM_request_type::in_req_type::miss,
                                      fd, fpage_id, response, finish);
     }
-    while (request_channel_.bounded_push(req))
+    while (!request_channel_.push(req))
       ;
+    return ret;
   }
 
  private:
@@ -222,53 +234,57 @@ class BufferPool {
 
   FORCE_INLINE bool ProcessFunc(async_BPM_request_type& req) {
     switch (req.req_type) {
-    case async_BPM_request_type::in_req_type::hit: {
-      assert(replacer_->Promote(page_table_->ToPageId(req.response->first)));
+    case async_BPM_request_type::in_req_type::
+        hit: {  // TODO:会出现promote失败的场景
+      // assert(replacer_->Promote(page_table_->ToPageId(req.response->first)));
+      replacer_->Promote(
+          req.fpage_id);  // FIXME:
+                          // 当type为hit时，req.fpage_id中存放的是mpage_id
       return true;
     }
     case async_BPM_request_type::in_req_type::miss: {
       return FetchPageAsyncInner(req);
     }
     }
+    return false;
   }
 
   void Run() {
-    size_t loops = 100;
-    boost::circular_buffer<std::optional<async_BPM_request_type*>>
-        async_requests(gbp::FIBER_CHANNEL_DEPTH);
+    // set_cpu_affinity();
+
+    std::vector<async_BPM_request_type*> async_requests(
+        gbp::BATCH_SIZE_BUFFER_POOL);
 
     async_BPM_request_type* async_request;
-    while (!async_requests.full())
-      async_requests.push_back(std::nullopt);
+    for (auto& req : async_requests)
+      req = nullptr;
 
-    size_t req_id = 0;
     while (true) {
-      req_id = 0;
-      while (req_id != gbp::EVICTION_FIBER_CHANNEL_DEPTH) {
-        auto& req = async_requests[req_id];
-        if (!req.has_value()) {
-          if (request_channel_.pop(async_request)) {
-            req.emplace(async_request);
+      for (auto& req : async_requests) {
+        if (req == nullptr) {
+          if (!request_channel_.empty()) {
+            request_channel_.pop(async_request);
+            req = async_request;
           } else {
-            req_id++;
             continue;
           }
         }
-        if (ProcessFunc(*req.value())) {
-          req.value()->bpm_finish->store(true);
-          delete req.value();
-          if (request_channel_.pop(async_request)) {
-            req.emplace(async_request);
+        if (ProcessFunc(*req)) {
+          if (req->req_type == async_BPM_request_type::in_req_type::miss)
+            req->bpm_finish->Notify();
+          delete req;
+          if (!request_channel_.empty()) {
+            request_channel_.pop(async_request);
+            req = async_request;
+            ProcessFunc(*req);
           } else {
-            req_id++;
-            req.reset();
+            req = nullptr;
           }
-        } else {
-          req_id++;
         }
       }
-      if (stop_)
+      if (stop_) {
         break;
+      }
     }
   }
 
@@ -293,10 +309,12 @@ class BufferPool {
   PTE* GetVictimPage();
 
   std::thread server_;
-  boost::lockfree::queue<async_BPM_request_type*,
-                         boost::lockfree::capacity<FIBER_CHANNEL_DEPTH>>
-      request_channel_;
-  size_t num_async_fiber_processing_;
-  bool stop_;
+  // boost::lockfree::queue<async_BPM_request_type*,
+  //                        boost::lockfree::capacity<FIBER_CHANNEL_BUFFER_POOL>>
+  //     request_channel_;
+
+  LockFreeQueue<async_BPM_request_type*> request_channel_{
+      FIBER_CHANNEL_BUFFER_POOL};
+  std::atomic<bool> stop_;
 };
 }  // namespace gbp

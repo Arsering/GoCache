@@ -25,10 +25,12 @@ using namespace gbp;
 
 namespace test {
 
-void set_cpu_affinity(int cpu) {
+void set_cpu_affinity() {
+  static std::atomic<size_t> cpu_id = 0;
+
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
-  CPU_SET(cpu, &cpuset);
+  CPU_SET(cpu_id.fetch_add(1), &cpuset);
 
   pid_t pid = getpid();  // 获取当前进程的 PID
 
@@ -200,17 +202,19 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
 
       // st = gbp::GetSystemTime();
       {
-        auto ret = bpm.GetBlockSync(curr_io_fileoffset, io_size);
+        // auto ret = bpm.GetBlockSync(curr_io_fileoffset, io_size);
 
+        auto ret = bpm.GetBlockAsync(curr_io_fileoffset, io_size);
         if constexpr (true) {
           // auto ret_new = bpm.GetObject(curr_io_fileoffset, io_size);
           // auto iter = gbp::BufferBlockIter<size_t>(ret_new);
           for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
             if (gbp::BufferBlock::Ref<size_t>(ret, i) !=
-                (curr_io_fileoffset / sizeof(size_t) + i))
-              std::cout << gbp::BufferBlock::Ref<size_t>(ret, i) << " "
-                        << (curr_io_fileoffset / sizeof(size_t) + i)
-                        << std::endl;
+                (curr_io_fileoffset / sizeof(size_t) + i)) {
+              GBPLOG << gbp::BufferBlock::Ref<size_t>(ret, i) << " "
+                     << (curr_io_fileoffset / sizeof(size_t) + i) << std::endl;
+            }
+
             assert(gbp::BufferBlock::Ref<size_t>(ret, i) ==
                    (curr_io_fileoffset / sizeof(size_t) + i));
             // assert(*(iter.current()) ==
@@ -234,6 +238,7 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
       gbp::PerformanceLogServer::GetPerformanceLogger()
           .GetClientReadThroughputByte()
           .fetch_add(io_size);
+      // return;
     }
   }
   latency_log.flush();
