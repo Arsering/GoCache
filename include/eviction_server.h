@@ -96,9 +96,8 @@ class EvictionServer {
   }
 
   void Run() {
-    size_t loops = 100;
     boost::circular_buffer<std::optional<async_eviction_request_type*>>
-        async_requests(gbp::FIBER_CHANNEL_DEPTH);
+        async_requests(gbp::BATCH_SIZE_EVICTION_SERVER);
 
     async_eviction_request_type* async_request;
     while (!async_requests.full())
@@ -137,8 +136,9 @@ class EvictionServer {
   }
 
   std::thread server_;
-  boost::lockfree::queue<async_eviction_request_type*,
-                         boost::lockfree::capacity<FIBER_CHANNEL_DEPTH>>
+  boost::lockfree::queue<
+      async_eviction_request_type*,
+      boost::lockfree::capacity<FIBER_CHANNEL_DEPTH_EVICTION_SERVER>>
       request_channel_;
   size_t num_async_fiber_processing_;
   bool stop_;

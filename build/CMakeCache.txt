@@ -248,6 +248,9 @@ boost_system_DIR:PATH=/usr/local/lib/cmake/boost_system-1.84.0
 //The directory containing a CMake configuration file for boost_thread.
 boost_thread_DIR:PATH=/usr/local/lib/cmake/boost_thread-1.84.0
 
+//Dependencies for the target
+bufferpool_LIB_DEPENDS:STATIC=general;uring;
+
 //Value Computed by CMake
 graphscope_bufferpool_BINARY_DIR:STATIC=/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build
 

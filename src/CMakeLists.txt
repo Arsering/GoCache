@@ -11,6 +11,8 @@ add_library(bufferpool SHARED ${LIB_SRCS})
 
 # target_link_libraries(bufferpool mimalloc)
 link_libraries(bufferpool)
+target_link_libraries(bufferpool uring)
+
 # target_link_libraries(bufferpool ${PROJECT_SOURCE_DIR}/bin/mimalloc.so)
 
 

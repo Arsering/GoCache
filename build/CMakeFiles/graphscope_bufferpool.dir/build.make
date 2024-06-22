@@ -81,14 +81,6 @@ graphscope_bufferpool_EXTERNAL_OBJECTS =
 ../bin/graphscope_bufferpool: CMakeFiles/graphscope_bufferpool.dir/build.make
 ../bin/graphscope_bufferpool: ../lib/libbufferpool.so
 ../bin/graphscope_bufferpool: ../lib/libtests.so
-../bin/graphscope_bufferpool: /usr/local/lib/libboost_system.so.1.84.0
-../bin/graphscope_bufferpool: /usr/local/lib/libboost_fiber.so.1.84.0
-../bin/graphscope_bufferpool: /usr/local/lib/libboost_program_options.so.1.84.0
-../bin/graphscope_bufferpool: /usr/local/lib/libboost_regex.so.1.84.0
-../bin/graphscope_bufferpool: /usr/local/lib/libboost_thread.so.1.84.0
-../bin/graphscope_bufferpool: /usr/local/lib/libboost_filesystem.so.1.84.0
-../bin/graphscope_bufferpool: /usr/local/lib/libboost_atomic.so.1.84.0
-../bin/graphscope_bufferpool: /usr/local/lib/libboost_context.so.1.84.0
 ../bin/graphscope_bufferpool: CMakeFiles/graphscope_bufferpool.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_2) "Linking CXX executable ../bin/graphscope_bufferpool"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/graphscope_bufferpool.dir/link.txt --verbose=$(VERBOSE)

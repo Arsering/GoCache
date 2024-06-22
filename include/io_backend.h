@@ -300,11 +300,15 @@ class IOURing : public IOBackend {
     assert(offset < disk_manager_->file_size_inBytes_[fd] &&
            ((uintptr_t) io_info->iov_base) % PAGE_SIZE_FILE == 0);
 #endif
+
     auto sqe = io_uring_get_sqe(&ring_);
     if (!sqe) {
       Progress();
       return false;
     }
+    // if (gbp::warmup_mark() == 1) {
+    //   LOG(INFO) << disk_manager_->file_names_[fd] << " " << offset;
+    // }
     io_uring_prep_readv(
         sqe,  // 用这个 SQE 准备一个待提交的 read 操作
         disk_manager_->fd_oss_[fd].first,  // 从 fd 打开的文件中读取数据
@@ -471,6 +475,9 @@ class RWSysCall : public IOBackend {
 #if ASSERT_ENABLE
     assert(ret != 0);
 #endif
+    // if (gbp::warmup_mark() == 1) {
+    //   LOG(INFO) << disk_manager_->file_names_[fd] << " " << offset;
+    // }
     // if file ends before reading PAGE_SIZE
     if (ret < size) {
       // std::cerr << "Read less than a page" << std::endl;

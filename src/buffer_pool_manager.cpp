@@ -139,15 +139,16 @@ bool BufferPoolManager::ReadWrite(size_t offset, size_t file_size, char* buf,
                   io_servers_.size()];
 
   if constexpr (USING_FIBER_ASYNC_RESPONSE) {
-    AsyncMesg ssd_io_finished;
-    assert(io_server->SendRequest(fd, offset, file_size, buf, &ssd_io_finished,
+    AsyncMesg* ssd_io_finished = new AsyncMesg2();
+    assert(io_server->SendRequest(fd, offset, file_size, buf, ssd_io_finished,
                                   is_read));
 
     size_t loops = 0;
-    while (!ssd_io_finished.FinishedAsync()) {
+    while (!ssd_io_finished->FinishedAsync()) {
       // hybrid_spin(loops);
       std::this_thread::yield();
     }
+    delete ssd_io_finished;
     return true;
   } else {
     if (is_read)
@@ -311,7 +312,7 @@ const BufferBlock BufferPoolManager::GetBlockSync(
                   PAGE_SIZE_FILE) +
              1);
   BufferBlock ret(object_size, num_page);
-  assert(num_page == 1);
+
   fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
   size_t page_id = 0;
   while (page_id < num_page) {
@@ -338,6 +339,7 @@ const BufferBlock BufferPoolManager::GetBlockSync(
 
   return ret;
 }
+
 const BufferBlock BufferPoolManager::GetBlockAsync(
     size_t file_offset, size_t object_size, GBPfile_handle_type fd) const {
   size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
@@ -351,35 +353,39 @@ const BufferBlock BufferPoolManager::GetBlockAsync(
              1);
   BufferBlock ret(object_size, num_page);
 
-  std::atomic<bool>* finishs = new std::atomic<bool>[num_page];
+  AsyncMesg2* finishs = new AsyncMesg2[num_page];
   pair_min<PTE*, char*>* mpages = new pair_min<PTE*, char*>[num_page];
 
   fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
   size_t page_id = 0;
+  size_t finish_id = 0;
   while (page_id < num_page) {
 #ifdef DEBUG_
     size_t st = gbp::GetSystemTime();
 #endif
-    pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageAsync(
-        fpage_id, fd, &(mpages[page_id]), &(finishs[page_id]));
+    // 当hit时，FetchPageAsync返回true，此时无需使用finish,则finish_id无需递增1
+    if (!(pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageAsync(
+            fpage_id, fd, &(mpages[page_id]), &(finishs[finish_id])))) {
+      finish_id++;
+    } else {
+      finish_id++;
+    }
 
     page_id++;
     fpage_offset = 0;
     fpage_id++;
+
 #ifdef DEBUG_
     st = gbp::GetSystemTime() - st;
     gbp::get_counter(11) += st;
     gbp::get_counter(12)++;
 #endif
   }
-  bool finish_global = false;
-  while (!finish_global) {
-    std::this_thread::yield();
-    for (page_id = 0; page_id < num_page; page_id++) {
-      finish_global &= finishs[page_id];
-    }
+  for (page_id = 0; page_id < finish_id; page_id++) {
+    finishs[page_id].FinishedSync();
   }
 
+  fpage_offset = file_offset % PAGE_SIZE_FILE;
   for (page_id = 0; page_id < num_page; page_id++) {
 #if ASSERT_ENABLE
     assert(mpages[page_id].first != nullptr &&
@@ -387,7 +393,10 @@ const BufferBlock BufferPoolManager::GetBlockAsync(
 #endif
     ret.InsertPage(page_id, mpages[page_id].second + fpage_offset,
                    mpages[page_id].first);
+    fpage_offset = 0;
   }
+  delete[] finishs;
+  delete[] mpages;
   // gbp::get_counter_global(11).fetch_add(ret.PageNum());
 
   return ret;
