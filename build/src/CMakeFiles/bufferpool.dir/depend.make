@@ -11,6 +11,7 @@ src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/extendible_hash.h
 src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/hash_table.h
 src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/io_backend.h
 src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/io_server.h
+src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/lockfree_queue.h
 src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/logger.h
 src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/memory_pool.h
 src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/page_table.h
@@ -40,6 +41,7 @@ src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/extendible_hash.h
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/hash_table.h
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/io_backend.h
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/io_server.h
+src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/lockfree_queue.h
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/logger.h
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/memory_pool.h
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/page_table.h
@@ -70,6 +72,7 @@ src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/extendible_h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/hash_table.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/io_backend.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/io_server.h
+src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/lockfree_queue.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/logger.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/memory_pool.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/page_table.h

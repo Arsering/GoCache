@@ -1121,7 +1121,7 @@ class BufferBlockImp5 {
       for (idx = 0; idx < page_num_; idx++) {
         loc_inpage =
             PAGE_SIZE_MEMORY - (uintptr_t) data_[idx] % PAGE_SIZE_MEMORY;
-        if (offset_t > loc_inpage) {
+        if (offset_t >= loc_inpage) {
           offset_t -= loc_inpage;
         } else {
           break;
@@ -1178,7 +1178,7 @@ class BufferBlockImp5 {
     } else if (ptes_ != nullptr) {
       ret = Compare_inner({right.data_[0], right.size_});
     } else {
-      ret = right.Compare_inner({data_[0], size_});
+      ret = -right.Compare_inner({data_[0], size_});
     }
 
     if (ret == 0 && size_ != right.size_)
@@ -1204,7 +1204,7 @@ class BufferBlockImp5 {
       for (idx = 0; idx < page_num_; idx++) {
         loc_inpage =
             PAGE_SIZE_MEMORY - (uintptr_t) data_[idx] % PAGE_SIZE_MEMORY;
-        if (offset_t > loc_inpage) {
+        if (offset_t >= loc_inpage) {
           offset_t -= loc_inpage;
         } else {
           break;
@@ -1316,6 +1316,536 @@ class BufferBlockImp5 {
   // mutable bool com_mark_ = false;
 };
 
+class BufferBlockImp6 {
+  template <typename OBJ_Type>
+  friend class BufferBlockIter;
+
+ public:
+  BufferBlockImp6() : size_(0), page_num_(0) { type_ = ObjectType::gbpClass; }
+
+  BufferBlockImp6(size_t size, size_t page_num)
+      : page_num_(page_num), size_(size) {
+    if (page_num > 1) {
+      data_.datas = (char**) LBMalloc(page_num_ * sizeof(char*));
+      ptes_.ptes = (PTE**) LBMalloc(page_num_ * sizeof(PTE*));
+    }
+#if ASSERT_ENABLE
+    assert(data_ != nullptr);
+    assert(ptes_ != nullptr);
+#endif
+    type_ = ObjectType::gbpClass;
+  }
+
+  BufferBlockImp6(size_t size, char* data) : size_(size), page_num_(0) {
+    // bitset_ = nullptr;
+#if (ASSERT_ENABLE)
+    assert(data_ != nullptr);
+#endif
+    data_.data = (char*) LBMalloc(size_);
+    memcpy(data_.data, data, size_);
+    type_ = ObjectType::gbpClass;
+  }
+
+  BufferBlockImp6(size_t size) : size_(size) {
+#if (ASSERT_ENABLE)
+    assert(data_ != nullptr);
+#endif
+    data_.data = (char*) LBMalloc(size);
+    type_ = ObjectType::gbpClass;
+  }
+
+#ifdef GRAPHSCOPE
+  BufferBlockImp5(const gs::Any& value) {
+    type_ = ObjectType::gbpAny;
+
+    if (value.type == gs::PropertyType::kInt32) {
+      Malloc(sizeof(int32_t));
+      memcpy(data_.data, &value.value.i, sizeof(int32_t));
+    } else if (value.type == gs::PropertyType::kInt64) {
+      Malloc(sizeof(int64_t));
+      memcpy(data_.data, &value.value.l, sizeof(int64_t));
+    } else if (value.type == gs::PropertyType::kString) {
+      Malloc(sizeof(std::string_view));
+      memcpy(data_.data, &value.value.s, sizeof(std::string_view));
+      //      return value.s.to_string();
+    } else if (value.type == gs::PropertyType::kDate) {
+      Malloc(sizeof(gs::Date));
+      memcpy(data_.data, &value.value.d, sizeof(gs::Date));
+    } else if (value.type == gs::PropertyType::kEmpty) {
+      data_.data = nullptr;
+      size_ = 0;
+      ptes_.pte = nullptr;
+      page_num_ = 0;
+    } else if (value.type == gs::PropertyType::kDouble) {
+      Malloc(sizeof(double));
+      memcpy(data_.data, &value.value.db, sizeof(double));
+    } else {
+      LOG(FATAL) << "Unexpected property type: "
+                 << static_cast<int>(value.type);
+    }
+  }
+#endif
+
+  BufferBlockImp6(const BufferBlockImp6& src) { Move(src, *this); }
+  // BufferObjectImp5& operator=(const BufferObjectImp5&) = delete;
+  BufferBlockImp6& operator=(const BufferBlockImp6& src) {
+    Move(src, *this);
+    return *this;
+  }
+
+  BufferBlockImp6(BufferBlockImp6&& src) noexcept { Move(src, *this); }
+
+  BufferBlockImp6& operator=(BufferBlockImp6&& src) noexcept {
+    Move(src, *this);
+    return *this;
+  }
+
+  ~BufferBlockImp6() {
+    // std::cout << __FILE__ << ":" << __LINE__ << ": " << "aa" << std::endl;
+    free();
+  }
+
+  FORCE_INLINE bool operator>=(const std::string& right) const {
+    return Compare(right) >= 0 ? true : false;
+  }
+  FORCE_INLINE bool operator>(const std::string& right) const {
+    return Compare(right) > 0 ? true : false;
+  }
+  FORCE_INLINE bool operator<=(const std::string& right) const {
+    return Compare(right) <= 0 ? true : false;
+  }
+  FORCE_INLINE bool operator<(const std::string& right) const {
+    return Compare(right) < 0 ? true : false;
+  }
+  FORCE_INLINE bool operator==(const std::string& right) const {
+    return Compare(right) == 0 ? true : false;
+  }
+
+  FORCE_INLINE bool operator>=(const std::string_view right) const {
+    return Compare(right) >= 0 ? true : false;
+  }
+  FORCE_INLINE bool operator>(const std::string_view right) const {
+    return Compare(right) > 0 ? true : false;
+  }
+  FORCE_INLINE bool operator<=(const std::string_view right) const {
+    return Compare(right) <= 0 ? true : false;
+  }
+  FORCE_INLINE bool operator<(const std::string_view right) const {
+    return Compare(right) < 0 ? true : false;
+  }
+  FORCE_INLINE bool operator==(const std::string_view right) const {
+    return Compare(right) == 0 ? true : false;
+  }
+
+  FORCE_INLINE bool operator>=(const BufferBlockImp6& right) const {
+    return Compare(right) >= 0 ? true : false;
+  }
+  FORCE_INLINE bool operator>(const BufferBlockImp6& right) const {
+    return Compare(right) > 0 ? true : false;
+  }
+  FORCE_INLINE bool operator<=(const BufferBlockImp6& right) const {
+    return Compare(right) <= 0 ? true : false;
+  }
+  FORCE_INLINE bool operator<(const BufferBlockImp6& right) const {
+    return Compare(right) < 0 ? true : false;
+  }
+  FORCE_INLINE bool operator==(const BufferBlockImp6& right) const {
+    return Compare(right) == 0 ? true : false;
+  }
+
+  void InsertPage(size_t idx, char* data, PTE* pte) {
+#if (ASSERT_ENABLE)
+    assert(idx < page_num_);
+#endif
+    if (page_num_ == 1) {
+      data_.data = data;
+      ptes_.pte = pte;
+    } else {
+      data_.datas[idx] = data;
+      ptes_.ptes[idx] = pte;
+    }
+  }
+
+  static BufferBlockImp6 Copy(const BufferBlockImp6& rhs) {
+    BufferBlockImp6 ret(rhs.size_);
+#if (ASSERT_ENABLE)
+    assert(rhs.data_ != nullptr);
+#endif
+
+    if (rhs.page_num_ < 2)
+      memcpy(ret.data_.data, rhs.data_.data, rhs.size_);
+    else {
+      size_t size_new = 0, size_old = rhs.size_, slice_len, loc_inpage;
+      for (size_t i = 0; i < rhs.page_num_; i++) {
+        loc_inpage = PAGE_SIZE_MEMORY -
+                     (uintptr_t) rhs.data_.datas[i] % PAGE_SIZE_MEMORY;
+        slice_len = loc_inpage < size_old ? loc_inpage : size_old;
+        assert(rhs.InitPage(i));
+        memcpy((char*) ret.data_.data + size_new, rhs.data_.datas[i],
+               slice_len);
+        size_new += slice_len;
+        size_old -= slice_len;
+      }
+    }
+    return ret;
+  }
+
+  size_t Copy(char* buf, size_t buf_size, size_t offset = 0) const {
+#if (ASSERT_ENABLE)
+    assert(data_ != nullptr);
+    assert(offset < size_);
+#endif
+    size_t ret = (buf_size + offset) > size_ ? size_ : buf_size;
+
+    if (page_num_ < 2) {
+      memcpy(buf, data_.data + offset, ret);
+    } else {
+      size_t size_new = 0, size_old = ret, slice_len, loc_inpage, idx,
+             offset_t = offset;
+      for (idx = 0; idx < page_num_; idx++) {
+        loc_inpage =
+            PAGE_SIZE_MEMORY - (uintptr_t) data_.datas[idx] % PAGE_SIZE_MEMORY;
+        if (offset_t > loc_inpage) {
+          offset_t -= loc_inpage;
+        } else {
+          break;
+        }
+      }
+
+      for (; idx < page_num_; idx++) {
+        loc_inpage =
+            PAGE_SIZE_MEMORY -
+            (uintptr_t) (data_.datas[idx] + offset_t) % PAGE_SIZE_MEMORY;
+        slice_len = loc_inpage < size_old ? loc_inpage : size_old;
+        assert(InitPage(idx));
+        memcpy(buf + size_new, data_.datas[idx] + offset_t, slice_len);
+        size_new += slice_len;
+        size_old -= slice_len;
+        offset = 0;
+        if (size_old == 0)
+          break;
+      }
+    }
+
+    return ret;
+  }
+
+  static void Move(const BufferBlockImp6& src, BufferBlockImp6& dst) {
+    dst.free();
+    dst.data_ = src.data_;
+    dst.page_num_ = src.page_num_;
+    dst.ptes_ = src.ptes_;
+    dst.type_ = src.type_;
+    dst.size_ = src.size_;
+    // dst.bitset_ = src.bitset_;
+    // if (gbp::warmup_mark().load() == 1) {
+    //   // dst.aa_ = src.aa_;
+    //   dst.com_mark_ = src.com_mark_;
+    // }
+
+    const_cast<BufferBlockImp6&>(src).size_ = 0;
+    // dst.free();
+  }
+
+  template <typename INNER_T>
+  INNER_T& Obj() {
+    if (size_ != sizeof(INNER_T) && page_num_ != 1) {
+      std::cerr << "size_!=sizeof(INNER_T)" << std::endl;
+      exit(-1);
+    }
+    assert(InitPage(0));
+    return *reinterpret_cast<INNER_T*>(data_.data);
+  }
+
+  void free() {
+    // 如果ptes不为空，则free
+    if (size_ != 0) {
+      if (page_num_ > 1) {
+        while (page_num_ != 0) {
+          ptes_.ptes[--page_num_]->DecRefCount();
+        }
+        LBFree(ptes_.ptes);
+        // LBFree(bitset_);
+      } else if (page_num_ == 1) {
+        ptes_.pte->DecRefCount();
+      } else {
+        LBFree(data_.data);
+      }
+    }
+    size_ = 0;
+  }
+
+#ifdef GRAPHSCOPE
+  std::string to_string() const {
+    // if (type_ != ObjectType::gbpAny)
+    //   LOG(FATAL) << "Can't convert current type to std::string!!";
+    // auto value = reinterpret_cast<const gs::Any*>(Data());
+    // return value->to_string();
+    assert(false);
+    return "aaa";
+  }
+#endif
+
+  template <typename OBJ_Type>
+  FORCE_INLINE static const OBJ_Type& Ref(const BufferBlockImp6& obj,
+                                          size_t idx = 0) {
+    return *obj.Ptr<OBJ_Type>(idx);
+  }
+
+  template <typename OBJ_Type>
+  FORCE_INLINE static void UpdateContent(std::function<void(OBJ_Type&)> cb,
+                                         const BufferBlockImp6& obj,
+                                         size_t idx = 0) {
+    auto data = obj.Decode<OBJ_Type>(idx);
+    cb(*data.first);
+    data.second->SetDirty(true);
+  }
+
+  // template <class T>
+  // FORCE_INLINE const T* Ptr(size_t idx = 0) const {
+  //   return Decode<T>(idx).first;
+  // }
+
+  template <class T>
+  FORCE_INLINE const T* Ptr(size_t idx = 0) const {
+    return Decode<T>(idx).first;
+  }
+
+  char* Data() const {
+    if (data_.data != nullptr && page_num_ < 2)
+      return data_.data;
+    assert(false);
+    return nullptr;
+  }
+  size_t Size() const { return size_; }
+  size_t PageNum() const { return page_num_; }
+
+  FORCE_INLINE int Compare(const std::string_view right,
+                           size_t offset = 0) const {
+#if (ASSERT_ENABLE)
+    assert(data_ != nullptr);
+    assert(offset < size_);
+#endif
+    // com_mark_ = true;
+
+    size_t size_left = std::min((size_ - offset), right.size()),
+           offset_t = offset;
+    int ret = -10;
+
+    if (page_num_ > 1) {
+      size_t size_cum = 0, slice_len, loc_inpage, idx = 0;
+      if (offset_t != 0) {
+        for (; idx < page_num_; idx++) {
+          loc_inpage = PAGE_SIZE_MEMORY -
+                       (uintptr_t) data_.datas[idx] % PAGE_SIZE_MEMORY;
+          if (offset_t >= loc_inpage) {
+            offset_t -= loc_inpage;
+          } else {
+            break;
+          }
+        }
+      }
+      for (; idx < page_num_; idx++) {
+        loc_inpage =
+            PAGE_SIZE_MEMORY -
+            (uintptr_t) (data_.datas[idx] + offset_t) % PAGE_SIZE_MEMORY;
+        slice_len = loc_inpage < size_left ? loc_inpage : size_left;
+        assert(InitPage(idx));
+        ret = ::strncmp(data_.datas[idx] + offset_t, right.data() + size_cum,
+                        slice_len);
+        if (ret != 0) {
+          break;
+        }
+        offset_t = 0;
+        size_left -= slice_len;
+        size_cum += slice_len;
+      }
+    } else {
+      ret = ::strncmp(data_.data + offset, right.data(), size_left);
+    }
+
+    if (ret == 0 && offset == 0 && (size_ - offset) != right.size()) {
+      return size_ - right.size();
+    }
+
+    return ret;
+  }
+
+  FORCE_INLINE int Compare(const BufferBlockImp6& right) const {
+#if (ASSERT_ENABLE)
+    assert(data_ != nullptr);
+#endif
+    int ret = 0;
+    // right.com_mark_ = true;
+    // com_mark_ = true;
+
+    if (page_num_ > 1 && right.page_num_ > 1) {
+      size_t slice_len, loc_inpage, len_right = 0;
+      size_t idx_right = 0;
+      for (; idx_right < right.page_num_; idx_right++) {
+        loc_inpage =
+            PAGE_SIZE_MEMORY -
+            (uintptr_t) right.data_.datas[idx_right] % PAGE_SIZE_MEMORY;
+        loc_inpage = std::min(loc_inpage, right.Size() - len_right);
+        assert(right.InitPage(idx_right));
+        ret = Compare_inner({right.data_.datas[idx_right], loc_inpage},
+                            len_right);
+
+        if (ret != 0) {
+          break;
+        }
+        len_right += loc_inpage;
+      }
+    } else if (right.page_num_ < 2) {
+      ret = Compare_inner({right.data_.data, right.size_});
+    } else {
+      ret = -right.Compare_inner({data_.data, size_});
+    }
+
+    if (ret == 0 && size_ != right.size_)
+      ret = size_ - right.size_;
+    return ret;
+  }
+
+ private:
+  bool LoadPage(size_t page_id) const;
+
+  FORCE_INLINE int Compare_inner(const std::string_view right,
+                                 size_t offset = 0) const {
+#if (ASSERT_ENABLE)
+    assert(data_ != nullptr && offset < size_);
+#endif
+    size_t size_left = std::min(size_ - offset, right.size()),
+           offset_t = offset;
+    int ret = 0;
+
+    if (page_num_ > 1) {
+      size_t size_cum = 0, slice_len;
+      uint32_t idx = 0, loc_inpage;
+      for (; idx < page_num_; idx++) {
+        loc_inpage =
+            PAGE_SIZE_MEMORY - (uintptr_t) data_.datas[idx] % PAGE_SIZE_MEMORY;
+        if (offset_t >= loc_inpage) {
+          offset_t -= loc_inpage;
+        } else {
+          break;
+        }
+      }
+      for (; idx < page_num_; idx++) {
+        loc_inpage =
+            PAGE_SIZE_MEMORY -
+            (uintptr_t) (data_.datas[idx] + offset_t) % PAGE_SIZE_MEMORY;
+        slice_len = loc_inpage < size_left ? loc_inpage : size_left;
+        assert(InitPage(idx));
+        ret = ::strncmp(data_.datas[idx] + offset_t, right.data() + size_cum,
+                        slice_len);
+        if (ret != 0) {
+          break;
+        }
+        offset_t = 0;
+        size_left -= slice_len;
+        size_cum += slice_len;
+      }
+    } else {
+      ret = ::strncmp(data_.data + offset, right.data(), size_left);
+    }
+
+    return ret;
+  }
+
+  void Malloc(size_t size) {
+#if (ASSERT_ENABLE)
+    assert(data_ != NULL);
+#endif
+    data_.data = (char*) LBMalloc(sizeof(char) * size);
+    size_ = size;
+    page_num_ = 0;
+    ptes_.pte = nullptr;
+  }
+
+  template <class T>
+  FORCE_INLINE pair_min<T*, PTE*> Decode(size_t idx = 0) const {
+#ifdef DEBUG_
+    size_t st = gbp::GetSystemTime();
+#endif
+
+    constexpr size_t OBJ_NUM_PERPAGE = PAGE_SIZE_MEMORY / sizeof(T);
+#if ASSERT_ENABLE
+    // FIXME: 不够准确
+    assert(sizeof(T) * (idx + 1) <= size_);
+#endif
+    char* ret = nullptr;
+    PTE* target_pte;
+
+    if (likely(page_num_ < 2)) {
+      ret = data_.data + idx * sizeof(T);
+      target_pte = ptes_.pte;
+    } else {
+      auto obj_num_curpage =
+          (PAGE_SIZE_MEMORY - ((uintptr_t) data_.datas[0] % PAGE_SIZE_MEMORY)) /
+          sizeof(T);
+
+      if (obj_num_curpage > idx) {
+        assert(InitPage(0));
+        ret = data_.datas[0] + idx * sizeof(T);
+        target_pte = ptes_.ptes[0];
+      } else {
+        idx -= obj_num_curpage;
+        auto page_id = idx / OBJ_NUM_PERPAGE + 1;
+        assert(InitPage(page_id));
+        ret = data_.datas[page_id] + (idx % OBJ_NUM_PERPAGE) * sizeof(T);
+        target_pte = ptes_.ptes[page_id];
+      }
+    }
+#if (ASSERT_ENABLE)
+    assert(((uintptr_t) ret / PAGE_SIZE_MEMORY + 1) * PAGE_SIZE_MEMORY >=
+           (uintptr_t) (ret + sizeof(T)));
+#endif
+#ifdef DEBUG_
+    st = gbp::GetSystemTime() - st;
+    gbp::get_counter(1) += st;
+    gbp::get_counter(2)++;
+#endif
+#if ASSERT_ENABLE
+    assert(ret != nullptr);
+#endif
+    return {reinterpret_cast<T*>(ret), target_pte};
+  }
+
+ private:
+  union AnyValue {
+    AnyValue() {}
+    ~AnyValue() {}
+
+    char** datas;
+    char* data;
+    PTE* pte;
+    PTE** ptes;
+  };
+
+  FORCE_INLINE bool InitPage(size_t page_id) const {
+    // bitset_[page_id / 8] |= 1 << (page_id % 8);
+    if (likely(page_num_ == 1)) {
+      assert(page_id == 0);
+      if (!ptes_.pte->initialized) {
+        return LoadPage(page_id);
+      }
+    } else {
+      if (!ptes_.ptes[page_id]->initialized) {
+        return LoadPage(page_id);
+      }
+    }
+    return true;
+  }
+
+  AnyValue data_;
+  AnyValue ptes_;
+  size_t size_ = 0;
+  size_t page_num_ = 0;
+
+  ObjectType type_;
+};
+
 class BufferObjectImp3 {
  private:
   std::shared_ptr<BufferObjectImp2> inner_;
@@ -1413,86 +1943,89 @@ class BufferObjectImp4 {
 #endif
 };
 
-using BufferBlock = BufferBlockImp5;
+using BufferBlock = BufferBlockImp6;
 
-template <typename OBJ_Type>
-class BufferBlockIter {
- public:
-  BufferBlockIter() = default;
-  BufferBlockIter(BufferBlock& buffer_obj) {
-#ifdef DEBUG_
-    size_t st = gbp::GetSystemTime();
-#endif
-    assert(buffer_obj.data_ != nullptr);
-    buffer_obj_ = buffer_obj;
-    if (buffer_obj_.ptes_ != nullptr) {
-      cur_ptr_ = reinterpret_cast<OBJ_Type*>(buffer_obj_.data_[0]);
-      cur_page_num_rest_ =
-          std::min((PAGE_SIZE_MEMORY -
-                    ((uintptr_t) buffer_obj_.data_[0] % PAGE_SIZE_MEMORY)),
-                   buffer_obj_.size_) /
-              sizeof(OBJ_Type) -
-          1;
-      cur_page_ = 0;
-    } else {
-      cur_ptr_ = reinterpret_cast<OBJ_Type*>(buffer_obj_.data_[0]);
-      cur_page_num_rest_ = buffer_obj_.size_ / sizeof(OBJ_Type);
-    }
-#ifdef DEBUG_
-    st = gbp::GetSystemTime() - st;
-    gbp::get_counter(11) += st;
-#endif
-  }
-  ~BufferBlockIter() = default;
+// template <typename OBJ_Type>
+// class BufferBlockIter {
+//  public:
+//   BufferBlockIter() = default;
+//   BufferBlockIter(BufferBlock& buffer_obj) {
+// #ifdef DEBUG_
+//     size_t st = gbp::GetSystemTime();
+// #endif
+//     assert(buffer_obj.size_ != 0);
+//     buffer_obj_ = buffer_obj;
+//     if (buffer_obj_.page_num_ > 1) {
+//       cur_ptr_ = reinterpret_cast<OBJ_Type*>(buffer_obj_.data_.datas[0]);
+//       cur_page_num_rest_ =
+//           std::min((PAGE_SIZE_MEMORY - ((uintptr_t)
+//           buffer_obj_.data_.datas[0] %
+//                                         PAGE_SIZE_MEMORY)),
+//                    buffer_obj_.size_) /
+//               sizeof(OBJ_Type) -
+//           1;
+//       cur_page_ = 0;
+//     } else {
+//       cur_ptr_ = reinterpret_cast<OBJ_Type*>(buffer_obj_.data_.data);
+//       cur_page_num_rest_ = buffer_obj_.size_ / sizeof(OBJ_Type);
+//     }
+// #ifdef DEBUG_
+//     st = gbp::GetSystemTime() - st;
+//     gbp::get_counter(11) += st;
+// #endif
+//   }
+//   ~BufferBlockIter() = default;
 
-  FORCE_INLINE OBJ_Type* next() {
-#ifdef DEBUG_
-    size_t st = gbp::GetSystemTime();
-#endif
-    if (likely(cur_page_num_rest_ > 0)) {
-      cur_page_num_rest_--;
-      cur_ptr_ += 1;
-    } else {
-      if (buffer_obj_.ptes_ != nullptr) {
-        cur_page_++;
-        if (cur_page_ < buffer_obj_.page_num_) {
-          cur_ptr_ = reinterpret_cast<OBJ_Type*>(buffer_obj_.data_[cur_page_]);
-          if (unlikely(cur_page_ == buffer_obj_.page_num_ - 1)) {
-            auto buf_size_left =
-                buffer_obj_.size_ -
-                (PAGE_SIZE_MEMORY -
-                 ((uintptr_t) buffer_obj_.data_[0] % PAGE_SIZE_MEMORY));
-            cur_page_num_rest_ = (buf_size_left % PAGE_SIZE_MEMORY == 0
-                                      ? PAGE_SIZE_MEMORY
-                                      : buf_size_left % PAGE_SIZE_MEMORY) /
-                                     sizeof(OBJ_Type) -
-                                 1;
-          } else {
-            cur_page_num_rest_ = PAGE_SIZE_MEMORY / sizeof(OBJ_Type) - 1;
-          }
-        } else {
-          cur_ptr_ = nullptr;
-        }
-      } else {
-        cur_ptr_ = nullptr;
-      }
-    }
-#ifdef DEBUG_
-    st = gbp::GetSystemTime() - st;
-    gbp::get_counter(11) += st;
-#endif
-    return cur_ptr_;
-  }
+//   FORCE_INLINE OBJ_Type* next() {
+// #ifdef DEBUG_
+//     size_t st = gbp::GetSystemTime();
+// #endif
+//     if (likely(cur_page_num_rest_ > 0)) {
+//       cur_page_num_rest_--;
+//       cur_ptr_ += 1;
+//     } else {
+//       if (buffer_obj_.page_num_ > 1) {
+//         cur_page_++;
+//         if (cur_page_ < buffer_obj_.page_num_) {
+//           cur_ptr_ =
+//               reinterpret_cast<OBJ_Type*>(buffer_obj_.data_.datas[cur_page_]);
+//           if (unlikely(cur_page_ == buffer_obj_.page_num_ - 1)) {
+//             auto buf_size_left =
+//                 buffer_obj_.size_ -
+//                 (PAGE_SIZE_MEMORY -
+//                  ((uintptr_t) buffer_obj_.data_.datas[0] %
+//                  PAGE_SIZE_MEMORY));
+//             cur_page_num_rest_ = (buf_size_left % PAGE_SIZE_MEMORY == 0
+//                                       ? PAGE_SIZE_MEMORY
+//                                       : buf_size_left % PAGE_SIZE_MEMORY) /
+//                                      sizeof(OBJ_Type) -
+//                                  1;
+//           } else {
+//             cur_page_num_rest_ = PAGE_SIZE_MEMORY / sizeof(OBJ_Type) - 1;
+//           }
+//         } else {
+//           cur_ptr_ = nullptr;
+//         }
+//       } else {
+//         cur_ptr_ = nullptr;
+//       }
+//     }
+// #ifdef DEBUG_
+//     st = gbp::GetSystemTime() - st;
+//     gbp::get_counter(11) += st;
+// #endif
+//     return cur_ptr_;
+//   }
 
-  FORCE_INLINE OBJ_Type* current() const { return cur_ptr_; }
-  BufferBlock& get_buffer_obj() { return buffer_obj_; }
+//   FORCE_INLINE OBJ_Type* current() const { return cur_ptr_; }
+//   BufferBlock& get_buffer_obj() { return buffer_obj_; }
 
- private:
-  BufferBlock buffer_obj_;
-  uint16_t cur_page_;
-  uint16_t cur_page_num_rest_;
-  OBJ_Type* cur_ptr_;
-};
+//  private:
+//   BufferBlock buffer_obj_;
+//   uint16_t cur_page_;
+//   uint16_t cur_page_num_rest_;
+//   OBJ_Type* cur_ptr_;
+// };
 
 #endif
 

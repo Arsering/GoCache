@@ -204,7 +204,7 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
       {
         // auto ret = bpm.GetBlockSync(curr_io_fileoffset, io_size);
 
-        auto ret = bpm.GetBlockAsync(curr_io_fileoffset, io_size);
+        auto ret = bpm.GetBlockSync(curr_io_fileoffset, io_size);
         if constexpr (true) {
           // auto ret_new = bpm.GetObject(curr_io_fileoffset, io_size);
           // auto iter = gbp::BufferBlockIter<size_t>(ret_new);
@@ -310,13 +310,18 @@ void write_bufferpool(size_t start_offset, size_t file_size_inByte,
 
 std::string random_str(size_t len) {
   char* test_str = "abcdefghi";
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_int_distribution<uint64_t> rnd(0, 9);
-  std::string ret(len, 'c');
-  for (int i = 0; i < len; i++) {
+  static std::random_device rd;
+  static std::mt19937 gen(rd());
+  static std::uniform_int_distribution<uint64_t> rnd(0, 5);
+  std::uniform_int_distribution<uint64_t> len_rnd(10, len);
+
+  size_t rnd_len = len_rnd(gen);
+  std::string ret(rnd_len, 'c');
+  for (int i = 0; i < rnd_len; i++) {
+    size_t tmp = rnd(gen);
     ret.data()[i] = test_str[rnd(gen)];
   }
+  assert(ret.size() == rnd_len);
   return ret;
 }
 
@@ -326,7 +331,7 @@ void randwrite_bufferpool(size_t start_offset, size_t file_size_inByte,
 
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::uniform_int_distribution<uint64_t> rnd(0, io_num);
+  std::uniform_int_distribution<uint64_t> rnd(0, io_num - 10);
 
   auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
   char* out_buf = (char*) aligned_alloc(512, io_size);
@@ -334,7 +339,7 @@ void randwrite_bufferpool(size_t start_offset, size_t file_size_inByte,
   char* out_buf_1 = (char*) aligned_alloc(512, io_size);
   ::memset(out_buf_1, 1, io_size);
 
-  auto test_str = random_str(io_size);
+  std::string test_str_1, test_str_2;
   size_t curr_io_fileoffset, ret;
   volatile size_t sum = 0;
   size_t st, io_id, page_id;
@@ -345,23 +350,38 @@ void randwrite_bufferpool(size_t start_offset, size_t file_size_inByte,
   while (true) {
     io_id = rnd(gen);
     curr_io_fileoffset = io_id * io_size;
-    auto test_str_1 = random_str(io_size);
+    test_str_1 = random_str(io_size);
+    bpm.SetBlock(test_str_1.data(), curr_io_fileoffset, test_str_1.size(), 0,
+                 false);
+    test_str_2 = random_str(io_size);
+    // test_str_2 = test_str_1;
+    bpm.SetBlock(test_str_2.data(), curr_io_fileoffset + test_str_1.size(),
+                 test_str_2.size(), 0, false);
+    auto ret_str_1 = bpm.GetBlockSync(curr_io_fileoffset, test_str_1.size());
+    auto ret_str_2 = bpm.GetBlockSync(curr_io_fileoffset + test_str_1.size(),
+                                      test_str_2.size());
 
-    auto ret =
-        bpm.SetBlock(test_str.data(), curr_io_fileoffset, io_size, 0, false);
-    auto ret_str = bpm.GetBlockSync(curr_io_fileoffset, io_size);
-    bpm.GetBlock(out_buf_1, curr_io_fileoffset, io_size);
-    assert(strncmp(test_str.data(), out_buf_1, io_size) == 0);
-    assert(ret_str == test_str);
-    // std::cout << test_str << std::endl;
-    // std::cout << test_str_1 << std::endl;
+    bpm.GetBlock(out_buf_1, curr_io_fileoffset, test_str_1.size());
+    assert(strncmp(test_str_1.data(), out_buf_1, test_str_1.size()) == 0);
+    assert(ret_str_1 == test_str_1);
+    assert(ret_str_2 == test_str_2);
 
-    if (test_str > test_str_1) {
-      assert(ret_str > test_str_1);
-    } else if (test_str < test_str_1) {
-      assert(ret_str < test_str_1);
+    if (test_str_1 > test_str_2) {
+      assert(ret_str_1 > ret_str_2);
+    } else if (test_str_1 < test_str_2) {
+      assert(ret_str_1 < ret_str_2);
     } else {
-      assert(ret_str == test_str_1);
+      assert(ret_str_1 == ret_str_2);
+    }
+    assert(ret_str_1 == ret_str_1);
+
+    auto aaa = random_str(io_size);
+    if (test_str_1 > aaa) {
+      assert(ret_str_1 > aaa);
+    } else if (test_str_1 < aaa) {
+      assert(ret_str_1 < aaa);
+    } else {
+      assert(ret_str_1 == aaa);
     }
     // if (*reinterpret_cast<size_t*>(ret.Data()) != io_id)
     //   std::cout << *reinterpret_cast<size_t*>(ret.Data()) << " | " << io_id
@@ -593,19 +613,19 @@ int test_concurrency(int argc, char** argv) {
   // std::string file_path = "/home/spdk/p4510/zhengyang/test_write.db";
   // std::string file_path = "/home/spdk/p4510/zhengyang/test_read.db";
 
-  std::string file_path = "/nvme0n1/test_write.db";
+  // std::string file_path = "/nvme0n1/test_write.db";
   std::string trace_dir =
       "/data/zhengyang/data/experiment_space/LDBC_SNB/logs/2024-06-06-20:05:02/"
       "server/graphscope_logs";
   // get_trace_global() = read_trace(trace_dir, worker_num);
 
-  // std::string file_path = "/nvme0n1/test_read.db";
+  std::string file_path = "/nvme0n1/test_read.db";
 
   size_t file_size_inByte = 1024LU * 1024LU * file_size_MB;
   int data_file = -1;
   data_file = ::open(file_path.c_str(), O_RDWR | O_CREAT | O_DIRECT, 0777);
   assert(data_file != -1);
-  // ::ftruncate(data_file, file_size_inByte);
+  ::ftruncate(data_file, file_size_inByte);
 
   char* data_file_mmaped = nullptr;
 
@@ -677,10 +697,11 @@ int test_concurrency(int argc, char** argv) {
     //   thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte,
     //   io_size, i);
     // else
-    thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size, i);
+    // thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size,
+    // i);
 
-    //  thread_pool.emplace_back(randwrite_bufferpool, 0, file_size_inByte,
-    //  io_size, i);
+    thread_pool.emplace_back(randwrite_bufferpool, 0, file_size_inByte, io_size,
+                             i);
     // thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte,
     // io_size, i);
   }
