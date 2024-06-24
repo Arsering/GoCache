@@ -11,6 +11,7 @@ CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/extendible_hash.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/hash_table.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/io_backend.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/io_server.h
+CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/lockfree_queue.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/logger.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/memory_pool.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/orgin_mmap.h
