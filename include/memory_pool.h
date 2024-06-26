@@ -69,13 +69,18 @@ class MemoryPool {
   }
 
   FORCE_INLINE void* FromPageId(const mpage_id_type& mpage_id) const {
+#if ASSERT_ENABLE
     assert(mpage_id < num_pages_);
+#endif
     return pool_ + mpage_id * PAGE_SIZE_MEMORY;
   }
 
   FORCE_INLINE mpage_id_type ToPageId(void* ptr) const {
+#if ASSERT_ENABLE
     assert(ptr >= pool_);
     assert(ptr < pool_ + num_pages_ * PAGE_SIZE_MEMORY);
+#endif
+
     return ((char*) ptr - pool_) / PAGE_SIZE_MEMORY;
   }
 #ifdef DEBUG_BITMAP

@@ -136,19 +136,20 @@ class PageTableInner {
 #else
     // 无需获得文件页的相关信息，因为该内存页的 ref_count >0
     // 时不可能被用于存储其他文件页
-    pair_min<bool, uint16_t> DecRefCount(bool is_write = false,
-                                         bool write_to_ssd = false) {
+    void DecRefCount(bool is_write, bool write_to_ssd = false) {
       std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
       if (is_write)
         atomic_packed.fetch_or(1 << 30);
       if (write_to_ssd)
         atomic_packed.fetch_and(~(((uint64_t) 1) << 30));
 
-      // atomic_packed.fetch_or(((uint64_t) 1) << 31);
-      // atomic_packed.fetch_and(~(((uint64_t) 1) << 31));
-
-      auto new_unpacked = atomic_packed.fetch_sub(1);
-      return {true, FromPacked(new_unpacked).ref_count};
+      atomic_packed.fetch_sub(1);
+    }
+    // 无需获得文件页的相关信息，因为该内存页的 ref_count >0
+    // 时不可能被用于存储其他文件页
+    void DecRefCount() {
+      std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
+      atomic_packed.fetch_sub(1);
     }
 #endif
 
@@ -247,7 +248,7 @@ class PageTableInner {
   ~PageTableInner() { delete[] pool_; };
 
   uint16_t GetRefCount(mpage_id_type mpage_id) const {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(mpage_id < num_pages_);
 #endif
     return pool_[mpage_id].GetRefCount();
@@ -331,7 +332,7 @@ class PageMapping {
 
   FORCE_INLINE pair_min<bool, mpage_id_type> FindMapping(
       fpage_id_type fpage_id) const {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(fpage_id < size_);
 #endif
 
@@ -349,7 +350,7 @@ class PageMapping {
   }
 
   bool CreateMapping(fpage_id_type fpage_id, mpage_id_type mpage_id) {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(fpage_id < size_);
 #endif
     std::atomic<mpage_id_type>& atomic_data =
@@ -372,7 +373,7 @@ class PageMapping {
   }
 
   bool DeleteMapping(fpage_id_type fpage_id) {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(fpage_id < size_);
 #endif
     std::atomic<mpage_id_type>& atomic_data =
@@ -396,7 +397,7 @@ class PageMapping {
   }
 
   pair_min<bool, mpage_id_type> LockMapping(fpage_id_type fpage_id) {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(fpage_id < size_);
 #endif
     std::atomic<mpage_id_type>& atomic_data =
@@ -494,7 +495,7 @@ class PageTable {
 
   FORCE_INLINE pair_min<bool, mpage_id_type> FindMapping(
       GBPfile_handle_type fd, fpage_id_type fpage_id) const {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(fd < mappings_.size());
     assert(mappings_[fd] != nullptr);
 #endif
@@ -512,7 +513,7 @@ class PageTable {
   FORCE_INLINE bool CreateMapping(GBPfile_handle_type fd,
                                   fpage_id_type fpage_id,
                                   mpage_id_type mpage_id) {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(fd < mappings_.size());
     assert(mappings_[fd] != nullptr);
 #endif
@@ -547,8 +548,6 @@ class PageTable {
   FORCE_INLINE pair_min<bool, mpage_id_type> LockMapping(
       GBPfile_handle_type fd, fpage_id_type fpage_id) {
 #if ASSERT_ENABLE
-    if (fd >= mappings_.size())
-      std::cout << fd << " " << mappings_.size() << std::endl;
     assert(fd < mappings_.size());
     assert(mappings_[fd] != nullptr);
 #endif

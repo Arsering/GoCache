@@ -203,8 +203,8 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
       // st = gbp::GetSystemTime();
       {
         // auto ret = bpm.GetBlockSync(curr_io_fileoffset, io_size);
-
         auto ret = bpm.GetBlockSync(curr_io_fileoffset, io_size);
+
         if constexpr (true) {
           // auto ret_new = bpm.GetObject(curr_io_fileoffset, io_size);
           // auto iter = gbp::BufferBlockIter<size_t>(ret_new);
@@ -613,19 +613,19 @@ int test_concurrency(int argc, char** argv) {
   // std::string file_path = "/home/spdk/p4510/zhengyang/test_write.db";
   // std::string file_path = "/home/spdk/p4510/zhengyang/test_read.db";
 
-  // std::string file_path = "/nvme0n1/test_write.db";
+  std::string file_path = "/nvme0n1/test_write.db";
   std::string trace_dir =
       "/data/zhengyang/data/experiment_space/LDBC_SNB/logs/2024-06-06-20:05:02/"
       "server/graphscope_logs";
   // get_trace_global() = read_trace(trace_dir, worker_num);
 
-  std::string file_path = "/nvme0n1/test_read.db";
+  // std::string file_path = "/nvme0n1/test_read.db";
 
   size_t file_size_inByte = 1024LU * 1024LU * file_size_MB;
   int data_file = -1;
   data_file = ::open(file_path.c_str(), O_RDWR | O_CREAT | O_DIRECT, 0777);
   assert(data_file != -1);
-  ::ftruncate(data_file, file_size_inByte);
+  // ::ftruncate(data_file, file_size_inByte);
 
   char* data_file_mmaped = nullptr;
 
@@ -697,11 +697,11 @@ int test_concurrency(int argc, char** argv) {
     //   thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte,
     //   io_size, i);
     // else
-    // thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size,
-    // i);
+    thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size, i);
 
-    thread_pool.emplace_back(randwrite_bufferpool, 0, file_size_inByte, io_size,
-                             i);
+    // thread_pool.emplace_back(randwrite_bufferpool, 0, file_size_inByte,
+    // io_size,
+    //                          i);
     // thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte,
     // io_size, i);
   }

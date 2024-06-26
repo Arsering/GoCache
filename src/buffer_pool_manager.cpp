@@ -187,14 +187,15 @@ bool BufferPoolManager::Clean() {
       fd = pool->page_table_->FromPageId(idx)->fd;
       fpage_id = pool->partitioner_->GetFPageIdGlobal(
           pool_id, pool->page_table_->FromPageId(idx)->fpage_id);
-#ifdef DEBUG_BITMAP
 
+#ifdef DEBUG_BITMAP
       if (pool->page_table_->FromPageId(idx)->initialized) {
         assert(disk_manager_->GetUsedMark(fd, fpage_id) == true);
         disk_manager_->SetUsedMark(fd, fpage_id, false);
         assert(disk_manager_->GetUsedMark(fd, fpage_id) == false);
       }
 #endif
+
       pool->page_table_->FromPageId(idx)->initialized = false;
       *reinterpret_cast<fpage_id_type*>(pool->memory_pool_.FromPageId(idx)) =
           fpage_id;
@@ -311,6 +312,41 @@ const BufferBlock BufferPoolManager::GetBlockSync(
           : (CEIL(object_size - (PAGE_SIZE_FILE - fpage_offset),
                   PAGE_SIZE_FILE) +
              1);
+  BufferBlock ret(object_size, num_page);
+
+  fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
+  size_t page_id = 0;
+  while (page_id < num_page) {
+#ifdef DEBUG_
+    size_t st = gbp::GetSystemTime();
+#endif
+    auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
+        fpage_id, fd);
+
+#if ASSERT_ENABLE
+    assert(mpage.first != nullptr && mpage.second != nullptr);
+#endif
+
+    ret.InsertPage(page_id, mpage.second + fpage_offset, mpage.first);
+    page_id++;
+    fpage_offset = 0;
+    fpage_id++;
+#ifdef DEBUG_
+    st = gbp::GetSystemTime() - st;
+    gbp::get_counter(11) += st;
+    gbp::get_counter(12)++;
+#endif
+  }
+  // gbp::get_counter_global(11).fetch_add(ret.PageNum());
+
+  return ret;
+}
+
+const BufferBlock BufferPoolManager::GetBlockSync(
+    size_t file_offset, size_t object_size, size_t num_page,
+    GBPfile_handle_type fd) const {
+  size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
+  assert(object_size != 0);
   BufferBlock ret(object_size, num_page);
 
   fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
