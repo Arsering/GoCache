@@ -6,7 +6,7 @@
 
 #pragma once
 
-// #define GRAPHSCOPE
+#define GRAPHSCOPE
 
 // #define DEBUG_BITMAP
 #define ASSERT_ENABLE false

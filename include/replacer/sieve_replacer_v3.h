@@ -15,7 +15,7 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
   // do not change public interface
   SieveReplacer_v3(PageTable* page_table, mpage_id_type capacity)
       : list_(capacity), page_table_(page_table) {
-    pointer_ = list_.usedHead_;
+    pointer_ = list_.head_;
   }
 
   SieveReplacer_v3(const SieveReplacer_v3& other) = delete;
@@ -27,23 +27,25 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
 #if BPM_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
-    bool ret = false;
-    if (!list_.inList(value)) {
-      list_.getValue(value).store(0);
-      assert(list_.moveToFront(value));
-      ret = true;
-    }
-    return ret;
+
+#if ASSERT_ENABLE
+    assert(!list_.inList(value));
+#endif
+
+    list_.getValue(value).store(0);
+    assert(list_.moveToFront(value));
+    return true;
   }
 
   FORCE_INLINE bool Promote(mpage_id_type value) override {
-    bool ret = false;
+#if ASSERT_ENABLE
+    assert(list_.inList(value));
+#endif
 
-    if (list_.inList(value)) {
-      list_.getValue(value).store(1);
-      ret = true;
-    }
-    return ret;
+    list_.getValue(value).store(1);
+    return true;
+
+    // return ret;
   }
 
   bool Victim(mpage_id_type& mpage_id) override {
@@ -53,8 +55,8 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
 
     PTE* pte;
     ListArray<listarray_value_type>::index_type to_evict =
-        pointer_ == list_.usedHead_ ? list_.getUsedTail() : pointer_;
-    if (to_evict == list_.usedHead_) {
+        pointer_ == list_.head_ ? list_.GetTail() : pointer_;
+    if (to_evict == list_.head_) {
       assert(false);
       return false;
     }
@@ -67,15 +69,15 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
       while (list_.getValue(to_evict).load() > 0) {
         if (list_.getValue(to_evict).load() == 1)
           list_.getValue(to_evict).store(0);
-        to_evict = list_.getPrevNodeIndex(to_evict) == list_.usedHead_
-                       ? list_.getUsedTail()
+        to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
+                       ? list_.GetTail()
                        : list_.getPrevNodeIndex(to_evict);
       }
       pte = page_table_->FromPageId(to_evict);
       if (pte->ref_count != 0) {  // FIXME: 可能对cache hit ratio有一定的损伤
         count--;
-        to_evict = list_.getPrevNodeIndex(to_evict) == list_.usedHead_
-                       ? list_.getUsedTail()
+        to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
+                       ? list_.GetTail()
                        : list_.getPrevNodeIndex(to_evict);
         continue;
       }
@@ -91,8 +93,8 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
       if (locked)
         assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
       count--;
-      to_evict = list_.getPrevNodeIndex(to_evict) == list_.usedHead_
-                     ? list_.getUsedTail()
+      to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
+                     ? list_.GetTail()
                      : list_.getPrevNodeIndex(to_evict);
     }
     pointer_ = list_.getPrevNodeIndex(to_evict);
@@ -110,8 +112,8 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
 
     PTE* pte;
     ListArray<listarray_value_type>::index_type to_evict =
-        pointer_ == list_.usedHead_ ? list_.getUsedTail() : pointer_;
-    if (to_evict == list_.usedHead_) {
+        pointer_ == list_.head_ ? list_.GetTail() : pointer_;
+    if (to_evict == list_.head_) {
       assert(false);
       return false;
     }
@@ -124,15 +126,15 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
       while (list_.getValue(to_evict).load() > 0) {
         if (list_.getValue(to_evict).load() == 1)
           list_.getValue(to_evict).store(0);
-        to_evict = list_.getPrevNodeIndex(to_evict) == list_.usedHead_
-                       ? list_.getUsedTail()
+        to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
+                       ? list_.GetTail()
                        : list_.getPrevNodeIndex(to_evict);
       }
       pte = page_table_->FromPageId(to_evict);
       if (pte->ref_count != 0) {  // FIXME: 可能对cache hit ratio有一定的损伤
         count--;
-        to_evict = list_.getPrevNodeIndex(to_evict) == list_.usedHead_
-                       ? list_.getUsedTail()
+        to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
+                       ? list_.GetTail()
                        : list_.getPrevNodeIndex(to_evict);
         continue;
       }
@@ -148,8 +150,8 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
       if (locked)
         assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
       count--;
-      to_evict = list_.getPrevNodeIndex(to_evict) == list_.usedHead_
-                     ? list_.getUsedTail()
+      to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
+                     ? list_.GetTail()
                      : list_.getPrevNodeIndex(to_evict);
     }
     pointer_ = list_.getPrevNodeIndex(to_evict);
@@ -170,14 +172,14 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
 
     PTE* pte;
     ListArray<listarray_value_type>::index_type to_evict;
-    if (to_evict == list_.usedHead_) {
+    if (to_evict == list_.head_) {
       return false;
     }
 
     while (page_num > 0) {
       size_t count = list_.capacity_ * 2;
 
-      to_evict = pointer_ == list_.usedHead_ ? list_.getUsedTail() : pointer_;
+      to_evict = pointer_ == list_.head_ ? list_.GetTail() : pointer_;
       while (true) {
         if (count == 0) {
           if (mpage_ids.size() != 0) {
@@ -187,8 +189,8 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
         }
         while (list_.getValue(to_evict)) {
           list_.getValue(to_evict) = false;
-          to_evict = list_.getPrevNodeIndex(to_evict) == list_.usedHead_
-                         ? list_.getUsedTail()
+          to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
+                         ? list_.GetTail()
                          : list_.getPrevNodeIndex(to_evict);
         }
 
@@ -196,8 +198,8 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
         if (pte->ref_count != 0 ||
             pte->dirty) {  // FIXME: 可能对cache hit ratio有一定的损伤
           count--;
-          to_evict = list_.getPrevNodeIndex(to_evict) == list_.usedHead_
-                         ? list_.getUsedTail()
+          to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
+                         ? list_.GetTail()
                          : list_.getPrevNodeIndex(to_evict);
           continue;
         }
@@ -216,8 +218,8 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
         if (locked)
           assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
         count--;
-        to_evict = list_.getPrevNodeIndex(to_evict) == list_.usedHead_
-                       ? list_.getUsedTail()
+        to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
+                       ? list_.GetTail()
                        : list_.getPrevNodeIndex(to_evict);
       }
       mpage_ids.push_back(to_evict);

@@ -94,12 +94,17 @@ class DiskManager {
    * Public helper function to get disk file size
    */
   FORCE_INLINE size_t GetFileSize(GBPfile_handle_type fd) const {
+#if ASSERT_ENABLE
     assert(fd < file_names_.size());
+#endif
     return std::filesystem::file_size(file_names_[fd]);
   }
 
   FORCE_INLINE std::string GetFilePath(GBPfile_handle_type fd) const {
+#if ASSERT_ENABLE
     assert(ValidFD(fd));
+#endif
+
     return file_names_[fd];
   }
 
@@ -192,11 +197,12 @@ class IOURing : public IOBackend {
 
   bool Write(size_t offset, const char* data, size_t size,
              GBPfile_handle_type fd, AsyncMesg* finish = nullptr) override {
+#if ASSERT_ENABLE
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
     assert(offset < disk_manager_->file_size_inBytes_[fd] &&
            ((uintptr_t) data) % PAGE_SIZE_MEMORY == 0);
-
+#endif
     auto sqe = io_uring_get_sqe(&ring_);
     if (!sqe) {
       Progress();
@@ -213,11 +219,12 @@ class IOURing : public IOBackend {
 
   bool Write(size_t offset, ::iovec* io_info, GBPfile_handle_type fd,
              AsyncMesg* finish = nullptr) override {
+#if ASSERT_ENABLE
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
     assert(offset < disk_manager_->file_size_inBytes_[fd] &&
            ((uintptr_t) io_info->iov_base) % PAGE_SIZE_FILE == 0);
-
+#endif
     auto sqe = io_uring_get_sqe(&ring_);
     if (!sqe) {
       Progress();
@@ -295,8 +302,6 @@ class IOURing : public IOBackend {
 #if ASSERT_ENABLE
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
-#endif
-#if ASSERT_ENABLE
     assert(offset < disk_manager_->file_size_inBytes_[fd] &&
            ((uintptr_t) io_info->iov_base) % PAGE_SIZE_FILE == 0);
 #endif

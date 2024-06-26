@@ -59,7 +59,7 @@ class BufferObjectImp0 {
 
   void Malloc(size_t s) {
     data_ = (char*) LBMalloc(s);
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(data_ != NULL);
 #endif
 
@@ -574,7 +574,7 @@ struct BufferObjectInner {
  private:
   void Malloc(size_t s) {
     data_ = (char*) LBMalloc(s);
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(data_ != NULL);
 #endif
     need_delete_ = true;
@@ -726,7 +726,7 @@ class BufferObjectImp2 {
 
   void Malloc(size_t s) {
     data_ = (char*) LBMalloc(s);
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(data_ != NULL);
 #endif
     need_delete_ = true;
@@ -737,7 +737,7 @@ class BufferObjectImp2 {
 
   template <typename T>
   static T& Decode(BufferObjectImp2& obj) {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(sizeof(T) == obj.Size());
 #endif
 
@@ -746,7 +746,7 @@ class BufferObjectImp2 {
 
   template <typename T>
   static const T& Decode(const BufferObjectImp2& obj) {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(sizeof(T) == obj.Size());
 #endif
 
@@ -755,7 +755,7 @@ class BufferObjectImp2 {
 
   template <typename T>
   static const T& Decode(const BufferObjectImp2& obj, size_t idx) {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(sizeof(T) * (idx + 1) <= obj.Size());
 #endif
     return *reinterpret_cast<const T*>(obj.Data() + idx * sizeof(T));
@@ -799,7 +799,7 @@ class BufferBlockImp5 {
     data_ = (char**) LBMalloc(1 * sizeof(char*));
     ptes_ = nullptr;
     // bitset_ = nullptr;
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(data_ != nullptr);
 #endif
     data_[0] = (char*) LBMalloc(size_);
@@ -812,7 +812,7 @@ class BufferBlockImp5 {
     ptes_ = nullptr;
     // bitset_ = nullptr;
 
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(data_ != nullptr);
 #endif
     data_[0] = (char*) LBMalloc(size);
@@ -919,7 +919,7 @@ class BufferBlockImp5 {
   }
 
   void InsertPage(size_t idx, char* data, PTE* pte) {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(idx < page_num_);
 #endif
     data_[idx] = data;
@@ -928,7 +928,7 @@ class BufferBlockImp5 {
 
   static BufferBlockImp5 Copy(const BufferBlockImp5& rhs) {
     BufferBlockImp5 ret(rhs.size_);
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(rhs.data_ != nullptr);
 #endif
 
@@ -950,7 +950,7 @@ class BufferBlockImp5 {
   }
 
   size_t Copy(char* buf, size_t buf_size, size_t offset = 0) const {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(data_ != nullptr);
     assert(offset < size_);
 #endif
@@ -1106,7 +1106,7 @@ class BufferBlockImp5 {
 
   FORCE_INLINE int Compare(const std::string_view right,
                            size_t offset = 0) const {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(data_ != nullptr);
     assert(offset < size_);
 #endif
@@ -1153,7 +1153,7 @@ class BufferBlockImp5 {
   }
 
   FORCE_INLINE int Compare(const BufferBlockImp5& right) const {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(data_ != nullptr);
 #endif
     int ret = 0;
@@ -1191,7 +1191,7 @@ class BufferBlockImp5 {
 
   FORCE_INLINE int Compare_inner(const std::string_view right,
                                  size_t offset = 0) const {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(data_ != nullptr && offset < size_);
 #endif
     size_t size_left = std::min(size_ - offset, right.size()),
@@ -1233,7 +1233,7 @@ class BufferBlockImp5 {
 
   void Malloc(size_t size) {
     data_ = (char**) LBMalloc(sizeof(char*));
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(data_ != NULL);
 #endif
     data_[0] = (char*) LBMalloc(sizeof(char) * size);
@@ -1281,7 +1281,7 @@ class BufferBlockImp5 {
         }
       }
     }
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(((uintptr_t) ret / PAGE_SIZE_MEMORY + 1) * PAGE_SIZE_MEMORY >=
            (uintptr_t) (ret + sizeof(T)));
 #endif
@@ -1299,8 +1299,10 @@ class BufferBlockImp5 {
  private:
   FORCE_INLINE bool InitPage(size_t page_id) const {
     // bitset_[page_id / 8] |= 1 << (page_id % 8);
-    if (!ptes_[page_id]->initialized) {
-      return LoadPage(page_id);
+    if constexpr (LAZY_SSD_IO) {
+      if (!ptes_[page_id]->initialized) {
+        return LoadPage(page_id);
+      }
     }
     return true;
   }
@@ -1326,7 +1328,7 @@ class BufferBlockImp6 {
   BufferBlockImp6(size_t size, size_t page_num)
       : page_num_(page_num), size_(size) {
     if (page_num > 1) {
-      data_.datas = (char**) LBMalloc(page_num_ * sizeof(char*));
+      datas_.datas = (char**) LBMalloc(page_num_ * sizeof(char*));
       ptes_.ptes = (PTE**) LBMalloc(page_num_ * sizeof(PTE*));
     }
 #if ASSERT_ENABLE
@@ -1338,47 +1340,47 @@ class BufferBlockImp6 {
 
   BufferBlockImp6(size_t size, char* data) : size_(size), page_num_(0) {
     // bitset_ = nullptr;
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(data_ != nullptr);
 #endif
-    data_.data = (char*) LBMalloc(size_);
-    memcpy(data_.data, data, size_);
+    datas_.data = (char*) LBMalloc(size_);
+    memcpy(datas_.data, data, size_);
     type_ = ObjectType::gbpClass;
   }
 
   BufferBlockImp6(size_t size) : size_(size) {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(data_ != nullptr);
 #endif
-    data_.data = (char*) LBMalloc(size);
+    datas_.data = (char*) LBMalloc(size);
     type_ = ObjectType::gbpClass;
   }
 
 #ifdef GRAPHSCOPE
-  BufferBlockImp5(const gs::Any& value) {
+  BufferBlockImp6(const gs::Any& value) {
     type_ = ObjectType::gbpAny;
 
     if (value.type == gs::PropertyType::kInt32) {
       Malloc(sizeof(int32_t));
-      memcpy(data_.data, &value.value.i, sizeof(int32_t));
+      memcpy(datas_.data, &value.value.i, sizeof(int32_t));
     } else if (value.type == gs::PropertyType::kInt64) {
       Malloc(sizeof(int64_t));
-      memcpy(data_.data, &value.value.l, sizeof(int64_t));
+      memcpy(datas_.data, &value.value.l, sizeof(int64_t));
     } else if (value.type == gs::PropertyType::kString) {
       Malloc(sizeof(std::string_view));
-      memcpy(data_.data, &value.value.s, sizeof(std::string_view));
+      memcpy(datas_.data, &value.value.s, sizeof(std::string_view));
       //      return value.s.to_string();
     } else if (value.type == gs::PropertyType::kDate) {
       Malloc(sizeof(gs::Date));
-      memcpy(data_.data, &value.value.d, sizeof(gs::Date));
+      memcpy(datas_.data, &value.value.d, sizeof(gs::Date));
     } else if (value.type == gs::PropertyType::kEmpty) {
-      data_.data = nullptr;
+      datas_.data = nullptr;
       size_ = 0;
       ptes_.pte = nullptr;
       page_num_ = 0;
     } else if (value.type == gs::PropertyType::kDouble) {
       Malloc(sizeof(double));
-      memcpy(data_.data, &value.value.db, sizeof(double));
+      memcpy(datas_.data, &value.value.db, sizeof(double));
     } else {
       LOG(FATAL) << "Unexpected property type: "
                  << static_cast<int>(value.type);
@@ -1400,10 +1402,7 @@ class BufferBlockImp6 {
     return *this;
   }
 
-  ~BufferBlockImp6() {
-    // std::cout << __FILE__ << ":" << __LINE__ << ": " << "aa" << std::endl;
-    free();
-  }
+  ~BufferBlockImp6() { free(); }
 
   FORCE_INLINE bool operator>=(const std::string& right) const {
     return Compare(right) >= 0 ? true : false;
@@ -1454,34 +1453,34 @@ class BufferBlockImp6 {
   }
 
   void InsertPage(size_t idx, char* data, PTE* pte) {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(idx < page_num_);
 #endif
     if (page_num_ == 1) {
-      data_.data = data;
+      datas_.data = data;
       ptes_.pte = pte;
     } else {
-      data_.datas[idx] = data;
+      datas_.datas[idx] = data;
       ptes_.ptes[idx] = pte;
     }
   }
 
   static BufferBlockImp6 Copy(const BufferBlockImp6& rhs) {
     BufferBlockImp6 ret(rhs.size_);
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(rhs.data_ != nullptr);
 #endif
 
     if (rhs.page_num_ < 2)
-      memcpy(ret.data_.data, rhs.data_.data, rhs.size_);
+      memcpy(ret.datas_.data, rhs.datas_.data, rhs.size_);
     else {
       size_t size_new = 0, size_old = rhs.size_, slice_len, loc_inpage;
       for (size_t i = 0; i < rhs.page_num_; i++) {
         loc_inpage = PAGE_SIZE_MEMORY -
-                     (uintptr_t) rhs.data_.datas[i] % PAGE_SIZE_MEMORY;
+                     (uintptr_t) rhs.datas_.datas[i] % PAGE_SIZE_MEMORY;
         slice_len = loc_inpage < size_old ? loc_inpage : size_old;
         assert(rhs.InitPage(i));
-        memcpy((char*) ret.data_.data + size_new, rhs.data_.datas[i],
+        memcpy((char*) ret.datas_.data + size_new, rhs.datas_.datas[i],
                slice_len);
         size_new += slice_len;
         size_old -= slice_len;
@@ -1491,20 +1490,20 @@ class BufferBlockImp6 {
   }
 
   size_t Copy(char* buf, size_t buf_size, size_t offset = 0) const {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(data_ != nullptr);
     assert(offset < size_);
 #endif
     size_t ret = (buf_size + offset) > size_ ? size_ : buf_size;
 
     if (page_num_ < 2) {
-      memcpy(buf, data_.data + offset, ret);
+      memcpy(buf, datas_.data + offset, ret);
     } else {
       size_t size_new = 0, size_old = ret, slice_len, loc_inpage, idx,
              offset_t = offset;
       for (idx = 0; idx < page_num_; idx++) {
         loc_inpage =
-            PAGE_SIZE_MEMORY - (uintptr_t) data_.datas[idx] % PAGE_SIZE_MEMORY;
+            PAGE_SIZE_MEMORY - (uintptr_t) datas_.datas[idx] % PAGE_SIZE_MEMORY;
         if (offset_t > loc_inpage) {
           offset_t -= loc_inpage;
         } else {
@@ -1515,10 +1514,10 @@ class BufferBlockImp6 {
       for (; idx < page_num_; idx++) {
         loc_inpage =
             PAGE_SIZE_MEMORY -
-            (uintptr_t) (data_.datas[idx] + offset_t) % PAGE_SIZE_MEMORY;
+            (uintptr_t) (datas_.datas[idx] + offset_t) % PAGE_SIZE_MEMORY;
         slice_len = loc_inpage < size_old ? loc_inpage : size_old;
         assert(InitPage(idx));
-        memcpy(buf + size_new, data_.datas[idx] + offset_t, slice_len);
+        memcpy(buf + size_new, datas_.datas[idx] + offset_t, slice_len);
         size_new += slice_len;
         size_old -= slice_len;
         offset = 0;
@@ -1532,19 +1531,14 @@ class BufferBlockImp6 {
 
   static void Move(const BufferBlockImp6& src, BufferBlockImp6& dst) {
     dst.free();
-    dst.data_ = src.data_;
+
+    dst.datas_ = src.datas_;
     dst.page_num_ = src.page_num_;
     dst.ptes_ = src.ptes_;
     dst.type_ = src.type_;
     dst.size_ = src.size_;
-    // dst.bitset_ = src.bitset_;
-    // if (gbp::warmup_mark().load() == 1) {
-    //   // dst.aa_ = src.aa_;
-    //   dst.com_mark_ = src.com_mark_;
-    // }
 
     const_cast<BufferBlockImp6&>(src).size_ = 0;
-    // dst.free();
   }
 
   template <typename INNER_T>
@@ -1554,22 +1548,22 @@ class BufferBlockImp6 {
       exit(-1);
     }
     assert(InitPage(0));
-    return *reinterpret_cast<INNER_T*>(data_.data);
+    return *reinterpret_cast<INNER_T*>(datas_.data);
   }
 
   void free() {
     // 如果ptes不为空，则free
     if (size_ != 0) {
-      if (page_num_ > 1) {
+      if (likely(page_num_ == 1)) {
+        ptes_.pte->DecRefCount();
+      } else if (page_num_ > 1) {
         while (page_num_ != 0) {
           ptes_.ptes[--page_num_]->DecRefCount();
         }
         LBFree(ptes_.ptes);
-        // LBFree(bitset_);
-      } else if (page_num_ == 1) {
-        ptes_.pte->DecRefCount();
+        LBFree(datas_.datas);
       } else {
-        LBFree(data_.data);
+        LBFree(datas_.data);
       }
     }
     size_ = 0;
@@ -1612,8 +1606,8 @@ class BufferBlockImp6 {
   }
 
   char* Data() const {
-    if (data_.data != nullptr && page_num_ < 2)
-      return data_.data;
+    if (datas_.data != nullptr && page_num_ < 2)
+      return datas_.data;
     assert(false);
     return nullptr;
   }
@@ -1622,7 +1616,7 @@ class BufferBlockImp6 {
 
   FORCE_INLINE int Compare(const std::string_view right,
                            size_t offset = 0) const {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(data_ != nullptr);
     assert(offset < size_);
 #endif
@@ -1637,7 +1631,7 @@ class BufferBlockImp6 {
       if (offset_t != 0) {
         for (; idx < page_num_; idx++) {
           loc_inpage = PAGE_SIZE_MEMORY -
-                       (uintptr_t) data_.datas[idx] % PAGE_SIZE_MEMORY;
+                       (uintptr_t) datas_.datas[idx] % PAGE_SIZE_MEMORY;
           if (offset_t >= loc_inpage) {
             offset_t -= loc_inpage;
           } else {
@@ -1648,10 +1642,10 @@ class BufferBlockImp6 {
       for (; idx < page_num_; idx++) {
         loc_inpage =
             PAGE_SIZE_MEMORY -
-            (uintptr_t) (data_.datas[idx] + offset_t) % PAGE_SIZE_MEMORY;
+            (uintptr_t) (datas_.datas[idx] + offset_t) % PAGE_SIZE_MEMORY;
         slice_len = loc_inpage < size_left ? loc_inpage : size_left;
         assert(InitPage(idx));
-        ret = ::strncmp(data_.datas[idx] + offset_t, right.data() + size_cum,
+        ret = ::strncmp(datas_.datas[idx] + offset_t, right.data() + size_cum,
                         slice_len);
         if (ret != 0) {
           break;
@@ -1661,7 +1655,7 @@ class BufferBlockImp6 {
         size_cum += slice_len;
       }
     } else {
-      ret = ::strncmp(data_.data + offset, right.data(), size_left);
+      ret = ::strncmp(datas_.data + offset, right.data(), size_left);
     }
 
     if (ret == 0 && offset == 0 && (size_ - offset) != right.size()) {
@@ -1672,23 +1666,21 @@ class BufferBlockImp6 {
   }
 
   FORCE_INLINE int Compare(const BufferBlockImp6& right) const {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(data_ != nullptr);
 #endif
     int ret = 0;
-    // right.com_mark_ = true;
-    // com_mark_ = true;
 
     if (page_num_ > 1 && right.page_num_ > 1) {
-      size_t slice_len, loc_inpage, len_right = 0;
+      size_t loc_inpage, len_right = 0;
       size_t idx_right = 0;
       for (; idx_right < right.page_num_; idx_right++) {
         loc_inpage =
             PAGE_SIZE_MEMORY -
-            (uintptr_t) right.data_.datas[idx_right] % PAGE_SIZE_MEMORY;
+            (uintptr_t) right.datas_.datas[idx_right] % PAGE_SIZE_MEMORY;
         loc_inpage = std::min(loc_inpage, right.Size() - len_right);
         assert(right.InitPage(idx_right));
-        ret = Compare_inner({right.data_.datas[idx_right], loc_inpage},
+        ret = Compare_inner({right.datas_.datas[idx_right], loc_inpage},
                             len_right);
 
         if (ret != 0) {
@@ -1697,9 +1689,9 @@ class BufferBlockImp6 {
         len_right += loc_inpage;
       }
     } else if (right.page_num_ < 2) {
-      ret = Compare_inner({right.data_.data, right.size_});
+      ret = Compare_inner({right.datas_.data, right.size_});
     } else {
-      ret = -right.Compare_inner({data_.data, size_});
+      ret = -right.Compare_inner({datas_.data, size_});
     }
 
     if (ret == 0 && size_ != right.size_)
@@ -1712,7 +1704,7 @@ class BufferBlockImp6 {
 
   FORCE_INLINE int Compare_inner(const std::string_view right,
                                  size_t offset = 0) const {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(data_ != nullptr && offset < size_);
 #endif
     size_t size_left = std::min(size_ - offset, right.size()),
@@ -1720,24 +1712,24 @@ class BufferBlockImp6 {
     int ret = 0;
 
     if (page_num_ > 1) {
-      size_t size_cum = 0, slice_len;
-      uint32_t idx = 0, loc_inpage;
+      size_t idx = 0, loc_inpage;
       for (; idx < page_num_; idx++) {
         loc_inpage =
-            PAGE_SIZE_MEMORY - (uintptr_t) data_.datas[idx] % PAGE_SIZE_MEMORY;
+            PAGE_SIZE_MEMORY - (uintptr_t) datas_.datas[idx] % PAGE_SIZE_MEMORY;
         if (offset_t >= loc_inpage) {
           offset_t -= loc_inpage;
         } else {
           break;
         }
       }
+      size_t size_cum = 0, slice_len;
       for (; idx < page_num_; idx++) {
         loc_inpage =
             PAGE_SIZE_MEMORY -
-            (uintptr_t) (data_.datas[idx] + offset_t) % PAGE_SIZE_MEMORY;
+            (uintptr_t) (datas_.datas[idx] + offset_t) % PAGE_SIZE_MEMORY;
         slice_len = loc_inpage < size_left ? loc_inpage : size_left;
         assert(InitPage(idx));
-        ret = ::strncmp(data_.datas[idx] + offset_t, right.data() + size_cum,
+        ret = ::strncmp(datas_.datas[idx] + offset_t, right.data() + size_cum,
                         slice_len);
         if (ret != 0) {
           break;
@@ -1747,17 +1739,17 @@ class BufferBlockImp6 {
         size_cum += slice_len;
       }
     } else {
-      ret = ::strncmp(data_.data + offset, right.data(), size_left);
+      ret = ::strncmp(datas_.data + offset, right.data(), size_left);
     }
 
     return ret;
   }
 
   void Malloc(size_t size) {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(data_ != NULL);
 #endif
-    data_.data = (char*) LBMalloc(sizeof(char) * size);
+    datas_.data = (char*) LBMalloc(sizeof(char) * size);
     size_ = size;
     page_num_ = 0;
     ptes_.pte = nullptr;
@@ -1778,26 +1770,33 @@ class BufferBlockImp6 {
     PTE* target_pte;
 
     if (likely(page_num_ < 2)) {
-      ret = data_.data + idx * sizeof(T);
+      ret = datas_.data + idx * sizeof(T);
       target_pte = ptes_.pte;
     } else {
-      auto obj_num_curpage =
-          (PAGE_SIZE_MEMORY - ((uintptr_t) data_.datas[0] % PAGE_SIZE_MEMORY)) /
-          sizeof(T);
-
-      if (obj_num_curpage > idx) {
+      if (likely(idx == 0)) {
         assert(InitPage(0));
-        ret = data_.datas[0] + idx * sizeof(T);
+        ret = datas_.datas[0];
         target_pte = ptes_.ptes[0];
       } else {
-        idx -= obj_num_curpage;
-        auto page_id = idx / OBJ_NUM_PERPAGE + 1;
-        assert(InitPage(page_id));
-        ret = data_.datas[page_id] + (idx % OBJ_NUM_PERPAGE) * sizeof(T);
-        target_pte = ptes_.ptes[page_id];
+        auto obj_num_curpage =
+            (PAGE_SIZE_MEMORY -
+             ((uintptr_t) datas_.datas[0] % PAGE_SIZE_MEMORY)) /
+            sizeof(T);
+
+        if (obj_num_curpage > idx) {
+          assert(InitPage(0));
+          ret = datas_.datas[0] + idx * sizeof(T);
+          target_pte = ptes_.ptes[0];
+        } else {
+          idx -= obj_num_curpage;
+          auto page_id = idx / OBJ_NUM_PERPAGE + 1;
+          assert(InitPage(page_id));
+          ret = datas_.datas[page_id] + (idx % OBJ_NUM_PERPAGE) * sizeof(T);
+          target_pte = ptes_.ptes[page_id];
+        }
       }
     }
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(((uintptr_t) ret / PAGE_SIZE_MEMORY + 1) * PAGE_SIZE_MEMORY >=
            (uintptr_t) (ret + sizeof(T)));
 #endif
@@ -1825,20 +1824,22 @@ class BufferBlockImp6 {
 
   FORCE_INLINE bool InitPage(size_t page_id) const {
     // bitset_[page_id / 8] |= 1 << (page_id % 8);
-    if (likely(page_num_ == 1)) {
-      assert(page_id == 0);
-      if (!ptes_.pte->initialized) {
-        return LoadPage(page_id);
-      }
-    } else {
-      if (!ptes_.ptes[page_id]->initialized) {
-        return LoadPage(page_id);
+    if constexpr (LAZY_SSD_IO) {
+      if (likely(page_num_ == 1)) {
+        assert(page_id == 0);
+        if (!ptes_.pte->initialized) {
+          return LoadPage(page_id);
+        }
+      } else {
+        if (!ptes_.ptes[page_id]->initialized) {
+          return LoadPage(page_id);
+        }
       }
     }
     return true;
   }
 
-  AnyValue data_;
+  AnyValue datas_;
   AnyValue ptes_;
   size_t size_ = 0;
   size_t page_num_ = 0;

@@ -15,7 +15,7 @@ class SieveReplacer_v2 : public Replacer<mpage_id_type> {
   // do not change public interface
   SieveReplacer_v2(PageTable* page_table, mpage_id_type capacity)
       : list_(capacity), page_table_(page_table) {
-    pointer_ = list_.usedHead_;
+    pointer_ = list_.head_;
   }
 
   SieveReplacer_v2(const SieveReplacer_v2& other) = delete;
@@ -55,8 +55,8 @@ class SieveReplacer_v2 : public Replacer<mpage_id_type> {
 
     PTE* pte;
     ListArray<bool>::index_type to_evict =
-        pointer_ == list_.usedHead_ ? list_.getUsedTail() : pointer_;
-    if (to_evict == list_.usedHead_) {
+        pointer_ == list_.head_ ? list_.GetTail() : pointer_;
+    if (to_evict == list_.head_) {
       assert(false);
       return false;
     }
@@ -68,8 +68,8 @@ class SieveReplacer_v2 : public Replacer<mpage_id_type> {
       }
       while (list_.getValue(to_evict)) {
         list_.getValue(to_evict) = false;
-        to_evict = list_.getPrevNodeIndex(to_evict) == list_.usedHead_
-                       ? list_.getUsedTail()
+        to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
+                       ? list_.GetTail()
                        : list_.getPrevNodeIndex(to_evict);
       }
       pte = page_table_->FromPageId(to_evict);
@@ -85,8 +85,8 @@ class SieveReplacer_v2 : public Replacer<mpage_id_type> {
       if (locked)
         assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
       count--;
-      to_evict = list_.getPrevNodeIndex(to_evict) == list_.usedHead_
-                     ? list_.getUsedTail()
+      to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
+                     ? list_.GetTail()
                      : list_.getPrevNodeIndex(to_evict);
     }
     pointer_ = list_.getPrevNodeIndex(to_evict);
@@ -105,14 +105,14 @@ class SieveReplacer_v2 : public Replacer<mpage_id_type> {
 
     PTE* pte;
     ListArray<bool>::index_type to_evict;
-    if (to_evict == list_.usedHead_) {
+    if (to_evict == list_.head_) {
       return false;
     }
 
     while (page_num > 0) {
       size_t count = list_.capacity_ * 2;
 
-      to_evict = pointer_ == list_.usedHead_ ? list_.getUsedTail() : pointer_;
+      to_evict = pointer_ == list_.head_ ? list_.GetTail() : pointer_;
       while (true) {
         if (count == 0) {
           if (mpage_ids.size() != 0) {
@@ -122,8 +122,8 @@ class SieveReplacer_v2 : public Replacer<mpage_id_type> {
         }
         while (list_.getValue(to_evict)) {
           list_.getValue(to_evict) = false;
-          to_evict = list_.getPrevNodeIndex(to_evict) == list_.usedHead_
-                         ? list_.getUsedTail()
+          to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
+                         ? list_.GetTail()
                          : list_.getPrevNodeIndex(to_evict);
         }
 
@@ -143,8 +143,8 @@ class SieveReplacer_v2 : public Replacer<mpage_id_type> {
         if (locked)
           assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
         count--;
-        to_evict = list_.getPrevNodeIndex(to_evict) == list_.usedHead_
-                       ? list_.getUsedTail()
+        to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
+                       ? list_.GetTail()
                        : list_.getPrevNodeIndex(to_evict);
       }
       mpage_ids.push_back(to_evict);

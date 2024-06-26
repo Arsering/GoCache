@@ -36,27 +36,28 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
 #if BPM_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
+#if ASSERT_ENABLE
+    assert(!list_.inList(value));
+#endif
 
-    bool ret = false;
-    if (!list_.inList(value)) {
-      list_.getValue(value) = 0;
-      assert(list_.moveToFront(value));
-      ret = true;
-    }
-    return ret;
+    list_.getValue(value) = 0;
+    assert(list_.moveToFront(value));
+    return true;
   }
 
   bool Promote(mpage_id_type value) override {
 #if BPM_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
+#if ASSERT_ENABLE
+    assert(list_.inList(value));
+#endif
+    // bool ret = false;
 
-    bool ret = false;
-    if (list_.inList(value)) {
-      assert(list_.moveToFront(value));
-      ret = true;
-    }
-    return ret;
+    assert(list_.moveToFront(value));
+    return true;
+
+    // return ret;
   }
 
   bool Victim(mpage_id_type& mpage_id) override {
@@ -64,9 +65,9 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
-    ListArray<listarray_value_type>::index_type nodeIndex = list_.getUsedTail();
+    ListArray<listarray_value_type>::index_type nodeIndex = list_.GetTail();
     while (true) {
-      if (nodeIndex == list_.usedHead_)
+      if (nodeIndex == list_.head_)
         return false;
 
       auto* pte = page_table_->FromPageId(nodeIndex);
@@ -103,9 +104,8 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
   }
 
   void traverse_node() {
-    ListArray<listarray_value_type>::index_type currentIndex =
-        list_.getUsedHead();
-    while (currentIndex != ListArray<listarray_value_type>::INVALID_INDEX) {
+    ListArray<listarray_value_type>::index_type currentIndex = list_.GetHead();
+    while (currentIndex != list_.tail_) {
       currentIndex = list_.getNextNodeIndex(currentIndex);
     }
   }
