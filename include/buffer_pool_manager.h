@@ -52,6 +52,9 @@ class BufferPoolManager {
 
   const BufferBlock GetBlockSync(size_t file_offset, size_t object_size,
                                  GBPfile_handle_type fd = 0) const;
+  const BufferBlock GetBlockSync(size_t file_offset, size_t object_size,
+                                 size_t num_page,
+                                 GBPfile_handle_type fd = 0) const;
   const BufferBlock GetBlockAsync(size_t file_offset, size_t object_size,
                                   GBPfile_handle_type fd = 0) const;
 

@@ -50,9 +50,9 @@ class FIFOReplacer_v2 : public Replacer<mpage_id_type> {
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
-    ListArray<mpage_id_type>::index_type to_evict = list_.getUsedTail();
+    auto to_evict = list_.GetTail();
     while (true) {
-      if (to_evict == list_.usedHead_)
+      if (to_evict == list_.head_)
         return false;
 
       auto* pte = page_table_->FromPageId(to_evict);
@@ -84,9 +84,9 @@ class FIFOReplacer_v2 : public Replacer<mpage_id_type> {
 
     PTE* pte;
     while (page_num != 0) {
-      ListArray<mpage_id_type>::index_type to_evict = list_.getUsedTail();
+      ListArray<mpage_id_type>::index_type to_evict = list_.GetTail();
       while (true) {
-        if (to_evict == list_.usedHead_) {
+        if (to_evict == list_.head_) {
           if (mpage_ids.size() != 0)
             return true;
           return false;

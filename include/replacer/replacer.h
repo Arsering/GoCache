@@ -19,7 +19,7 @@ class Replacer {
   Replacer() : finish_mark_async_(true) {}
   virtual ~Replacer() {}
   virtual bool Insert(T value) = 0;
-  virtual bool Promote(T value) = 0;
+  virtual FORCE_INLINE bool Promote(T value) = 0;
   virtual bool Victim(T& value) = 0;
   virtual bool Victim(std::vector<T>& value, T page_num) = 0;
   virtual bool Replace(T& value) {

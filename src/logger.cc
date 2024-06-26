@@ -295,6 +295,19 @@ std::tuple<size_t, size_t> GetCPUTime() {
           usage.ru_stime.tv_sec * 1000000 + usage.ru_stime.tv_usec};
 }
 
+// std::tuple<size_t, size_t> GetCPUTime() {
+//   static const size_t ticks_per_second = sysconf(_SC_CLK_TCK);
+
+//   std::ifstream stat_file("/proc/self/stat");
+//   std::string stat;
+//   std::getline(stat_file, stat);
+
+//   std::vector<std::string> stats;
+//   boost::split(stats, stat, boost::is_any_of(" "));
+//   return {(std::stoul(stats[13]) * 1000000.0) / ticks_per_second,
+//           (std::stoul(stats[14]) * 1000000.0) / ticks_per_second};
+// }
+
 void clearPageCache() {
   // 调用 sync 系统调用
   if (system("sync") != 0) {
