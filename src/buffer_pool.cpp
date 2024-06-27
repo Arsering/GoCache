@@ -344,15 +344,11 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
                              ret.second, PAGE_SIZE_MEMORY, fd, true));
         ret.first->initialized = true;
       }
-      // if (gbp::warmup_mark() == 1)
-      //   LOG(INFO) << *reinterpret_cast<size_t*>(ret.second) << " "
-      //             << (uintptr_t) ret.second;
       ret.first->ref_count = 1;
       ret.first->fpage_id = fpage_id_inpool;
       ret.first->fd = fd;
 
       assert(replacer_->Insert(page_table_->ToPageId(ret.first)));
-      // assert(replacer_->Promote(page_table_->ToPageId(ret.first)));
 
       stat = async_BPM_request_type::Phase::End;
       std::atomic_thread_fence(std::memory_order_release);
