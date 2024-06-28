@@ -71,6 +71,9 @@ find_package(Boost 1.84 REQUIRED COMPONENTS system filesystem fiber program_opti
 # endif()
 
 target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES} uring)
+
+find_library(MIMALLOC_LIBRARY NAMES mimalloc HINTS /usr/local/lib /usr/lib)
+target_link_libraries(${PROJECT_NAME} mimalloc)
 # target_link_libraries(${PROJECT_NAME} ${LIBRARY_NAME})
 
 # add_library(mimalloc INTERFACE)

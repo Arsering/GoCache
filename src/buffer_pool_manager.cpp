@@ -311,7 +311,7 @@ const BufferBlock BufferPoolManager::GetBlockSync(
                   PAGE_SIZE_FILE) +
              1);
   BufferBlock ret(object_size, num_page);
-  assert(num_page == 1);
+
   fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
   size_t page_id = 0;
   while (page_id < num_page) {

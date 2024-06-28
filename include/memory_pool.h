@@ -20,14 +20,19 @@
 
 #include "config.h"
 #include "page_table.h"
+#include <mimalloc-1.8/mimalloc.h>
 
 namespace gbp {
 class MemoryPool {
  public:
   MemoryPool() : num_pages_(0), need_free_(false), pool_(nullptr){};
   MemoryPool(mpage_id_type num_pages) : num_pages_(num_pages) {
-    pool_ = (char*) ::aligned_alloc(PAGE_SIZE_MEMORY,
-                                    PAGE_SIZE_MEMORY * num_pages_);
+    std::cout<<"begin mimalloc "<<PAGE_SIZE_MEMORY * num_pages_<<" bytes"<<std::endl;
+    pool_ = static_cast<char*>(mi_malloc_aligned(
+                                    PAGE_SIZE_MEMORY * num_pages_,PAGE_SIZE_MEMORY));
+            if (!pool_) {
+            throw std::bad_alloc();
+        }
 #ifdef GRAPHSCOPE
     LOG(INFO) << (uintptr_t) pool_ << " | " << PAGE_SIZE_MEMORY * num_pages_;
 #endif
