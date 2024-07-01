@@ -18,12 +18,12 @@ cd ..
 
 CUR_DIR=.
 
-export FILE_SIZE_MB=$((1024*1))
-export WORKER_NUM=10
-export POOL_NUM=1
+export FILE_SIZE_MB=$((20))
+export WORKER_NUM=20
+export POOL_NUM=2
 export IO_SERVER_NUM=${POOL_NUM}
 export POOL_SIZE_MB=$((1))
-export IO_SIZE_Byte=$((8*512))
+export IO_SIZE_Byte=$((20*512))
 # export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD
 
 # for WORKER_NUM in 1 8 16 32 64 128 256 512
@@ -35,7 +35,7 @@ cp -r ./$0 ${LOG_DIR}/run.sh
 
 echo 1 > /proc/sys/vm/drop_caches
 
-./bin/graphscope_bufferpool ${FILE_SIZE_MB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_MB} ${IO_SERVER_NUM} ${IO_SIZE_Byte} ${LOG_DIR} > ${LOG_DIR}/log.log
+# ./bin/graphscope_bufferpool ${FILE_SIZE_MB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_MB} ${IO_SERVER_NUM} ${IO_SIZE_Byte} ${LOG_DIR} > ${LOG_DIR}/log.log
 # cgexec -g memory:yz_15g
 
 # ./bin/graphscope_bufferpool ${FILE_SIZE_MB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_MB} ${IO_SERVER_NUM} ${IO_SIZE_Byte} ${LOG_DIR} > ${LOG_DIR}/log.log
@@ -50,7 +50,6 @@ echo 1 > /proc/sys/vm/drop_caches
 # cgexec -g memory:yz_256M ./bin/graphscope_bufferpool
 # nohup ./bin/graphscope_bufferpool &
 
-# sleep 30s
+# sleep 10s
 # timeout 100s perf record -F 999 -a -g -p `pidof graphscope_bufferpool` -o ${LOG_DIR}/perf.data
-
 # kill `pidof graphscope_bufferpool`

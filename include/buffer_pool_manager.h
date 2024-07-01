@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <math.h>
+#include <any>
 #include <thread>
 
 #include "buffer_obj.h"
@@ -26,9 +27,36 @@
 #include "utils.h"
 
 namespace gbp {
-
 // FIXME: 未实现读写的并发
 class BufferPoolManager {
+  class async_request_type {
+   public:
+    async_request_type(GBPfile_handle_type _fd, size_t _file_offset,
+                       size_t _block_size, fpage_id_type _page_num)
+        : fd(_fd),
+          file_offset(_file_offset),
+          block_size(_block_size),
+          page_num(_page_num),
+          futures(_page_num),
+          curr_page_unfinished(0),
+          response(_block_size, _page_num),
+          run_time_phase(Phase::Begin) {}
+
+    ~async_request_type() { promise.set_value(response); }
+
+    enum Phase { Begin, Waiting, FinishWaiting, End } run_time_phase;
+
+    const GBPfile_handle_type fd;
+    const size_t file_offset;
+    const size_t block_size;
+    const fpage_id_type page_num;
+    std::vector<std::future<pair_min<PTE*, char*>>> futures;
+    fpage_id_type curr_page_unfinished = 0;  // TODO:可能可以提升性能
+    BufferBlock response;
+
+    std::promise<BufferBlock> promise;
+  };
+
  public:
   BufferPoolManager() = default;
   ~BufferPoolManager();
@@ -45,20 +73,21 @@ class BufferPoolManager {
     return disk_manager_->GetFileDescriptor(fd);
   }
 
-  int GetBlock(char* buf, size_t file_offset, size_t object_size,
+  int GetBlock(char* buf, size_t file_offset, size_t block_size,
                GBPfile_handle_type fd = 0) const;
-  int SetBlock(const char* buf, size_t file_offset, size_t object_size,
+  int SetBlock(const char* buf, size_t file_offset, size_t block_size,
                GBPfile_handle_type fd = 0, bool flush = false);
 
-  const BufferBlock GetBlockSync(size_t file_offset, size_t object_size,
+  const BufferBlock GetBlockSync(size_t file_offset, size_t block_size,
                                  GBPfile_handle_type fd = 0) const;
-  const BufferBlock GetBlockSync(size_t file_offset, size_t object_size,
+  const BufferBlock GetBlockSync(size_t file_offset, size_t block_size,
                                  size_t num_page,
                                  GBPfile_handle_type fd = 0) const;
-  const BufferBlock GetBlockAsync(size_t file_offset, size_t object_size,
-                                  GBPfile_handle_type fd = 0) const;
 
-  int SetBlock(const BufferBlock& buf, size_t file_offset, size_t object_size,
+  std::future<BufferBlock> GetBlockAsync(size_t file_offset, size_t block_size,
+                                         GBPfile_handle_type fd = 0) const;
+
+  int SetBlock(const BufferBlock& buf, size_t file_offset, size_t block_size,
                GBPfile_handle_type fd = 0, bool flush = false);
 
   int Resize(GBPfile_handle_type fd, size_t new_size_inByte) {
@@ -135,11 +164,111 @@ class BufferPoolManager {
   }
 
  private:
-  bool initialized_ = false;
+  void RegisterFile(OSfile_handle_type fd);
 
+  FORCE_INLINE bool ProcessFunc(async_request_type& req) const {
+    while (true) {
+      switch (req.run_time_phase) {
+      case async_request_type::Phase::Begin: {
+        req.run_time_phase = async_request_type::Phase::End;
+
+        fpage_id_type fpage_id = req.file_offset / PAGE_SIZE_FILE;
+        size_t fpage_offset = req.file_offset % PAGE_SIZE_FILE;
+
+        size_t page_id = 0;
+        while (page_id < req.page_num) {
+          auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->Pin(
+              fpage_id, req.fd);
+          if (likely(mpage.first != nullptr)) {
+            req.response.InsertPage(page_id, mpage.second + fpage_offset,
+                                    mpage.first);
+          } else {
+            req.futures[page_id] =
+                pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageAsync(
+                    req.fd, fpage_id * PAGE_SIZE_FILE, 0);
+            req.run_time_phase = async_request_type::Phase::Waiting;
+          }
+
+          page_id++;
+          fpage_offset = 0;
+          fpage_id++;
+        }
+        break;
+      }
+      case async_request_type::Phase::Waiting: {
+        for (; req.curr_page_unfinished < req.page_num;
+             req.curr_page_unfinished++) {
+          if (req.futures[req.curr_page_unfinished].valid() &&
+              req.futures[req.curr_page_unfinished].wait_for(
+                  std::chrono::milliseconds(0)) != std::future_status::ready) {
+            return false;
+          }
+        }
+        req.run_time_phase = async_request_type::Phase::FinishWaiting;
+        break;
+      }
+      case async_request_type::Phase::FinishWaiting: {
+        size_t fpage_offset = req.file_offset % PAGE_SIZE_FILE;
+        for (fpage_id_type page_id = 0; page_id < req.page_num; page_id++) {
+          if (req.futures[page_id].valid()) {
+            auto mpage = req.futures[page_id].get();
+            req.response.InsertPage(page_id, mpage.second + fpage_offset,
+                                    mpage.first);
+          }
+          fpage_offset = 0;
+        }
+        req.run_time_phase = async_request_type::Phase::End;
+        break;
+      }
+      case async_request_type::Phase::End: {
+        return true;
+      }
+      }
+    }
+    assert(false);
+  }
+
+  void Run() {
+    // set_cpu_affinity();
+
+    std::vector<async_request_type*> async_requests(
+        BATCH_SIZE_BUFFER_POOL_MANAGER);
+
+    async_request_type* async_request = nullptr;
+    for (auto& req : async_requests)
+      req = nullptr;
+
+    while (true) {
+      for (auto& req : async_requests) {
+        if (req == nullptr) {
+          if (request_channel_.pop(async_request)) {
+            req = async_request;
+          } else {
+            continue;
+          }
+        }
+
+        if (ProcessFunc(*req)) {
+          delete req;
+          if (!request_channel_.empty()) {
+            request_channel_.pop(async_request);
+            req = async_request;
+            ProcessFunc(*req);
+          } else {
+            req = nullptr;
+          }
+        }
+      }
+      if (stop_) {
+        break;
+      }
+    }
+  }
+
+  bool initialized_ = false;
   uint16_t pool_num_;
-  size_t
-      pool_size_inpage_per_instance_;  // number of pages in buffer pool (Byte)
+  size_t pool_size_inpage_per_instance_;  // number of pages in buffer pool
+                                          // (Byte)
   MemoryPool* memory_pool_global_ = nullptr;
   DiskManager* disk_manager_;
   RoundRobinPartitioner* partitioner_;
@@ -148,7 +277,14 @@ class BufferPoolManager {
   EvictionServer* eviction_server_;
   std::vector<BufferPool*> pools_;
 
-  void RegisterFile(OSfile_handle_type fd);
+  std::thread server_;
+  mutable boost::lockfree::queue<
+      async_request_type*,
+      boost::lockfree::capacity<FIBER_CHANNEL_BUFFER_POOL_MANAGER>>
+      request_channel_;
+  // LockFreeQueue<async_BPM_request_type*> request_channel_{
+  //     FIBER_CHANNEL_BUFFER_POOL};
+  std::atomic<bool> stop_;
 };
 
 }  // namespace gbp

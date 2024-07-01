@@ -21,10 +21,10 @@ class SieveReplacer_v2 : public Replacer<mpage_id_type> {
   SieveReplacer_v2(const SieveReplacer_v2& other) = delete;
   SieveReplacer_v2& operator=(const SieveReplacer_v2&) = delete;
 
-  ~SieveReplacer_v2() = default;
+  ~SieveReplacer_v2() override = default;
 
   bool Insert(mpage_id_type value) override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
     bool ret = false;
@@ -37,7 +37,7 @@ class SieveReplacer_v2 : public Replacer<mpage_id_type> {
   }
 
   FORCE_INLINE bool Promote(mpage_id_type value) override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
     bool ret = false;
@@ -49,7 +49,7 @@ class SieveReplacer_v2 : public Replacer<mpage_id_type> {
   }
 
   bool Victim(mpage_id_type& mpage_id) override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
@@ -99,7 +99,7 @@ class SieveReplacer_v2 : public Replacer<mpage_id_type> {
 
   bool Victim(std::vector<mpage_id_type>& mpage_ids,
               mpage_id_type page_num) override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
@@ -158,7 +158,7 @@ class SieveReplacer_v2 : public Replacer<mpage_id_type> {
   }
 
   bool Erase(mpage_id_type value) override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
@@ -167,7 +167,7 @@ class SieveReplacer_v2 : public Replacer<mpage_id_type> {
   }
 
   size_t Size() const override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
     return list_.size();

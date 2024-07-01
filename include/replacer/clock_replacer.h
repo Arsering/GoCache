@@ -37,7 +37,7 @@ class ClockReplacer : public Replacer<mpage_id_type> {
   ClockReplacer(const ClockReplacer& other) = delete;
   ClockReplacer& operator=(const ClockReplacer&) = delete;
 
-  ~ClockReplacer() {
+  ~ClockReplacer() override {
     ListNode* tmp;
     while (tail_.prev != &head_) {
       tmp = tail_.prev->prev;
@@ -47,7 +47,7 @@ class ClockReplacer : public Replacer<mpage_id_type> {
   }
 
   bool Insert(mpage_id_type value) override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
@@ -68,7 +68,7 @@ class ClockReplacer : public Replacer<mpage_id_type> {
   }
 
   bool Promote(mpage_id_type value) override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
@@ -85,7 +85,7 @@ class ClockReplacer : public Replacer<mpage_id_type> {
   }
 
   bool Victim(mpage_id_type& mpage_id) override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
@@ -124,7 +124,7 @@ class ClockReplacer : public Replacer<mpage_id_type> {
 
   bool Victim(std::vector<mpage_id_type>& mpage_ids,
               mpage_id_type page_num) override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
@@ -148,7 +148,7 @@ class ClockReplacer : public Replacer<mpage_id_type> {
   }
 
   bool Erase(mpage_id_type value) override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
     if (map_.find(value) != map_.end()) {
@@ -163,7 +163,7 @@ class ClockReplacer : public Replacer<mpage_id_type> {
   }
 
   size_t Size() const override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
     return map_.size();

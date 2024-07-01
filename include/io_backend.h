@@ -311,9 +311,7 @@ class IOURing : public IOBackend {
       Progress();
       return false;
     }
-    // if (gbp::warmup_mark() == 1) {
-    //   LOG(INFO) << disk_manager_->file_names_[fd] << " " << offset;
-    // }
+
     io_uring_prep_readv(
         sqe,  // 用这个 SQE 准备一个待提交的 read 操作
         disk_manager_->fd_oss_[fd].first,  // 从 fd 打开的文件中读取数据
@@ -450,7 +448,6 @@ class RWSysCall : public IOBackend {
 
     // if file ends before reading PAGE_SIZE
     if (ret < data.size()) {
-      // std::cerr << "Read less than a page" << std::endl;
       memset(const_cast<char*>(data.data()) + ret, 0, data.size() - ret);
     }
     if (finish != nullptr)
@@ -474,18 +471,12 @@ class RWSysCall : public IOBackend {
 #endif
 
     auto ret = ::pread(disk_manager_->fd_oss_[fd].first, data, size, offset);
-    // if (ret == 0) {
-    //   std::cout << "ret= " << offset / 4096 << " " << size << std::endl;
-    // }
+
 #if ASSERT_ENABLE
     assert(ret != 0);
 #endif
-    // if (gbp::warmup_mark() == 1) {
-    //   LOG(INFO) << disk_manager_->file_names_[fd] << " " << offset;
-    // }
-    // if file ends before reading PAGE_SIZE
+
     if (ret < size) {
-      // std::cerr << "Read less than a page" << std::endl;
       memset(data + ret, 0, size - ret);
     }
     if (finish != nullptr)
@@ -506,12 +497,9 @@ class RWSysCall : public IOBackend {
 
     auto ret = ::pread(disk_manager_->fd_oss_[fd].first, io_info[0].iov_base,
                        PAGE_SIZE_FILE, offset);
-    // ::lseek(fd, offset);
-    // readv(fd, &io_info[0], PER_IO);
 
     // if file ends before reading PAGE_SIZE
     if (ret < PAGE_SIZE_FILE) {
-      // std::cerr << "Read less than a page" << std::endl;
       memset((char*) io_info->iov_base + ret, 0, PAGE_SIZE_FILE - ret);
     }
     if (finish != nullptr)
@@ -520,10 +508,7 @@ class RWSysCall : public IOBackend {
     return true;
   }
 
-  bool Progress() override {
-    // assert(false);
-    return true;
-  }
+  bool Progress() override { return true; }
 };
 
 }  // namespace gbp
