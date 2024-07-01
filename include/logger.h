@@ -71,7 +71,7 @@ struct LogData {
 class ThreadLo {
  private:
   int thread_id_;
-  std::string filename_;
+  std::string filename_ = " ";
   size_t list_capacity_ = 1024;
   size_t list_size_ = 0;
   std::vector<LogData> log_data_list_;
@@ -237,7 +237,7 @@ class PerformanceLogServer {
   std::atomic<size_t> client_read_throughput_Byte_;
   std::atomic<size_t> client_write_throughput_Byte_;
   std::ofstream log_file_;
-  std::string device_name_;
+  std::string device_name_ = "nvme0n1";
 
   bool stop_ = false;
   std::thread server_;

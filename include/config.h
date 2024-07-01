@@ -8,10 +8,9 @@
 
 // #define GRAPHSCOPE
 
-// #define DEBUG_BITMAP
 #define ASSERT_ENABLE false
 #define EVICTION_SYNC_ENABLE true
-#define BPM_SYNC_ENABLE false
+#define BPM_SYNC_ENABLE true
 // #define USING_EDGE_ITER
 
 #ifdef GRAPHSCOPE
@@ -19,11 +18,13 @@
 #endif
 
 #include <assert.h>
+// #include <mimalloc-1.8/mimalloc.h>
 #include <sys/mman.h>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <utility>
+
 // #include "../deps/mimalloc/include/mimalloc.h"
 
 #define FORCE_INLINE __attribute__((always_inline))
@@ -61,9 +62,10 @@ constexpr static size_t CACHELINE_SIZE = 64;
 
 constexpr static size_t ASYNC_SSDIO_SLEEP_TIME_MICROSECOND = 500;
 constexpr int IO_BACKEND_TYPE = 2;  // 1: pread; 2: IO_Uring
-constexpr bool USING_FIBER_ASYNC_RESPONSE = false;
+constexpr bool USING_FIBER_ASYNC_RESPONSE = true;
 constexpr static size_t IOURing_MAX_DEPTH = 16;
-constexpr static size_t BATCH_SIZE_IO_SERVER = IOURing_MAX_DEPTH * 1.5;
+constexpr static size_t BATCH_SIZE_IO_SERVER =
+    IOURing_MAX_DEPTH * 1.5;  // 这个值高点好？？？
 constexpr static size_t FIBER_CHANNEL_IO_SERVER = BATCH_SIZE_IO_SERVER * 1.5;
 
 constexpr static size_t BATCH_SIZE_BUFFER_POOL_MANAGER = 20;

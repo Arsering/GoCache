@@ -205,7 +205,7 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
         auto ret = bpm.GetBlockAsync(curr_io_fileoffset, io_size);
         auto block = ret.get();
 
-        // auto block = bpm.GetBlockSync(curr_io_fileoffset, io_size);
+        auto block = bpm.GetBlockSync(curr_io_fileoffset, io_size);
         if constexpr (true) {
           // auto ret_new = bpm.GetObject(curr_io_fileoffset, io_size);
           // auto iter = gbp::BufferBlockIter<size_t>(ret_new);
@@ -310,7 +310,7 @@ void write_bufferpool(size_t start_offset, size_t file_size_inByte,
 }
 
 std::string random_str(size_t len) {
-  char* test_str = "abcdefghi";
+  std::string test_str = "abcdefghi";
   static std::random_device rd;
   static std::mt19937 gen(rd());
   static std::uniform_int_distribution<uint64_t> rnd(0, 5);
@@ -583,7 +583,7 @@ std::vector<std::vector<size_t>> read_trace(const std::string& trace_dir,
       std::ifstream trace_file(trace_file_path);
       assert(!!trace_file);
 
-      for (std::string line; std::getline(trace_file, line);) {
+      for (std::string line = ""; std::getline(trace_file, line);) {
         std::vector<std::string> strs;
         boost::split(strs, line, boost::is_any_of(" "),
                      boost::token_compress_on);
