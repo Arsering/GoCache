@@ -337,7 +337,7 @@ class IOURing : public IOBackend {
     for (int i = 0; i < num_ready; i++) {
       void* finish = io_uring_cqe_get_data(cqes_[i]);
       if (finish)
-        ((AsyncMesg*) finish)->Notify();
+        ((AsyncMesg*) finish)->Post();
     }
     io_uring_cq_advance(&ring_, num_ready);
     num_processing_ -= num_ready;
@@ -379,7 +379,7 @@ class RWSysCall : public IOBackend {
                     .first);  // needs to flush to keep disk file in sync
 
     if (finish != nullptr)
-      ((AsyncMesg*) finish)->Notify();
+      ((AsyncMesg*) finish)->Post();
 
     return false;
   }
@@ -401,7 +401,7 @@ class RWSysCall : public IOBackend {
                     .first);  // needs to flush to keep disk file in sync
 
     if (finish != nullptr)
-      ((AsyncMesg*) finish)->Notify();
+      ((AsyncMesg*) finish)->Post();
 
     return true;
   }
@@ -426,7 +426,7 @@ class RWSysCall : public IOBackend {
               .first);  // needs to flush to keep disk file in sync
 
     if (finish != nullptr)
-      ((AsyncMesg*) finish)->Notify();
+      ((AsyncMesg*) finish)->Post();
 
     return true;
   }
@@ -451,7 +451,7 @@ class RWSysCall : public IOBackend {
       memset(const_cast<char*>(data.data()) + ret, 0, data.size() - ret);
     }
     if (finish != nullptr)
-      ((AsyncMesg*) finish)->Notify();
+      ((AsyncMesg*) finish)->Post();
 
     return true;
   }
@@ -480,7 +480,7 @@ class RWSysCall : public IOBackend {
       memset(data + ret, 0, size - ret);
     }
     if (finish != nullptr)
-      ((AsyncMesg*) finish)->Notify();
+      ((AsyncMesg*) finish)->Post();
 
     return true;
   }
@@ -503,7 +503,7 @@ class RWSysCall : public IOBackend {
       memset((char*) io_info->iov_base + ret, 0, PAGE_SIZE_FILE - ret);
     }
     if (finish != nullptr)
-      ((AsyncMesg*) finish)->Notify();
+      ((AsyncMesg*) finish)->Post();
 
     return true;
   }

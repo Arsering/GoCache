@@ -1,5 +1,6 @@
 set -x
 export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+# export MIMALLOC_VERBOSE=2
 
 cd build
 
@@ -18,11 +19,11 @@ cd ..
 
 CUR_DIR=.
 
-export FILE_SIZE_MB=$((20))
+export FILE_SIZE_MB=$((1024*10))
 export WORKER_NUM=20
 export POOL_NUM=2
 export IO_SERVER_NUM=${POOL_NUM}
-export POOL_SIZE_MB=$((1))
+export POOL_SIZE_MB=$((1024*3))
 export IO_SIZE_Byte=$((20*512))
 # export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD
 
@@ -35,7 +36,7 @@ cp -r ./$0 ${LOG_DIR}/run.sh
 
 echo 1 > /proc/sys/vm/drop_caches
 
-# ./bin/graphscope_bufferpool ${FILE_SIZE_MB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_MB} ${IO_SERVER_NUM} ${IO_SIZE_Byte} ${LOG_DIR} > ${LOG_DIR}/log.log
+./bin/graphscope_bufferpool ${FILE_SIZE_MB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_MB} ${IO_SERVER_NUM} ${IO_SIZE_Byte} ${LOG_DIR} > ${LOG_DIR}/log.log
 # cgexec -g memory:yz_15g
 
 # ./bin/graphscope_bufferpool ${FILE_SIZE_MB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_MB} ${IO_SERVER_NUM} ${IO_SIZE_Byte} ${LOG_DIR} > ${LOG_DIR}/log.log

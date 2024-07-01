@@ -137,7 +137,7 @@ class IOServer {
 
     case context_type::State::Poll: {
       io_backend_->Progress();
-      if (req.async_context.finish->FinishedAsync()) {
+      if (req.async_context.finish->TryWait()) {
         req.async_context.state = context_type::State::End;
         return true;
       }
@@ -183,7 +183,7 @@ class IOServer {
             }
           }
           if (ProcessFunc(*req.value())) {
-            req.value()->finish->Notify();
+            req.value()->finish->Post();
             delete req.value();
             if (request_channel_.pop(async_request)) {
               req.emplace(async_request);

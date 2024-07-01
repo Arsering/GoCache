@@ -4,6 +4,7 @@
 #include <atomic>
 #include <boost/fiber/context.hpp>
 #include <boost/fiber/operations.hpp>
+#include <boost/interprocess/sync/interprocess_semaphore.hpp>
 #include <boost/lockfree/queue.hpp>
 #include <cstring>
 
@@ -287,51 +288,52 @@ class AsyncMesg {
   AsyncMesg() = default;
   ~AsyncMesg() = default;
 
-  virtual FORCE_INLINE void Notify() = 0;
-  virtual FORCE_INLINE bool FinishedSync() const = 0;
-  virtual FORCE_INLINE bool FinishedAsync() const = 0;
+  virtual void Post() = 0;
+  virtual bool Wait() const = 0;
+  virtual bool TryWait() const = 0;
 
-  virtual FORCE_INLINE void Reset() = 0;
+  virtual void Reset() = 0;
 };
 
+// 它最好，但是不支持阻塞式等待
 class AsyncMesg1 : public AsyncMesg {
  public:
   AsyncMesg1() : finish_(false) {}
   ~AsyncMesg1() = default;
 
-  FORCE_INLINE void Notify() override { finish_.store(true); }
-  FORCE_INLINE bool FinishedSync() const override { return finish_.load(); }
-  FORCE_INLINE bool FinishedAsync() const override { return finish_.load(); }
-
+  FORCE_INLINE void Post() override { finish_.store(true); }
+  FORCE_INLINE bool Wait() const override { return finish_.load(); }
+  FORCE_INLINE bool TryWait() const override { return finish_.load(); }
   FORCE_INLINE void Reset() override { finish_.store(false); }
 
  private:
   std::atomic<bool> finish_;
 };
 
+// 这是第三好
 class AsyncMesg2 : public AsyncMesg {
  public:
   AsyncMesg2() : finish_(false) {}
   ~AsyncMesg2() = default;
 
-  FORCE_INLINE void Notify() override {
+  FORCE_INLINE void Post() override {
     {
       std::unique_lock<std::mutex> lock(mtx);
       finish_ = true;
     }
     cv.notify_all();
   }
-  bool FinishedSync() const override {
+  FORCE_INLINE bool Wait() const override {
     std::unique_lock<std::mutex> lock(mtx);
     while (!finish_)
       cv.wait(lock);
     return true;
   }
-  bool FinishedAsync() const override {
+  FORCE_INLINE bool TryWait() const override {
     std::unique_lock<std::mutex> lock(mtx);
     return finish_;
   }
-  void Reset() override { finish_ = false; }
+  FORCE_INLINE void Reset() override { finish_ = false; }
 
  private:
   bool finish_;
@@ -339,7 +341,52 @@ class AsyncMesg2 : public AsyncMesg {
   mutable std::condition_variable cv;
 };
 
-// using AsyncMesg = AsyncMesg2;
+// 这是第四好
+class AsyncMesg3 : public AsyncMesg {
+ public:
+  AsyncMesg3() { future_ = promise_.get_future(); }
+  ~AsyncMesg3() = default;
+
+  FORCE_INLINE void Post() override { promise_.set_value(true); }
+  FORCE_INLINE bool Wait() const override {
+    future_.get();
+    return true;
+  }
+  FORCE_INLINE bool TryWait() const override {
+    return future_.wait_for(std::chrono::milliseconds(0)) !=
+           std::future_status::ready;
+  }
+  FORCE_INLINE void Reset() override {
+    promise_ = std::promise<bool>();
+    future_ = promise_.get_future();
+  }
+
+ private:
+  std::promise<bool> promise_;
+  mutable std::future<bool> future_;
+};
+
+// 这是第二好
+class AsyncMesg4 : public AsyncMesg {
+ public:
+  explicit AsyncMesg4(size_t count = 0) : sem(count) {}
+  ~AsyncMesg4() = default;
+
+  FORCE_INLINE void Post() override { sem.post(); }
+  FORCE_INLINE bool Wait() const override {
+    sem.wait();
+    return true;
+  }
+  FORCE_INLINE bool TryWait() const override { return sem.try_wait(); }
+  FORCE_INLINE
+  void Reset() override {
+    sem.~interprocess_semaphore();
+    assert(false);
+  }
+
+ private:
+  mutable boost::interprocess::interprocess_semaphore sem;
+};
 
 void set_cpu_affinity();
 }  // namespace gbp

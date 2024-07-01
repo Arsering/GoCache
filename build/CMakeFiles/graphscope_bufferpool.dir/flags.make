@@ -6,5 +6,5 @@ CXX_DEFINES =
 
 CXX_INCLUDES = -I/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include
 
-CXX_FLAGS =  -std=c++17 -fPIC -rdynamic -pthread -g3 -O0
+CXX_FLAGS =  -std=c++17 -fPIC -rdynamic -pthread -Wextra -g3 -O0
 

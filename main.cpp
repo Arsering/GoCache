@@ -10,6 +10,7 @@
 #include <iostream>
 // #include <mimalloc.h>
 #include <assert.h>
+#include <libunwind.h>
 #include <ctime>
 #include <random>
 #include <string_view>
@@ -517,8 +518,12 @@ int main(int argc, char** argv) {
   // test1();
   // test3();
   // mi_malloc(10);
-
-  test::test_concurrency(argc, argv);
+  try {
+    test::test_concurrency(argc, argv);
+  } catch (const std::logic_error& e) {
+    // std::cerr << "Caught logic_error: " << gbp::get_stack_trace() <<
+    // std::endl; 输出调用栈信息或记录日志
+  }
 
   // test_aa(file_path);
   return 0;
