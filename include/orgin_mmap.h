@@ -166,7 +166,7 @@ class mmap_array {
   const std::string& filename() const { return filename_; }
 
  private:
-  std::string filename_;
+  std::string filename_ = "";
   int fd_;
   size_t size_;
   gbp::BufferPoolManager* buffer_pool_manager_ = nullptr;

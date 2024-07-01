@@ -132,17 +132,14 @@ bool BufferPool::ReadWriteSync(size_t offset, size_t file_size, char* buf,
                                size_t buf_size, GBPfile_handle_type fd,
                                bool is_read) {
   if constexpr (USING_FIBER_ASYNC_RESPONSE) {
-    AsyncMesg* ssd_io_finished = new AsyncMesg2();
+    AsyncMesg* ssd_io_finished = new AsyncMesg4();
     assert(io_server_->SendRequest(fd, offset, file_size, buf, ssd_io_finished,
                                    is_read));
 
     size_t loops = 0;
-    while (!ssd_io_finished->FinishedSync()) {
-      // hybrid_spin(loops);
-      // std::this_thread::sleep_for(
-      //     std::chrono::nanoseconds(ASYNC_SSDIO_SLEEP_TIME_MICROSECOND));
-      std::this_thread::yield();
-    }
+    while (!ssd_io_finished->Wait())
+      ;
+    delete ssd_io_finished;
     return true;
   } else {
     if (is_read)

@@ -152,7 +152,7 @@ bool BufferPoolManager::ReadWrite(size_t offset, size_t file_size, char* buf,
                                   is_read));
 
     size_t loops = 0;
-    while (!ssd_io_finished->FinishedAsync()) {
+    while (!ssd_io_finished->TryWait()) {
       // hybrid_spin(loops);
       std::this_thread::yield();
     }

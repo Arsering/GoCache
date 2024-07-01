@@ -4,7 +4,7 @@ set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 # set(CMAKE_C_FLAGS "-fxray-instrument")
 
 set(CMAKE_BUILD_TYPE "Debug")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -rdynamic -pthread")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -rdynamic -pthread -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 set(CMAKE_LIBRARY_PATH "/usr/local/lib;/usr/lib/x86_64-linux-gnu;/usr/lib64")
@@ -65,9 +65,15 @@ link_libraries(tests)
 add_executable(${PROJECT_NAME} ${ALL_SRCS})	# 指定生成目标，注意这里要用${ALL_SRCS}!!!
 find_package(Boost 1.84 REQUIRED COMPONENTS system filesystem fiber program_options regex thread)
 
-find_library(MIMALLOC_LIBRARY NAMES mimalloc HINTS /usr/local/lib /usr/lib)
-target_link_libraries(${PROJECT_NAME} mimalloc)
+# find_library(MIMALLOC_LIBRARY NAMES mimalloc HINTS /usr/local/lib /usr/lib)
+# target_link_libraries(${PROJECT_NAME} mimalloc)
 
+
+# add_custom_command(
+#     TARGET ${PROJECT_NAME}
+#     POST_BUILD
+#     COMMAND ${CMAKE_COMMAND} -E env LD_PRELOAD=${MIMALLOC_LIBRARY} $<TARGET_FILE:${PROJECT_NAME}>
+# )
 # find_library(EXAMPLE_LIB mimalloc PATHS /usr/local/lib/x86_64-linux-gnu/)
 # if(NOT EXAMPLE_LIB)
 #     message(FATAL_ERROR "Library not found")

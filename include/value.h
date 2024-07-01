@@ -520,7 +520,7 @@ class Value {
                         '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
     const uint8_t* ptr = (const uint8_t*) Data();
     size_t s = Size();
-    std::string ret;
+    std::string ret = "";
     for (size_t i = 0; i < s; i++) {
       if (i % line_width == 0 && i != 0)
         ret.push_back('\n');

@@ -187,7 +187,7 @@ std::atomic<size_t>& get_pool_size() {
   return data;
 }
 std::string& get_db_dir() {
-  static std::string db_dir;
+  static std::string db_dir = ".";
   return db_dir;
 }
 
@@ -196,7 +196,7 @@ size_t GetMemoryUsage() {
   // std::ifstream
   // proc_status("/data/experiment_space/graphscope_bufferpool/status");
   assert(!!proc_status);
-  for (std::string line; std::getline(proc_status, line);) {
+  for (std::string line = " "; std::getline(proc_status, line);) {
     if (line.find("VmRSS") != std::string::npos) {
       std::vector<std::string> strs;
       boost::split(strs, line, boost::is_any_of("\t "),
@@ -212,7 +212,7 @@ uint64_t readTLBShootdownCount() {
   std::ifstream irq_stats("/proc/interrupts");
   assert(!!irq_stats);
 
-  for (std::string line; std::getline(irq_stats, line);) {
+  for (std::string line = " "; std::getline(irq_stats, line);) {
     if (line.find("TLB") != std::string::npos) {
       std::vector<std::string> strs;
       boost::split(strs, line, boost::is_any_of("\t "));
@@ -233,7 +233,7 @@ uint64_t readIObytesOne() {
   std::ifstream stat("/sys/block/nvme0n1/stat");
   assert(!!stat);
 
-  for (std::string line; std::getline(stat, line);) {
+  for (std::string line = " "; std::getline(stat, line);) {
     std::vector<std::string> strs;
     boost::split(strs, line, boost::is_any_of("\t "), boost::token_compress_on);
     std::stringstream ss(strs[2]);
@@ -249,7 +249,7 @@ std::tuple<size_t, size_t> SSD_io_bytes(const std::string& device_name) {
   assert(!!stat);
 
   uint64_t read = 0, write = 0;
-  for (std::string line; std::getline(stat, line);) {
+  for (std::string line = " "; std::getline(stat, line);) {
     if (line.find(device_name) != std::string::npos) {
       std::vector<std::string> strs;
       boost::split(strs, line, boost::is_any_of("\t "),
@@ -270,7 +270,7 @@ size_t GetMemoryUsageMMAP(std::string& mmap_monitored_dir) {
     assert(false);
   }
 
-  std::string line;
+  std::string line = " ";
   std::regex rss_regex(R"(Rss:\s+(\d+)\s+kB)");
   std::smatch match;
   size_t total_mmap_rss = 0;
