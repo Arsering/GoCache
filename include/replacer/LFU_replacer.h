@@ -54,7 +54,7 @@ class LFUReplacer : public Replacer<mpage_id_type> {
   LFUReplacer(const LFUReplacer& other) = delete;
   LFUReplacer& operator=(const LFUReplacer&) = delete;
 
-  ~LFUReplacer() {
+  ~LFUReplacer() override {
     std::cout << "begin resolve func" << std::endl;
     ListNode* tmp;
     // for (auto pair : freq_map_) {
@@ -189,7 +189,7 @@ class LFUReplacer : public Replacer<mpage_id_type> {
     return true;
   }
 
-  bool Erase(const mpage_id_type& value) override {
+  bool Erase(mpage_id_type value) override {
     std::lock_guard<std::mutex> lck(latch_);
     auto iter = map_.find(value);
     if (iter != map_.end()) {

@@ -1332,8 +1332,8 @@ class BufferBlockImp6 {
       ptes_.ptes = (PTE**) LBMalloc(page_num_ * sizeof(PTE*));
     }
 #if ASSERT_ENABLE
-    assert(data_ != nullptr);
-    assert(ptes_ != nullptr);
+    assert(datas_.data != nullptr);
+    assert(ptes_.pte != nullptr);
 #endif
     type_ = ObjectType::gbpClass;
   }
@@ -1341,7 +1341,7 @@ class BufferBlockImp6 {
   BufferBlockImp6(size_t size, char* data) : size_(size), page_num_(0) {
     // bitset_ = nullptr;
 #if ASSERT_ENABLE
-    assert(data_ != nullptr);
+    assert(datas_.data != nullptr);
 #endif
     datas_.data = (char*) LBMalloc(size_);
     memcpy(datas_.data, data, size_);
@@ -1350,7 +1350,7 @@ class BufferBlockImp6 {
 
   BufferBlockImp6(size_t size) : size_(size) {
 #if ASSERT_ENABLE
-    assert(data_ != nullptr);
+    assert(datas_.data != nullptr);
 #endif
     datas_.data = (char*) LBMalloc(size);
     type_ = ObjectType::gbpClass;
@@ -1468,7 +1468,7 @@ class BufferBlockImp6 {
   static BufferBlockImp6 Copy(const BufferBlockImp6& rhs) {
     BufferBlockImp6 ret(rhs.size_);
 #if ASSERT_ENABLE
-    assert(rhs.data_ != nullptr);
+    assert(rhs.datas_.data != nullptr);
 #endif
 
     if (rhs.page_num_ < 2)
@@ -1491,7 +1491,7 @@ class BufferBlockImp6 {
 
   size_t Copy(char* buf, size_t buf_size, size_t offset = 0) const {
 #if ASSERT_ENABLE
-    assert(data_ != nullptr);
+    assert(datas_.data != nullptr);
     assert(offset < size_);
 #endif
     size_t ret = (buf_size + offset) > size_ ? size_ : buf_size;
@@ -1617,7 +1617,7 @@ class BufferBlockImp6 {
   FORCE_INLINE int Compare(const std::string_view right,
                            size_t offset = 0) const {
 #if ASSERT_ENABLE
-    assert(data_ != nullptr);
+    assert(datas_.data != nullptr);
     assert(offset < size_);
 #endif
     // com_mark_ = true;
@@ -1667,7 +1667,7 @@ class BufferBlockImp6 {
 
   FORCE_INLINE int Compare(const BufferBlockImp6& right) const {
 #if ASSERT_ENABLE
-    assert(data_ != nullptr);
+    assert(datas_.data != nullptr);
 #endif
     int ret = 0;
 
@@ -1705,7 +1705,7 @@ class BufferBlockImp6 {
   FORCE_INLINE int Compare_inner(const std::string_view right,
                                  size_t offset = 0) const {
 #if ASSERT_ENABLE
-    assert(data_ != nullptr && offset < size_);
+    assert(datas_.data != nullptr && offset < size_);
 #endif
     size_t size_left = std::min(size_ - offset, right.size()),
            offset_t = offset;
@@ -1747,7 +1747,7 @@ class BufferBlockImp6 {
 
   void Malloc(size_t size) {
 #if ASSERT_ENABLE
-    assert(data_ != NULL);
+    assert(datas_.data != nullptr);
 #endif
     datas_.data = (char*) LBMalloc(sizeof(char) * size);
     size_ = size;

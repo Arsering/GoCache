@@ -28,10 +28,10 @@ class FIFOReplacer_v2 : public Replacer<mpage_id_type> {
   FIFOReplacer_v2(const FIFOReplacer_v2& other) = delete;
   FIFOReplacer_v2& operator=(const FIFOReplacer_v2&) = delete;
 
-  ~FIFOReplacer_v2() = default;
+  ~FIFOReplacer_v2() override = default;
 
   bool Insert(mpage_id_type value) override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
@@ -46,7 +46,7 @@ class FIFOReplacer_v2 : public Replacer<mpage_id_type> {
   bool Promote(mpage_id_type value) override { return true; }
 
   bool Victim(mpage_id_type& mpage_id) override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
@@ -78,7 +78,7 @@ class FIFOReplacer_v2 : public Replacer<mpage_id_type> {
 
   bool Victim(std::vector<mpage_id_type>& mpage_ids,
               mpage_id_type page_num) override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
@@ -117,7 +117,7 @@ class FIFOReplacer_v2 : public Replacer<mpage_id_type> {
   }
 
   bool Erase(mpage_id_type value) override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
@@ -125,7 +125,7 @@ class FIFOReplacer_v2 : public Replacer<mpage_id_type> {
     return true;
   }
   size_t Size() const override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 

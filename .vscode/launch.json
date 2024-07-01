@@ -9,7 +9,15 @@
             "type": "cppdbg", //调试类型，除使用msvc进行调试外，均为该类型
             "request": "launch",
             "program": "${workspaceFolder}/bin/graphscope_bufferpool", //指定C/C++程序位置
-            "args": [], //指定运行参数
+            "args": [
+                10,
+                1,
+                1,
+                1,
+                1,
+                10240,
+                "."
+            ], //指定运行参数
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}", //指定工作目录
             "preLaunchTask": "build", //在调试前会先调用build_debug这个task编译构建程序

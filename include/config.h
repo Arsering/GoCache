@@ -6,11 +6,12 @@
 
 #pragma once
 
-#define GRAPHSCOPE
+// #define GRAPHSCOPE
 
 // #define DEBUG_BITMAP
 #define ASSERT_ENABLE false
-#define BPM_SYNC_ENABLE true
+#define EVICTION_SYNC_ENABLE true
+#define BPM_SYNC_ENABLE false
 // #define USING_EDGE_ITER
 
 #ifdef GRAPHSCOPE
@@ -59,14 +60,18 @@ constexpr static size_t PAGE_SIZE_FILE = 4096;
 constexpr static size_t CACHELINE_SIZE = 64;
 
 constexpr static size_t ASYNC_SSDIO_SLEEP_TIME_MICROSECOND = 500;
-constexpr int IO_BACKEND_TYPE = 1;  // 1: pread; 2: IO_Uring
+constexpr int IO_BACKEND_TYPE = 2;  // 1: pread; 2: IO_Uring
 constexpr bool USING_FIBER_ASYNC_RESPONSE = false;
-constexpr static size_t IOURing_MAX_DEPTH = 64;  // 64 * 2
+constexpr static size_t IOURing_MAX_DEPTH = 16;
 constexpr static size_t BATCH_SIZE_IO_SERVER = IOURing_MAX_DEPTH * 1.5;
 constexpr static size_t FIBER_CHANNEL_IO_SERVER = BATCH_SIZE_IO_SERVER * 1.5;
 
+constexpr static size_t BATCH_SIZE_BUFFER_POOL_MANAGER = 20;
+constexpr static size_t FIBER_CHANNEL_BUFFER_POOL_MANAGER =
+    BATCH_SIZE_BUFFER_POOL_MANAGER * 2;
+
 constexpr static size_t BATCH_SIZE_BUFFER_POOL = IOURing_MAX_DEPTH * 1.5;
-constexpr static size_t FIBER_CHANNEL_BUFFER_POOL = BATCH_SIZE_BUFFER_POOL * 50;
+constexpr static size_t FIBER_CHANNEL_BUFFER_POOL = BATCH_SIZE_BUFFER_POOL * 2;
 
 constexpr static size_t BATCH_SIZE_EVICTION_SERVER = 15;
 constexpr static size_t FIBER_CHANNEL_DEPTH_EVICTION_SERVER =

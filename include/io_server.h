@@ -29,12 +29,18 @@ class IOServer {
  public:
   struct context_type {
     context_type() : state(State::Commit) { finish = new AsyncMesg1(); }
+    ~context_type() { delete finish; }
+    void Reset() {
+      finish->Reset();
+      state = State::Commit;
+    }
     enum class State { Commit, Poll, End } state;
     AsyncMesg* finish;
   };
 
   struct async_SSD_IO_request_type {
     async_SSD_IO_request_type() = default;
+    ~async_SSD_IO_request_type() = default;
 
     void Init(std::vector<::iovec>& _io_vec, size_t _offset, size_t _file_size,
               GBPfile_handle_type _fd, AsyncMesg* _finish, bool _read = true) {
@@ -44,6 +50,8 @@ class IOServer {
       finish = _finish;
       read = _read;
       io_vec.swap(_io_vec);
+
+      async_context.Reset();
     }
 
     void Init(char* buf, size_t buf_size, size_t _offset, size_t _file_size,
@@ -60,8 +68,9 @@ class IOServer {
       io_vec.resize(1);
       io_vec[0].iov_base = buf;
       io_vec[0].iov_len = buf_size;
+
+      async_context.Reset();
     }
-    ~async_SSD_IO_request_type() = default;
 
     std::vector<::iovec> io_vec;
     size_t io_vec_size;
@@ -121,15 +130,11 @@ class IOServer {
         }
       }
 
-      if (!req.async_context.finish->FinishedAsync()) {
-        io_backend_->Progress();
-        req.async_context.state = context_type::State::Poll;
-        return false;
-      } else {
-        req.async_context.state = context_type::State::End;
-        return true;
-      }
+      io_backend_->Progress();
+      req.async_context.state = context_type::State::Poll;
+      return false;
     }
+
     case context_type::State::Poll: {
       io_backend_->Progress();
       if (req.async_context.finish->FinishedAsync()) {
