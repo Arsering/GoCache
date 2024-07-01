@@ -179,8 +179,19 @@ class IOURing : public IOBackend {
         cqes_(),
         num_preparing_(),
         num_processing_() {
-    auto ret = io_uring_queue_init(IOURing_MAX_DEPTH, &ring_,
-                                   0 /*IORING_SETUP_IOPOLL*/);
+    struct io_uring_params params;
+    memset(&params, 0, sizeof(params));
+
+    params.flags = IORING_SETUP_SQPOLL;
+    params.sq_thread_cpu = 1; // 绑定到CPU 1
+    params.sq_thread_idle = 2000; // 线程空闲时间 2 秒
+
+    auto ret = io_uring_queue_init_params(IOURing_MAX_DEPTH, &ring_, &params);
+    if (ret < 0) {
+        std::cerr << "io_uring_queue_init failed" << std::endl;
+    }      
+    // auto ret = io_uring_queue_init(IOURing_MAX_DEPTH, &ring_,
+    //                                0 /*IORING_SETUP_IOPOLL*/);
     assert(ret == 0);
   }
 

@@ -254,49 +254,49 @@ std::vector<std::tuple<void**, int, size_t>>& GetMAS();
 void CleanMAS();
 std::mutex& get_lock_global();
 
-class LogStream {
- public:
-  LogStream(const char* file, size_t line)
-      : file_(file), line_(line), newline_(true) {
-    lock();  // 加锁
-    std::cout << file_ << ":" << line_ << " ";
-  }
+// class LogStream {
+//  public:
+//   LogStream(const char* file, size_t line)
+//       : file_(file), line_(line), newline_(true) {
+//     lock();  // 加锁
+//     std::cout << file_ << ":" << line_ << " ";
+//   }
 
-  template <typename T>
-  LogStream& operator<<(const T& msg) {
-    std::cout << msg;
-    newline_ = false;  // 标记未换行
-    return *this;
-  }
+//   template <typename T>
+//   LogStream& operator<<(const T& msg) {
+//     std::cout << msg;
+//     newline_ = false;  // 标记未换行
+//     return *this;
+//   }
 
-  // 特化处理 std::endl
-  LogStream& operator<<(std::ostream& (*pf)(std::ostream&) ) {
-    std::cout << pf;
-    if (pf == static_cast<std::ostream& (*) (std::ostream&)>(std::endl)) {
-      newline_ = true;  // 标记已经换行
-    }
-    return *this;
-  }
+//   // 特化处理 std::endl
+//   LogStream& operator<<(std::ostream& (*pf)(std::ostream&) ) {
+//     std::cout << pf;
+//     if (pf == static_cast<std::ostream& (*) (std::ostream&)>(std::endl)) {
+//       newline_ = true;  // 标记已经换行
+//     }
+//     return *this;
+//   }
 
-  ~LogStream() {
-    if (!newline_) {
-      std::cout << std::endl;  // 如果未换行则添加换行符
-    }
-    unlock();  // 解锁
-  }
+//   ~LogStream() {
+//     if (!newline_) {
+//       std::cout << std::endl;  // 如果未换行则添加换行符
+//     }
+//     unlock();  // 解锁
+//   }
 
- private:
-  const char* file_;
-  size_t line_;
-  bool newline_;
-  static std::mutex latch_;  // 用于保护 std::cout 的静态互斥量
+//  private:
+//   const char* file_;
+//   size_t line_;
+//   bool newline_;
+//   static std::mutex latch_;  // 用于保护 std::cout 的静态互斥量
 
-  void lock() { latch_.lock(); }
-  void unlock() { latch_.unlock(); }
-};
-// // 初始化静态成员
-// std::mutex LogStream::latch_;
-// 宏定义，简化使用
-#define GBPLOG LogStream(__FILE__, __LINE__)
+//   void lock() { latch_.lock(); }
+//   void unlock() { latch_.unlock(); }
+// };
+// // // 初始化静态成员
+// // std::mutex LogStream::latch_;
+// // 宏定义，简化使用
+// #define GBPLOG LogStream(__FILE__, __LINE__)
 
 }  // namespace gbp

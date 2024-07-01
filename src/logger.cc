@@ -365,5 +365,5 @@ std::mutex& get_lock_global() {
 }
 
 // 初始化静态成员
-std::mutex LogStream::latch_;
+// std::mutex LogStream::latch_;
 }  // namespace gbp

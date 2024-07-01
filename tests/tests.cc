@@ -202,8 +202,8 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
 
       // st = gbp::GetSystemTime();
       {
-        auto ret = bpm.GetBlockAsync(curr_io_fileoffset, io_size);
-        auto block = ret.get();
+        // auto ret = bpm.GetBlockAsync(curr_io_fileoffset, io_size);
+        // auto block = ret.get();
 
         auto block = bpm.GetBlockSync(curr_io_fileoffset, io_size);
         if constexpr (true) {
@@ -212,8 +212,8 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
           for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
             if (gbp::BufferBlock::Ref<size_t>(block, i) !=
                 (curr_io_fileoffset / sizeof(size_t) + i)) {
-              GBPLOG << gbp::BufferBlock::Ref<size_t>(block, i) << " "
-                     << (curr_io_fileoffset / sizeof(size_t) + i) << std::endl;
+              // GBPLOG << gbp::BufferBlock::Ref<size_t>(block, i) << " "
+                    //  << (curr_io_fileoffset / sizeof(size_t) + i) << std::endl;
             }
 
             assert(gbp::BufferBlock::Ref<size_t>(block, i) ==
@@ -614,7 +614,7 @@ int test_concurrency(int argc, char** argv) {
   // std::string file_path = "/home/spdk/p4510/zhengyang/test_write.db";
   // std::string file_path = "/home/spdk/p4510/zhengyang/test_read.db";
 
-  std::string file_path = "/nvme0n1/test_write.db";
+  std::string file_path = "/data-1/yichengzhang/data/bufferpool/graphscope_bufferpool/nvme/test_write.db";
   std::string trace_dir =
       "/data/zhengyang/data/experiment_space/LDBC_SNB/logs/"
       "2024-06-06-20:05:02/"
@@ -696,8 +696,8 @@ int test_concurrency(int argc, char** argv) {
     // i); thread_pool.emplace_back(write_bufferpool, file_size_inByte * i,
     // file_size_inByte, io_size, i);
     // if (false)
-    //   thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte,
-    //   io_size, i);
+      // thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte,
+      // io_size, i);
     // else
     thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size, i);
 

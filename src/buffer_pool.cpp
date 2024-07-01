@@ -9,7 +9,7 @@ void BP_async_request_type_instance<
   try {
     promise.set_value(response);
   } catch (...) {
-    GBPLOG << "cp";
+    // GBPLOG << "cp";
     assert(false);
   }
 }
@@ -22,7 +22,7 @@ void BP_async_request_type_instance<BufferBlock>::PromiseSetValue() {
   try {
     promise.set_value(std::move(ret));
   } catch (...) {
-    GBPLOG << "cp";
+    // GBPLOG << "cp";
     assert(false);
   }
 }
