@@ -26,12 +26,6 @@ class LockFreeQueue {
 
     buffer_[tail] = item;
     tail_.store(next_tail, std::memory_order_release);
-
-    if (gbp::warmup_mark().load() == 1)
-      get_counter_global(20).fetch_add(1);
-
-    // if (gbp::warmup_mark().load() == 1)
-    //   LOG(INFO) << "cp";
     return true;
   }
 
@@ -45,9 +39,6 @@ class LockFreeQueue {
 
     item = buffer_[head];
     head_.store(increment(head), std::memory_order_release);
-
-    // if (gbp::warmup_mark().load() == 1)
-    //   LOG(INFO) << "cp";
 
     return true;
   }
@@ -66,33 +57,4 @@ class LockFreeQueue {
   std::atomic<size_t> tail_;
 };
 
-}  // namespace gbp
-// int main() {
-//     LockFreeQueue<int> queue(10);
-
-//     auto producer = [&queue]() {
-//         for (int i = 0; i < 50; ++i) {
-//             while (!queue.enqueue(i)) {
-//                 // busy-wait
-//             }
-//         }
-//     };
-
-//     auto consumer = [&queue]() {
-//         int item;
-//         for (int i = 0; i < 50; ++i) {
-//             while (!queue.dequeue(item)) {
-//                 // busy-wait
-//             }
-//             std::cout << "Consumed: " << item << std::endl;
-//         }
-//     };
-
-//     std::thread prod_thread(producer);
-//     std::thread cons_thread(consumer);
-
-//     prod_thread.join();
-//     cons_thread.join();
-
-//     return 0;
-// }
+} 

@@ -15,6 +15,7 @@ class TwoQLRUReplacer : public Replacer<mpage_id_type> {
   TwoQLRUReplacer(PageTable* page_table) { page_table_ = page_table; }
   TwoQLRUReplacer(const TwoQLRUReplacer& other) = delete;
   TwoQLRUReplacer& operator=(const TwoQLRUReplacer&) = delete;
+  ~TwoQLRUReplacer() override= default;
 
   // 插入页面，如果页面已存在则返回true，如果页面不存在则插入并返回false
   bool Insert(mpage_id_type page_id) override {

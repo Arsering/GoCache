@@ -2,6 +2,31 @@
 #include "../include/buffer_obj.h"
 
 namespace gbp {
+
+template <>
+void BP_async_request_type_instance<
+    gbp::pair_min<PTE*, char*>>::PromiseSetValue() {
+  try {
+    promise.set_value(response);
+  } catch (...) {
+    GBPLOG << "cp";
+    assert(false);
+  }
+}
+
+template <>
+void BP_async_request_type_instance<BufferBlock>::PromiseSetValue() {
+  BufferBlock ret(block_size, 1);
+  ret.InsertPage(0, response.second + file_offset % PAGE_SIZE_FILE,
+                 response.first);
+  try {
+    promise.set_value(std::move(ret));
+  } catch (...) {
+    GBPLOG << "cp";
+    assert(false);
+  }
+}
+
 /*
  * BufferPoolInner Constructor
  * When log_manager is nullptr, logging is disabled (for test purpose)
@@ -236,7 +261,7 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
 #endif
 
   // std::lock_guard<std::mutex> lck(latch_);
-  auto stat = async_BPM_request_type::Phase::Begin;
+  auto stat = BP_async_request_type::Phase::Begin;
 
 #if ASSERT_ENABLE
   assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
@@ -247,19 +272,18 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
 
   while (true) {
     switch (stat) {
-    case async_BPM_request_type::Phase::Begin: {
+    case BP_async_request_type::Phase::Begin: {
       ret = Pin(fpage_id, fd);
 
       if (ret.first) {  // 1.1
-        stat = async_BPM_request_type::Phase::End;
-        assert(replacer_->Promote(page_table_->ToPageId(ret.first)));
+        stat = BP_async_request_type::Phase::End;
         break;
       }
       auto [locked, mpage_id] = page_table_->LockMapping(fd, fpage_id_inpool);
 
       if (locked) {
         if (mpage_id == PageMapping::Mapping::EMPTY_VALUE)
-          stat = async_BPM_request_type::Phase::Initing;
+          stat = BP_async_request_type::Phase::Initing;
         else {
           page_table_->UnLockMapping(fd, fpage_id_inpool, mpage_id);
           // std::this_thread::yield();
@@ -273,11 +297,10 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
       }
       break;
     }
-    case async_BPM_request_type::Phase::Initing: {  // 1.2
+    case BP_async_request_type::Phase::Initing: {  // 1.2
       mpage_id_type mpage_id = 10;
       if (free_list_->Poll(mpage_id)) {
-        // assert(replacer_->Insert(mpage_id));
-        stat = async_BPM_request_type::Phase::Loading;
+        stat = BP_async_request_type::Phase::Loading;
       } else {
         if constexpr (EVICTION_BATCH_ENABLE) {
           if (!replacer_
@@ -299,14 +322,14 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
             break;
           }
         }
-        stat = async_BPM_request_type::Phase::Evicting;
+        stat = BP_async_request_type::Phase::Evicting;
       }
 
       ret.first = page_table_->FromPageId(mpage_id);
       ret.second = (char*) memory_pool_.FromPageId(mpage_id);
       break;
     }
-    case async_BPM_request_type::Phase::Evicting: {  // 2
+    case BP_async_request_type::Phase::Evicting: {  // 2
 #ifdef DEBUG_BITMAP
       size_t fd_old = ret.first->fd;
       size_t fpage_id_old =
@@ -326,10 +349,10 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
 
       assert(page_table_->DeleteMapping(ret.first->fd, ret.first->fpage_id));
 
-      stat = async_BPM_request_type::Phase::Loading;
+      stat = BP_async_request_type::Phase::Loading;
       break;
     }
-    case async_BPM_request_type::Phase::Loading: {  // 4
+    case BP_async_request_type::Phase::Loading: {  // 4
       ret.first->Clean();
       if constexpr (LAZY_SSD_IO) {
         *reinterpret_cast<fpage_id_type*>(ret.second) = fpage_id;
@@ -350,12 +373,12 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
 
       assert(replacer_->Insert(page_table_->ToPageId(ret.first)));
 
-      stat = async_BPM_request_type::Phase::End;
+      stat = BP_async_request_type::Phase::End;
       std::atomic_thread_fence(std::memory_order_release);
       assert(page_table_->CreateMapping(fd, fpage_id_inpool,
                                         page_table_->ToPageId(ret.first)));
     }
-    case async_BPM_request_type::Phase::End: {
+    case BP_async_request_type::Phase::End: {
       // get_thread_logfile() << (uintptr_t) ret.second << std::endl;
       return ret;
     }
@@ -364,7 +387,7 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
   assert(false);
 }
 
-bool BufferPool::FetchPageAsyncInner(async_BPM_request_type& req) {
+bool BufferPool::FetchPageAsyncInner(BP_async_request_type& req) {
 #if ASSERT_ENABLE
   auto file_size = disk_manager_->GetFileSizeShort(req.fd);
   assert(req.fpage_id < CEIL(file_size, PAGE_SIZE_MEMORY));
@@ -373,59 +396,57 @@ bool BufferPool::FetchPageAsyncInner(async_BPM_request_type& req) {
 #if ASSERT_ENABLE
   assert(partitioner_->GetPartitionId(req.fpage_id) == pool_ID_);
 #endif
-
-  fpage_id_type fpage_id_inpool =
-      partitioner_->GetFPageIdInPartition(req.fpage_id);
+  fpage_id_type fpage_id = req.file_offset / PAGE_SIZE_FILE;
+  fpage_id_type fpage_id_inpool = partitioner_->GetFPageIdInPartition(fpage_id);
 
   while (true) {
     switch (req.runtime_phase) {
-    case async_BPM_request_type::Phase::Begin: {
+    case BP_async_request_type::Phase::Begin: {
       auto [locked, mpage_id] =
           page_table_->LockMapping(req.fd, fpage_id_inpool);
 
       if (locked) {
         if (mpage_id == PageMapping::Mapping::EMPTY_VALUE)
-          req.runtime_phase = async_BPM_request_type::Phase::Initing;
+          req.runtime_phase = BP_async_request_type::Phase::Initing;
         else {
           page_table_->UnLockMapping(req.fd, fpage_id_inpool, mpage_id);
-          req.runtime_phase = async_BPM_request_type::Phase::Rebegin;
+          req.runtime_phase = BP_async_request_type::Phase::Rebegin;
           return false;
         }
       } else {
-        req.runtime_phase = async_BPM_request_type::Phase::Rebegin;
+        req.runtime_phase = BP_async_request_type::Phase::Rebegin;
         return false;
       }
       break;
     }
-    case async_BPM_request_type::Phase::Rebegin: {
-      *req.response = Pin(req.fpage_id, req.fd);
-
-      if (req.response->first) {  // 1.1
-        req.runtime_phase = async_BPM_request_type::Phase::End;
-        assert(replacer_->Promote(page_table_->ToPageId(req.response->first)));
+    case BP_async_request_type::Phase::Rebegin: {
+      req.response = Pin(fpage_id, req.fd);
+      if (req.response.first) {  // 1.1
+        req.runtime_phase = BP_async_request_type::Phase::End;
         break;
       }
       return false;
     }
-    case async_BPM_request_type::Phase::Initing: {  // 1.2
+    case BP_async_request_type::Phase::Initing: {  // 1.2
 
       mpage_id_type mpage_id = 10;
       if (free_list_->Poll(mpage_id)) {
-        req.runtime_phase = async_BPM_request_type::Phase::Loading;
+        req.runtime_phase = BP_async_request_type::Phase::Loading;
       } else {
         if (!replacer_->Victim(mpage_id)) {
           assert(false);
           return false;
           break;
         }
-        req.runtime_phase = async_BPM_request_type::Phase::Evicting;
+        req.runtime_phase = BP_async_request_type::Phase::Evicting;
       }
 
-      req.response->first = page_table_->FromPageId(mpage_id);
-      req.response->second = (char*) memory_pool_.FromPageId(mpage_id);
+      req.response.first = page_table_->FromPageId(mpage_id);
+      req.response.second = (char*) memory_pool_.FromPageId(mpage_id);
       break;
     }
-    case async_BPM_request_type::Phase::Evicting: {  // 2
+    case BP_async_request_type::Phase::Evicting: {  // 2
+
 #ifdef DEBUG_BITMAP
       size_t fd_old = ret.first->fd;
       size_t fpage_id_old =
@@ -435,84 +456,76 @@ bool BufferPool::FetchPageAsyncInner(async_BPM_request_type& req) {
       disk_manager_->SetUsedMark(fd_old, fpage_id_old, false);
       assert(disk_manager_->GetUsedMark(fd_old, fpage_id_old) == false);
 #endif
-      if (req.response->first->dirty) {
-        req.ssd_IO_req = new IOServer::async_SSD_IO_request_type();
-        req.ssd_IO_req->Init(req.response->second, PAGE_SIZE_MEMORY,
-                             partitioner_->GetFPageIdGlobal(
-                                 pool_ID_, req.response->first->fpage_id) *
-                                 PAGE_SIZE_FILE,
-                             PAGE_SIZE_FILE, req.response->first->fd,
-                             req.ssd_io_finish, false);
-        if (!io_server_->ProcessFunc(*req.ssd_IO_req)) {
-          req.runtime_phase = async_BPM_request_type::Phase::EvictingFinish;
+      if (req.response.first->dirty) {
+        req.ssd_IO_req.Init(req.response.second, PAGE_SIZE_MEMORY,
+                            partitioner_->GetFPageIdGlobal(
+                                pool_ID_, req.response.first->fpage_id) *
+                                PAGE_SIZE_FILE,
+                            PAGE_SIZE_FILE, req.response.first->fd,
+                            req.ssd_io_finish, false);
+        if (!io_server_->ProcessFunc(req.ssd_IO_req)) {
+          req.runtime_phase = BP_async_request_type::Phase::EvictingFinish;
           return false;
         }
       }
-      assert(page_table_->DeleteMapping(req.response->first->fd,
-                                        req.response->first->fpage_id));
-      req.runtime_phase = async_BPM_request_type::Phase::Loading;
+      assert(page_table_->DeleteMapping(req.response.first->fd,
+                                        req.response.first->fpage_id));
+      req.runtime_phase = BP_async_request_type::Phase::Loading;
 
       break;
     }
-    case async_BPM_request_type::Phase::EvictingFinish: {
-      if (!io_server_->ProcessFunc(*req.ssd_IO_req))
+    case BP_async_request_type::Phase::EvictingFinish: {
+      if (!io_server_->ProcessFunc(req.ssd_IO_req))
         return false;
 
-      assert(page_table_->DeleteMapping(req.response->first->fd,
-                                        req.response->first->fpage_id));
-      req.runtime_phase = async_BPM_request_type::Phase::Loading;
+      assert(page_table_->DeleteMapping(req.response.first->fd,
+                                        req.response.first->fpage_id));
+      req.runtime_phase = BP_async_request_type::Phase::Loading;
       break;
     }
-    case async_BPM_request_type::Phase::Loading: {  // 4
-      req.response->first->Clean();
+    case BP_async_request_type::Phase::Loading: {  // 4
+      req.response.first->Clean();
+
       if constexpr (LAZY_SSD_IO) {
-        *reinterpret_cast<fpage_id_type*>(req.response->second) =
-            req.fpage_id;  // 传递参数
-        req.response->first->initialized = false;
+        *reinterpret_cast<fpage_id_type*>(req.response.second) =
+            fpage_id;  // 传递参数
+        req.response.first->initialized = false;
       } else {
-#ifdef DEBUG_BITMAP
-        assert(disk_manager_->GetUsedMark(fd, fpage_id) == false);
-        disk_manager_->SetUsedMark(fd, fpage_id, true);
-        assert(disk_manager_->GetUsedMark(fd, fpage_id) == true);
-#endif
         req.ssd_io_finish->Reset();
-        if (req.ssd_IO_req != nullptr) {
-          delete req.ssd_IO_req;
-          delete req.ssd_io_finish;
-          req.ssd_io_finish = new AsyncMesg1();
-        }
-        req.ssd_IO_req = new IOServer::async_SSD_IO_request_type();
-        req.ssd_IO_req->Init(req.response->second, PAGE_SIZE_MEMORY,
-                             req.fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_FILE,
-                             req.fd, req.ssd_io_finish, true);
+        // if (req.ssd_IO_req != nullptr) {
+        //   delete req.ssd_io_finish;
+        //   req.ssd_io_finish = new AsyncMesg1();
+        // }
+        req.ssd_IO_req.Init(req.response.second, PAGE_SIZE_MEMORY,
+                            fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_FILE, req.fd,
+                            req.ssd_io_finish, true);
       }
-      req.runtime_phase = async_BPM_request_type::Phase::LoadingFinish;
+      assert(!io_server_->ProcessFunc(req.ssd_IO_req));
+      req.runtime_phase = BP_async_request_type::Phase::LoadingFinish;
+
       return false;
     }
-    case async_BPM_request_type::Phase::LoadingFinish: {
+    case BP_async_request_type::Phase::LoadingFinish: {
       if constexpr (!LAZY_SSD_IO) {
-        if (!io_server_->ProcessFunc(*req.ssd_IO_req))
+        if (!io_server_->ProcessFunc(req.ssd_IO_req))
           return false;
-        // if (gbp::warmup_mark() == 1)
-        //   LOG(INFO) << *reinterpret_cast<size_t*>(req.response->second) << "
-        //   "
-        //             << (uintptr_t) req.response->second;
-        req.response->first->initialized = true;
+        req.response.first->initialized = true;
       }
 
-      req.response->first->ref_count = 1;
-      req.response->first->fpage_id = fpage_id_inpool;
-      req.response->first->fd = req.fd;
+      req.response.first->ref_count = 1;
+      req.response.first->fpage_id = fpage_id_inpool;
+      req.response.first->fd = req.fd;
 
-      assert(replacer_->Insert(page_table_->ToPageId(req.response->first)));
-      req.runtime_phase = async_BPM_request_type::Phase::End;
+      assert(replacer_->Insert(page_table_->ToPageId(req.response.first)));
       std::atomic_thread_fence(std::memory_order_release);
 
       assert(page_table_->CreateMapping(
-          req.fd, fpage_id_inpool, page_table_->ToPageId(req.response->first)));
+          req.fd, fpage_id_inpool, page_table_->ToPageId(req.response.first)));
+
+      req.runtime_phase = BP_async_request_type::Phase::End;
       break;
     }
-    case async_BPM_request_type::Phase::End: {
+    case BP_async_request_type::Phase::End: {
       // get_thread_logfile() << (uintptr_t) ret.second << std::endl;
 
       return true;
@@ -522,20 +535,20 @@ bool BufferPool::FetchPageAsyncInner(async_BPM_request_type& req) {
   assert(false);
 }
 
-int BufferPool::GetObject(char* buf, size_t file_offset, size_t object_size,
+int BufferPool::GetObject(char* buf, size_t file_offset, size_t block_size,
                           GBPfile_handle_type fd) {
   fpage_id_type page_id = file_offset / PAGE_SIZE_MEMORY;
   size_t page_offset = file_offset % PAGE_SIZE_MEMORY;
   size_t object_size_t = 0;
   size_t st, latency;
-  while (object_size > 0) {
+  while (block_size > 0) {
     auto mpage = FetchPageSync(page_id, fd);
 
     object_size_t =
-        PageTableInner::SetObject(buf, mpage.second, page_offset, object_size);
+        PageTableInner::SetObject(buf, mpage.second, page_offset, block_size);
     mpage.first->DecRefCount(true);
 
-    object_size -= object_size_t;
+    block_size -= object_size_t;
     buf += object_size_t;
     page_id++;
     page_offset = 0;
@@ -544,22 +557,22 @@ int BufferPool::GetObject(char* buf, size_t file_offset, size_t object_size,
 }
 
 int BufferPool::SetObject(const char* buf, size_t file_offset,
-                          size_t object_size, GBPfile_handle_type fd,
+                          size_t block_size, GBPfile_handle_type fd,
                           bool flush) {
   fpage_id_type fpage_id = file_offset / PAGE_SIZE_MEMORY;
   size_t page_offset = file_offset % PAGE_SIZE_MEMORY;
   size_t object_size_t = 0;
 
-  while (object_size > 0) {
+  while (block_size > 0) {
     auto mpage = FetchPageSync(fpage_id, fd);
     object_size_t =
-        PageTableInner::SetObject(buf, mpage.second, page_offset, object_size);
+        PageTableInner::SetObject(buf, mpage.second, page_offset, block_size);
     mpage.first->DecRefCount(true);
 
     if (flush)
       FlushPage(fpage_id, fd);
 
-    object_size -= object_size_t;
+    block_size -= object_size_t;
     buf += object_size_t;
     fpage_id++;
     page_offset = 0;
@@ -568,9 +581,9 @@ int BufferPool::SetObject(const char* buf, size_t file_offset,
 }
 
 // int BufferPool::SetObject(BufferObject buf, size_t file_offset,
-//   size_t object_size, GBPfile_handle_type fd,
+//   size_t block_size, GBPfile_handle_type fd,
 //   bool flush) {
-//   return SetObject(buf.Data(), file_offset, object_size, fd, flush);
+//   return SetObject(buf.Data(), file_offset, block_size, fd, flush);
 // }
 
 }  // namespace gbp

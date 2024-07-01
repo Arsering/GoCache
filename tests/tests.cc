@@ -202,20 +202,21 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
 
       // st = gbp::GetSystemTime();
       {
-        // auto ret = bpm.GetBlockSync(curr_io_fileoffset, io_size);
-        auto ret = bpm.GetBlockSync(curr_io_fileoffset, io_size);
+        auto ret = bpm.GetBlockAsync(curr_io_fileoffset, io_size);
+        auto block = ret.get();
 
+        // auto block = bpm.GetBlockSync(curr_io_fileoffset, io_size);
         if constexpr (true) {
           // auto ret_new = bpm.GetObject(curr_io_fileoffset, io_size);
           // auto iter = gbp::BufferBlockIter<size_t>(ret_new);
           for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
-            if (gbp::BufferBlock::Ref<size_t>(ret, i) !=
+            if (gbp::BufferBlock::Ref<size_t>(block, i) !=
                 (curr_io_fileoffset / sizeof(size_t) + i)) {
-              GBPLOG << gbp::BufferBlock::Ref<size_t>(ret, i) << " "
+              GBPLOG << gbp::BufferBlock::Ref<size_t>(block, i) << " "
                      << (curr_io_fileoffset / sizeof(size_t) + i) << std::endl;
             }
 
-            assert(gbp::BufferBlock::Ref<size_t>(ret, i) ==
+            assert(gbp::BufferBlock::Ref<size_t>(block, i) ==
                    (curr_io_fileoffset / sizeof(size_t) + i));
             // assert(*(iter.current()) ==
             //        (curr_io_fileoffset / sizeof(size_t) + i));
@@ -615,7 +616,8 @@ int test_concurrency(int argc, char** argv) {
 
   std::string file_path = "/nvme0n1/test_write.db";
   std::string trace_dir =
-      "/data/zhengyang/data/experiment_space/LDBC_SNB/logs/2024-06-06-20:05:02/"
+      "/data/zhengyang/data/experiment_space/LDBC_SNB/logs/"
+      "2024-06-06-20:05:02/"
       "server/graphscope_logs";
   // get_trace_global() = read_trace(trace_dir, worker_num);
 

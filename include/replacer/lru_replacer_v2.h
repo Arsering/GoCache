@@ -30,10 +30,10 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
   LRUReplacer_v2(const LRUReplacer_v2& other) = delete;
   LRUReplacer_v2& operator=(const LRUReplacer_v2&) = delete;
 
-  ~LRUReplacer_v2() = default;
+  ~LRUReplacer_v2() override= default;
 
   bool Insert(mpage_id_type value) override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 #if ASSERT_ENABLE
@@ -46,7 +46,7 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
   }
 
   bool Promote(mpage_id_type value) override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 #if ASSERT_ENABLE
@@ -61,7 +61,7 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
   }
 
   bool Victim(mpage_id_type& mpage_id) override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
@@ -95,7 +95,7 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
 
   bool Victim(std::vector<mpage_id_type>& value,
               mpage_id_type page_num) override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
@@ -111,7 +111,7 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
   }
 
   bool Erase(mpage_id_type value) override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
@@ -120,7 +120,7 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
   }
 
   size_t Size() const override {
-#if BPM_SYNC_ENABLE
+#if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
     return list_.size();
