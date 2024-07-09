@@ -17,7 +17,7 @@
 #include <utility>
 #include <vector>
 
-#include "buffer_obj.h"
+#include "bufferblock/buffer_obj.h"
 #include "config.h"
 #include "debug.h"
 #include "extendible_hash.h"
@@ -199,10 +199,11 @@ class BufferPool {
 
     // 1.1
     auto [success, mpage_id] = page_table_->FindMapping(fd, fpage_id_inpool);
-
     if (success) {
       auto tar = page_table_->FromPageId(mpage_id);
-      auto [has_inc, pre_ref_count] = tar->IncRefCount(fpage_id_inpool, fd);
+      // auto [has_inc, pre_ref_count] = tar->IncRefCount(fpage_id_inpool, fd);
+      auto has_inc = tar->IncRefCount1(fpage_id_inpool, fd);
+
       if (has_inc) {
         assert(replacer_->Promote(page_table_->ToPageId(tar)));
         return {tar, (char*) memory_pool_.FromPageId(mpage_id)};

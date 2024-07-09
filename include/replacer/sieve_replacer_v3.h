@@ -21,7 +21,7 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
   SieveReplacer_v3(const SieveReplacer_v3& other) = delete;
   SieveReplacer_v3& operator=(const SieveReplacer_v3&) = delete;
 
-  ~SieveReplacer_v3() override= default;
+  ~SieveReplacer_v3() override = default;
 
   bool Insert(mpage_id_type value) override {
 #if EVICTION_SYNC_ENABLE
@@ -83,15 +83,16 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
       }
       auto pte_unpacked = pte->ToUnpacked();
 
-      auto [locked, mpage_id] =
-          page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id);
+      auto [locked, mpage_id] = page_table_->LockMapping(
+          pte_unpacked.fd_cur, pte_unpacked.fpage_id_cur);
 
       if (locked && pte->ref_count == 0 &&
           mpage_id != PageMapping::Mapping::EMPTY_VALUE)
         break;
 
       if (locked)
-        assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
+        assert(page_table_->UnLockMapping(pte->fd_cur, pte->fpage_id_cur,
+                                          mpage_id));
       count--;
       to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
                      ? list_.GetTail()
@@ -140,15 +141,16 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
       }
       auto pte_unpacked = pte->ToUnpacked();
 
-      auto [locked, mpage_id] =
-          page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id);
+      auto [locked, mpage_id] = page_table_->LockMapping(
+          pte_unpacked.fd_cur, pte_unpacked.fpage_id_cur);
 
       if (locked && pte->ref_count == 0 &&
           mpage_id != PageMapping::Mapping::EMPTY_VALUE)
         break;
 
       if (locked)
-        assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
+        assert(page_table_->UnLockMapping(pte->fd_cur, pte->fpage_id_cur,
+                                          mpage_id));
       count--;
       to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
                      ? list_.GetTail()
@@ -205,18 +207,19 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
         }
         auto pte_unpacked = pte->ToUnpacked();
 
-        auto [locked, mpage_id] =
-            page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id);
+        auto [locked, mpage_id] = page_table_->LockMapping(
+            pte_unpacked.fd_cur, pte_unpacked.fpage_id_cur);
 
         if (locked && pte->ref_count == 0 && !pte->dirty &&
             mpage_id != PageMapping::Mapping::EMPTY_VALUE) {
-          assert(page_table_->DeleteMapping(pte_unpacked.fd,
-                                            pte_unpacked.fpage_id));
+          assert(page_table_->DeleteMapping(pte_unpacked.fd_cur,
+                                            pte_unpacked.fpage_id_cur));
           break;
         }
 
         if (locked)
-          assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
+          assert(page_table_->UnLockMapping(pte->fd_cur, pte->fpage_id_cur,
+                                            mpage_id));
         count--;
         to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
                        ? list_.GetTail()

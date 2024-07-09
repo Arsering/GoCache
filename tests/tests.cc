@@ -202,8 +202,8 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
 
       // st = gbp::GetSystemTime();
       {
-        auto ret = bpm.GetBlockAsync(curr_io_fileoffset, io_size);
-        auto block = ret.get();
+        // auto ret = bpm.GetBlockAsync(curr_io_fileoffset, io_size);
+        // auto block = ret.get();
 
         auto block = bpm.GetBlockSync(curr_io_fileoffset, io_size);
         if constexpr (true) {

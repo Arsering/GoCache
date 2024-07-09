@@ -89,15 +89,16 @@ class SieveReplacer : public Replacer<mpage_id_type> {
       pte = page_table_->FromPageId(target->val);
       auto pte_unpacked = pte->ToUnpacked();
 
-      auto [locked, mpage_id] =
-          page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id);
+      auto [locked, mpage_id] = page_table_->LockMapping(
+          pte_unpacked.fd_cur, pte_unpacked.fpage_id_cur);
 
       if (locked && pte->ref_count == 0 &&
           mpage_id != PageMapping::Mapping::EMPTY_VALUE)
         break;
 
       if (locked)
-        assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
+        assert(page_table_->UnLockMapping(pte->fd_cur, pte->fpage_id_cur,
+                                          mpage_id));
       count--;
       target = target->prev == nullptr ? tail_ : target->prev;
     }
@@ -140,18 +141,19 @@ class SieveReplacer : public Replacer<mpage_id_type> {
         pte = page_table_->FromPageId(to_evict->val);
         auto pte_unpacked = pte->ToUnpacked();
 
-        auto [locked, mpage_id] =
-            page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id);
+        auto [locked, mpage_id] = page_table_->LockMapping(
+            pte_unpacked.fd_cur, pte_unpacked.fpage_id_cur);
 
         if (locked && pte->ref_count == 0 && !pte->dirty &&
             mpage_id != PageMapping::Mapping::EMPTY_VALUE) {
-          assert(page_table_->DeleteMapping(pte_unpacked.fd,
-                                            pte_unpacked.fpage_id));
+          assert(page_table_->DeleteMapping(pte_unpacked.fd_cur,
+                                            pte_unpacked.fpage_id_cur));
           break;
         }
 
         if (locked)
-          assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
+          assert(page_table_->UnLockMapping(pte->fd_cur, pte->fpage_id_cur,
+                                            mpage_id));
         count--;
         to_evict = to_evict->prev == nullptr ? tail_ : to_evict->prev;
       }

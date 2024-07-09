@@ -29,11 +29,11 @@ class PageTableInner {
  public:
   struct UnpackedPTE {
     uint16_t ref_count;
-    GBPfile_handle_type fd;
+    GBPfile_handle_type fd_cur;
     bool initialized;
     bool dirty;
     bool busy;
-    fpage_id_type fpage_id;
+    fpage_id_type fpage_id_cur;
   };
 
   class alignas(sizeof(uint64_t)) PTE {
@@ -47,12 +47,14 @@ class PageTableInner {
     static inline PTE& FromPacked(uint64_t& packed) { return (PTE&) packed; }
 
     FORCE_INLINE GBPfile_handle_type GetFileHandler() {
-      return ToUnpacked().fd;
+      return ToUnpacked().fd_cur;
     }
 
     FORCE_INLINE uint16_t GetRefCount() { return ToUnpacked().ref_count; }
 
-    FORCE_INLINE fpage_id_type GetFPageId() { return ToUnpacked().fpage_id; }
+    FORCE_INLINE fpage_id_type GetFPageId() {
+      return ToUnpacked().fpage_id_cur;
+    }
 
     bool Clean() {
       *this = PackedPTECacheLine::EMPTY_PTE;
@@ -64,13 +66,15 @@ class PageTableInner {
       auto packed_header =
           as_atomic(AsPacked()).load(std::memory_order_relaxed);
       auto pte = PTE::FromPacked(packed_header);
-      return {pte.ref_count, pte.fd,   pte.initialized,
-              pte.dirty,     pte.busy, pte.fpage_id};
+      return {pte.ref_count, pte.fd_cur, pte.initialized,
+              pte.dirty,     pte.busy,   pte.fpage_id_cur};
     }
 
+// #define BB
+#ifdef BB
     // 需要获得文件页的相关信息，因为该内存页可能被用于存储其他文件页
-    pair_min<bool, uint16_t> IncRefCount(fpage_id_type fpage_id,
-                                         GBPfile_handle_type fd) {
+    FORCE_INLINE pair_min<bool, uint16_t> IncRefCount(fpage_id_type fpage_id,
+                                                      GBPfile_handle_type fd) {
       // return {true, 0};
       std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
       uint64_t old_packed = atomic_packed.load(std::memory_order_relaxed),
@@ -90,18 +94,72 @@ class PageTableInner {
                (std::numeric_limits<uint16_t>::max() >> 2) - 1);
         assert(fd < (std::numeric_limits<uint16_t>::max() >> 2) - 1);
 #endif
-        if (new_unpacked.fpage_id != fpage_id || new_unpacked.fd != fd) {
+        if (new_unpacked.fpage_id_cur != fpage_id ||
+            new_unpacked.fd_cur != fd) {
           return {false, 0};
         }
 
         old_ref_count = new_unpacked.ref_count;
-        new_unpacked.ref_count++;
+        // new_unpacked.ref_count++;
+        new_packed++;
       } while (!atomic_packed.compare_exchange_weak(old_packed, new_packed,
                                                     std::memory_order_release,
                                                     std::memory_order_relaxed));
 
       return {true, old_ref_count};
     }
+#else
+    // 需要获得文件页的相关信息，因为该内存页可能被用于存储其他文件页
+    FORCE_INLINE bool IncRefCount(fpage_id_type fpage_id,
+                                  GBPfile_handle_type fd) {
+      std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
+      uint64_t old_packed = atomic_packed.load(std::memory_order_relaxed),
+               new_packed;
+      uint16_t old_ref_count;
+
+      do {
+        new_packed = old_packed;
+        PTE& new_unpacked = PTE::FromPacked(new_packed);
+
+        if (new_unpacked.busy) {
+          return false;
+        }
+
+#if ASSERT_ENABLE
+        assert(new_unpacked.ref_count <
+               (std::numeric_limits<uint16_t>::max() >> 2) - 1);
+        assert(fd < (std::numeric_limits<uint16_t>::max() >> 2) - 1);
+#endif
+        if (new_unpacked.fpage_id_cur != fpage_id ||
+            new_unpacked.fd_cur != fd) {
+          return false;
+        }
+
+        old_ref_count = new_unpacked.ref_count;
+        // new_unpacked.ref_count++;
+        new_packed++;
+      } while (!atomic_packed.compare_exchange_weak(old_packed, new_packed,
+                                                    std::memory_order_release,
+                                                    std::memory_order_relaxed));
+      return true;
+    }
+
+    // 需要获得文件页的相关信息，因为该内存页可能被用于存储其他文件页
+    FORCE_INLINE bool IncRefCount1(fpage_id_type fpage_id,
+                                   GBPfile_handle_type fd) {
+      std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
+      auto old_packed = atomic_packed.fetch_add(1);
+      PTE& old_unpacked = PTE::FromPacked(old_packed);
+
+      // 此处表明本页处于busy阶段或本页已用于存储其他文件页的内容
+      if (old_unpacked.busy || old_unpacked.fpage_id_cur != fpage_id ||
+          old_unpacked.fd_cur != fd) {
+        atomic_packed.fetch_sub(1);
+        return false;
+      }
+      return true;
+    }
+#endif
 
 // #define AA
 #ifdef AA
@@ -201,11 +259,11 @@ class PageTableInner {
 
    public:
     uint16_t ref_count : 16;
-    GBPfile_handle_type fd : 13;
+    GBPfile_handle_type fd_cur : 13;
     bool initialized : 1;
     bool dirty : 1;
     bool busy : 1;
-    fpage_id_type fpage_id : 32;
+    fpage_id_type fpage_id_cur : 32;
   };
 
   static_assert(sizeof(PTE) == sizeof(uint64_t));
@@ -276,9 +334,6 @@ class PageTableInner {
 #if ASSERT_ENABLE
     assert(page != nullptr);
 #endif
-    // auto ret = (page - pool_);
-    // if (ret > num_pages_)
-    //   assert(false);
     return (page - pool_);
   }
   size_t GetMemoryUsage() { return num_pages_ * sizeof(PTE); }
@@ -586,7 +641,7 @@ class PageTable {
 
     if (mpage_id != PageMapping::Mapping::EMPTY_VALUE) {
       auto* tar = FromPageId(mpage_id);
-      if (tar->fpage_id != fpage_id && tar->fd == fd) {
+      if (tar->fpage_id_cur != fpage_id && tar->fd_cur == fd) {
         return false;
       }
       if (!tar->UnLock())
