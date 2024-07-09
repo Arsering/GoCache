@@ -18,7 +18,6 @@
 #endif
 
 #include <assert.h>
-// #include <mimalloc-1.8/mimalloc.h>
 #include <sys/mman.h>
 #include <atomic>
 #include <chrono>
@@ -61,8 +60,8 @@ constexpr static size_t PAGE_SIZE_FILE = 4096;
 constexpr static size_t CACHELINE_SIZE = 64;
 
 constexpr static size_t ASYNC_SSDIO_SLEEP_TIME_MICROSECOND = 500;
-constexpr int IO_BACKEND_TYPE = 2;  // 1: pread; 2: IO_Uring
-constexpr bool USING_FIBER_ASYNC_RESPONSE = true;
+constexpr int IO_BACKEND_TYPE = 1;  // 1: pread; 2: IO_Uring
+constexpr bool USING_FIBER_ASYNC_RESPONSE = false;
 constexpr static size_t IOURing_MAX_DEPTH = 16;
 constexpr static size_t BATCH_SIZE_IO_SERVER =
     IOURing_MAX_DEPTH * 1.5;  // 这个值高点好？？？

@@ -15,7 +15,7 @@ class TwoQLRUReplacer : public Replacer<mpage_id_type> {
   TwoQLRUReplacer(PageTable* page_table) { page_table_ = page_table; }
   TwoQLRUReplacer(const TwoQLRUReplacer& other) = delete;
   TwoQLRUReplacer& operator=(const TwoQLRUReplacer&) = delete;
-  ~TwoQLRUReplacer() override= default;
+  ~TwoQLRUReplacer() override = default;
 
   // 插入页面，如果页面已存在则返回true，如果页面不存在则插入并返回false
   bool Insert(mpage_id_type page_id) override {
@@ -72,14 +72,15 @@ class TwoQLRUReplacer : public Replacer<mpage_id_type> {
       auto* pte = page_table_->FromPageId(*to_evict);
       auto pte_unpacked = pte->ToUnpacked();
 
-      auto [locked, mpage_id] =
-          page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id);
+      auto [locked, mpage_id] = page_table_->LockMapping(
+          pte_unpacked.fd_cur, pte_unpacked.fpage_id_cur);
       if (locked && pte->ref_count == 0 &&
           mpage_id != PageMapping::Mapping::EMPTY_VALUE)
         break;
 
       if (locked)
-        assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
+        assert(page_table_->UnLockMapping(pte->fd_cur, pte->fpage_id_cur,
+                                          mpage_id));
     }
 
     if (to_evict != inactiveList.rend()) {
@@ -93,14 +94,15 @@ class TwoQLRUReplacer : public Replacer<mpage_id_type> {
         auto* pte = page_table_->FromPageId(*to_evict);
         auto pte_unpacked = pte->ToUnpacked();
 
-        auto [locked, mpage_id] =
-            page_table_->LockMapping(pte_unpacked.fd, pte_unpacked.fpage_id);
+        auto [locked, mpage_id] = page_table_->LockMapping(
+            pte_unpacked.fd_cur, pte_unpacked.fpage_id_cur);
         if (locked && pte->ref_count == 0 &&
             mpage_id != PageMapping::Mapping::EMPTY_VALUE)
           break;
 
         if (locked)
-          assert(page_table_->UnLockMapping(pte->fd, pte->fpage_id, mpage_id));
+          assert(page_table_->UnLockMapping(pte->fd_cur, pte->fpage_id_cur,
+                                            mpage_id));
       }
       if (to_evict != activeList.rend()) {
         page_id = *to_evict;

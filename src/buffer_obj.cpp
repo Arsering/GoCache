@@ -1,4 +1,4 @@
-#include "../include/buffer_obj.h"
+#include "../include/bufferblock/buffer_obj.h"
 #include "../include/buffer_pool_manager.h"
 
 namespace gbp {

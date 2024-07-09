@@ -1,5 +1,4 @@
 #include "../include/buffer_pool_manager.h"
-#include "../include/buffer_obj.h"
 
 #include <sys/mman.h>
 #include <utility>
@@ -23,6 +22,8 @@ BufferPoolManager::~BufferPoolManager() {
     Flush();
 
   stop_ = true;
+  CheckValid();
+
   if (server_.joinable())
     server_.join();
 
@@ -175,7 +176,7 @@ bool BufferPoolManager::LoadPage(pair_min<PTE*, char*> mpage) {
       }
       assert(ReadWrite(
           *reinterpret_cast<fpage_id_type*>(mpage.second) * PAGE_SIZE_FILE,
-          PAGE_SIZE_FILE, mpage.second, PAGE_SIZE_MEMORY, mpage.first->fd,
+          PAGE_SIZE_FILE, mpage.second, PAGE_SIZE_MEMORY, mpage.first->fd_cur,
           true));
       mpage.first->initialized = true;
       assert(mpage.first->UnLock());
@@ -192,9 +193,9 @@ bool BufferPoolManager::Clean() {
   size_t fd, fpage_id;
   for (auto pool : pools_) {
     for (size_t idx = 0; idx < pool->pool_size_; idx++) {
-      fd = pool->page_table_->FromPageId(idx)->fd;
+      fd = pool->page_table_->FromPageId(idx)->fd_cur;
       fpage_id = pool->partitioner_->GetFPageIdGlobal(
-          pool_id, pool->page_table_->FromPageId(idx)->fpage_id);
+          pool_id, pool->page_table_->FromPageId(idx)->fpage_id_cur);
 
 #ifdef DEBUG_BITMAP
       if (pool->page_table_->FromPageId(idx)->initialized) {

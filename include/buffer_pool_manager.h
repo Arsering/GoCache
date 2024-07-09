@@ -16,8 +16,8 @@
 #include <any>
 #include <thread>
 
-#include "buffer_obj.h"
 #include "buffer_pool.h"
+#include "bufferblock/buffer_obj.h"
 #include "config.h"
 #include "debug.h"
 #include "extendible_hash.h"
@@ -104,7 +104,13 @@ class BufferPoolManager {
       free_page_num += pool->GetFreePageNum();
     return free_page_num;
   }
-
+  void CheckValid() {
+    for (auto pool : pools_) {
+      for (size_t page_id = 0; page_id < pool->memory_pool_.GetSize();
+           page_id++)
+        assert(pool->page_table_->FromPageId(page_id)->ref_count == 0);
+    }
+  }
   void WarmUp() {
     std::vector<std::thread> thread_pool;
 
