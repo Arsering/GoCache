@@ -313,9 +313,7 @@ int BufferPoolManager::SetBlock(const BufferBlock& buf, size_t file_offset,
 const BufferBlock BufferPoolManager::GetBlockSync(
     size_t file_offset, size_t block_size, GBPfile_handle_type fd) const {
   size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
-  size_t num_page = 0;
-
-  num_page =
+  size_t num_page =
       fpage_offset == 0 || (block_size <= (PAGE_SIZE_FILE - fpage_offset))
           ? CEIL(block_size, PAGE_SIZE_FILE)
           : (CEIL(block_size - (PAGE_SIZE_FILE - fpage_offset),
@@ -324,27 +322,27 @@ const BufferBlock BufferPoolManager::GetBlockSync(
   BufferBlock ret(block_size, num_page);
 
   fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
-  size_t page_id = 0;
-  while (page_id < num_page) {
-#ifdef DEBUG_
-    size_t st = gbp::GetSystemTime();
-#endif
+  if (likely(num_page == 1)) {
     auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
         fpage_id, fd);
-
 #if ASSERT_ENABLE
     assert(mpage.first != nullptr && mpage.second != nullptr);
 #endif
-
-    ret.InsertPage(page_id, mpage.second + fpage_offset, mpage.first);
-    page_id++;
-    fpage_offset = 0;
-    fpage_id++;
-#ifdef DEBUG_
-    st = gbp::GetSystemTime() - st;
-    gbp::get_counter(11) += st;
-    gbp::get_counter(12)++;
+    ret.InsertPage(0, mpage.second + fpage_offset, mpage.first);
+  } else {
+    size_t page_id = 0;
+    while (page_id < num_page) {
+      auto mpage =
+          pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
+              fpage_id, fd);
+#if ASSERT_ENABLE
+      assert(mpage.first != nullptr && mpage.second != nullptr);
 #endif
+      ret.InsertPage(page_id, mpage.second + fpage_offset, mpage.first);
+      page_id++;
+      fpage_offset = 0;
+      fpage_id++;
+    }
   }
   // gbp::get_counter_global(11).fetch_add(ret.PageNum());
 
@@ -355,30 +353,33 @@ const BufferBlock BufferPoolManager::GetBlockSync(
     size_t file_offset, size_t block_size, size_t num_page,
     GBPfile_handle_type fd) const {
   size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
+#if ASSERT_ENABLE
   assert(block_size != 0);
+#endif
   BufferBlock ret(block_size, num_page);
 
   fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
-  size_t page_id = 0;
-  while (page_id < num_page) {
-#ifdef DEBUG_
-    size_t st = gbp::GetSystemTime();
-#endif
+  if (likely(num_page == 1)) {
     auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
         fpage_id, fd);
 #if ASSERT_ENABLE
     assert(mpage.first != nullptr && mpage.second != nullptr);
 #endif
-
-    ret.InsertPage(page_id, mpage.second + fpage_offset, mpage.first);
-    page_id++;
-    fpage_offset = 0;
-    fpage_id++;
-#ifdef DEBUG_
-    st = gbp::GetSystemTime() - st;
-    gbp::get_counter(11) += st;
-    gbp::get_counter(12)++;
+    ret.InsertPage(0, mpage.second + fpage_offset, mpage.first);
+  } else {
+    size_t page_id = 0;
+    while (page_id < num_page) {
+      auto mpage =
+          pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
+              fpage_id, fd);
+#if ASSERT_ENABLE
+      assert(mpage.first != nullptr && mpage.second != nullptr);
 #endif
+      ret.InsertPage(page_id, mpage.second + fpage_offset, mpage.first);
+      page_id++;
+      fpage_offset = 0;
+      fpage_id++;
+    }
   }
   // gbp::get_counter_global(11).fetch_add(ret.PageNum());
 

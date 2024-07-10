@@ -40,7 +40,6 @@ class BufferBlockImp7 {
   }
 
   BufferBlockImp7(size_t size, char* data) : size_(size), page_num_(0) {
-    // bitset_ = nullptr;
 #if ASSERT_ENABLE
     assert(datas_.data != nullptr);
 #endif
@@ -56,7 +55,6 @@ class BufferBlockImp7 {
   }
 
   BufferBlockImp7(const BufferBlockImp7& src) { Move(src, *this); }
-  // BufferObjectImp5& operator=(const BufferObjectImp5&) = delete;
   BufferBlockImp7& operator=(const BufferBlockImp7& src) {
     Move(src, *this);
     return *this;
@@ -237,10 +235,6 @@ class BufferBlockImp7 {
 
 #ifdef GRAPHSCOPE
   std::string to_string() const {
-    // if (type_ != ObjectType::gbpAny)
-    //   LOG(FATAL) << "Can't convert current type to std::string!!";
-    // auto value = reinterpret_cast<const gs::Any*>(Data());
-    // return value->to_string();
     assert(false);
     return "aaa";
   }
@@ -249,21 +243,21 @@ class BufferBlockImp7 {
   template <typename OBJ_Type>
   FORCE_INLINE static const OBJ_Type& Ref(const BufferBlockImp7& obj,
                                           size_t idx = 0) {
-    return *obj.Ptr<OBJ_Type>(idx);
+    return *obj.Decode<OBJ_Type>(idx);
   }
 
   template <typename OBJ_Type>
   FORCE_INLINE static void UpdateContent(std::function<void(OBJ_Type&)> cb,
                                          const BufferBlockImp7& obj,
                                          size_t idx = 0) {
-    auto data = obj.Decode<OBJ_Type>(idx);
+    auto data = obj.DecodeWithPTE<OBJ_Type>(idx);
     cb(*data.first);
     data.second->SetDirty(true);
   }
 
-  template <class T>
-  FORCE_INLINE const T* Ptr(size_t idx = 0) const {
-    return Decode<T>(idx).first;
+  template <class OBJ_Type>
+  FORCE_INLINE const OBJ_Type* Ptr(size_t idx = 0) const {
+    return Decode<OBJ_Type>(idx);
   }
 
   char* Data() const {
@@ -414,13 +408,65 @@ class BufferBlockImp7 {
     ptes_.pte = nullptr;
   }
 
-  template <class T>
-  FORCE_INLINE pair_min<T*, PTE*> Decode(size_t idx = 0) const {
+  template <class OBJ_Type>
+  FORCE_INLINE OBJ_Type* Decode(size_t idx = 0) const {
 #ifdef DEBUG_
     size_t st = gbp::GetSystemTime();
 #endif
 
-    constexpr size_t OBJ_NUM_PERPAGE = PAGE_SIZE_MEMORY / sizeof(T);
+    constexpr size_t OBJ_NUM_PERPAGE = PAGE_SIZE_MEMORY / sizeof(OBJ_Type);
+#if ASSERT_ENABLE
+    // FIXME: 不够准确
+    assert(sizeof(T) * (idx + 1) <= size_);
+#endif
+    char* ret = nullptr;
+    if (likely(page_num_ < 2)) {
+      ret = datas_.data + idx * sizeof(OBJ_Type);
+    } else {
+      if (likely(idx == 0)) {
+        assert(InitPage(0));
+        ret = datas_.datas[0];
+      } else {
+        auto obj_num_curpage =
+            (PAGE_SIZE_MEMORY -
+             ((uintptr_t) datas_.datas[0] % PAGE_SIZE_MEMORY)) /
+            sizeof(OBJ_Type);
+
+        if (obj_num_curpage > idx) {
+          assert(InitPage(0));
+          ret = datas_.datas[0] + idx * sizeof(OBJ_Type);
+        } else {
+          idx -= obj_num_curpage;
+          auto page_id = idx / OBJ_NUM_PERPAGE + 1;
+          assert(InitPage(page_id));
+          ret = datas_.datas[page_id] +
+                (idx % OBJ_NUM_PERPAGE) * sizeof(OBJ_Type);
+        }
+      }
+    }
+#if ASSERT_ENABLE
+    assert(((uintptr_t) ret / PAGE_SIZE_MEMORY + 1) * PAGE_SIZE_MEMORY >=
+           (uintptr_t) (ret + sizeof(T)));
+#endif
+#ifdef DEBUG_
+    st = gbp::GetSystemTime() - st;
+    gbp::get_counter(1) += st;
+    gbp::get_counter(2)++;
+#endif
+#if ASSERT_ENABLE
+    assert(ret != nullptr);
+#endif
+    return reinterpret_cast<OBJ_Type*>(ret);
+  }
+
+ private:
+  template <class OBJ_Type>
+  FORCE_INLINE pair_min<OBJ_Type*, PTE*> DecodeWithPTE(size_t idx = 0) const {
+#ifdef DEBUG_
+    size_t st = gbp::GetSystemTime();
+#endif
+
+    constexpr size_t OBJ_NUM_PERPAGE = PAGE_SIZE_MEMORY / sizeof(OBJ_Type);
 #if ASSERT_ENABLE
     // FIXME: 不够准确
     assert(sizeof(T) * (idx + 1) <= size_);
@@ -429,7 +475,7 @@ class BufferBlockImp7 {
     PTE* target_pte;
 
     if (likely(page_num_ < 2)) {
-      ret = datas_.data + idx * sizeof(T);
+      ret = datas_.data + idx * sizeof(OBJ_Type);
       target_pte = ptes_.pte;
     } else {
       if (likely(idx == 0)) {
@@ -440,17 +486,18 @@ class BufferBlockImp7 {
         auto obj_num_curpage =
             (PAGE_SIZE_MEMORY -
              ((uintptr_t) datas_.datas[0] % PAGE_SIZE_MEMORY)) /
-            sizeof(T);
+            sizeof(OBJ_Type);
 
         if (obj_num_curpage > idx) {
           assert(InitPage(0));
-          ret = datas_.datas[0] + idx * sizeof(T);
+          ret = datas_.datas[0] + idx * sizeof(OBJ_Type);
           target_pte = ptes_.ptes[0];
         } else {
           idx -= obj_num_curpage;
           auto page_id = idx / OBJ_NUM_PERPAGE + 1;
           assert(InitPage(page_id));
-          ret = datas_.datas[page_id] + (idx % OBJ_NUM_PERPAGE) * sizeof(T);
+          ret = datas_.datas[page_id] +
+                (idx % OBJ_NUM_PERPAGE) * sizeof(OBJ_Type);
           target_pte = ptes_.ptes[page_id];
         }
       }
@@ -467,10 +514,9 @@ class BufferBlockImp7 {
 #if ASSERT_ENABLE
     assert(ret != nullptr);
 #endif
-    return {reinterpret_cast<T*>(ret), target_pte};
+    return {reinterpret_cast<OBJ_Type*>(ret), target_pte};
   }
 
- private:
   union AnyValue {
     AnyValue() {}
     ~AnyValue() {}
@@ -482,19 +528,20 @@ class BufferBlockImp7 {
   };
 
   FORCE_INLINE bool InitPage(size_t page_id) const {
-    // bitset_[page_id / 8] |= 1 << (page_id % 8);
-    if constexpr (LAZY_SSD_IO) {
-      if (likely(page_num_ == 1)) {
-        assert(page_id == 0);
-        if (!ptes_.pte->initialized) {
-          return LoadPage(page_id);
-        }
-      } else {
-        if (!ptes_.ptes[page_id]->initialized) {
-          return LoadPage(page_id);
-        }
+#if LAZY_SSD_IO_NEW
+    if (likely(page_num_ == 1)) {
+#if ASSERT_ENABLE
+      assert(page_id == 0);
+#endif
+      if (!ptes_.pte->initialized) {
+        return LoadPage(page_id);
+      }
+    } else {
+      if (!ptes_.ptes[page_id]->initialized) {
+        return LoadPage(page_id);
       }
     }
+#endif
     return true;
   }
 
@@ -526,7 +573,6 @@ class BufferBlockImp8 {
   }
 
   BufferBlockImp8(BufferBlockImp8&& src) noexcept { Move(src, *this); }
-
   BufferBlockImp8& operator=(BufferBlockImp8&& src) noexcept {
     Move(src, *this);
     return *this;
@@ -598,7 +644,6 @@ class BufferBlockImp8 {
 
   static void Move(const BufferBlockImp8& src, BufferBlockImp8& dst) {
     dst.free();
-
     dst.inner_ = src.inner_;
     const_cast<BufferBlockImp8&>(src).inner_ = nullptr;
   }
@@ -610,27 +655,27 @@ class BufferBlockImp8 {
 
   void free() {
     if (inner_ != nullptr) {
-      inner_->free();
+      delete inner_;
+      inner_ = nullptr;
     }
-    inner_ = nullptr;
   }
 
   template <typename OBJ_Type>
   FORCE_INLINE static const OBJ_Type& Ref(const BufferBlockImp8& obj,
                                           size_t idx = 0) {
-    return BufferBlockImp7::Ref<OBJ_Type>(obj, idx);
+    return BufferBlockImp7::Ref<OBJ_Type>(*(obj.inner_), idx);
   }
 
   template <typename OBJ_Type>
   FORCE_INLINE static void UpdateContent(std::function<void(OBJ_Type&)> cb,
                                          const BufferBlockImp8& obj,
                                          size_t idx = 0) {
-    BufferBlockImp7::UpdateContent<OBJ_Type>(cb, obj, 0);
+    BufferBlockImp7::UpdateContent<OBJ_Type>(cb, *(obj.inner_), idx);
   }
 
   template <class T>
   FORCE_INLINE const T* Ptr(size_t idx = 0) const {
-    return Decode<T>(idx).first;
+    return Decode<T>(idx);
   }
 
   char* Data() const { return inner_->Data(); }
@@ -655,12 +700,12 @@ class BufferBlockImp8 {
   }
 
   template <class T>
-  FORCE_INLINE pair_min<T*, PTE*> Decode(size_t idx = 0) const {
-    return inner_->Decode(idx);
+  FORCE_INLINE T* Decode(size_t idx = 0) const {
+    return inner_->Decode<T>(idx);
   }
 
  private:
-  BufferBlockImp7* inner_;
+  BufferBlockImp7* inner_ = nullptr;
 };
 
 }  // namespace gbp

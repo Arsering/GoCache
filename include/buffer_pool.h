@@ -82,6 +82,8 @@ class BP_async_request_type {
   IOServer::async_SSD_IO_request_type ssd_IO_req;
   Phase runtime_phase;
   pair_min<PTE*, char*> response;
+
+  PTE tmp;
 };
 
 template <typename T>
@@ -193,7 +195,8 @@ class BufferPool {
   pair_min<PTE*, char*> FetchPageSync(fpage_id_type fpage_id,
                                       GBPfile_handle_type fd);
 
-  pair_min<PTE*, char*> Pin(fpage_id_type fpage_id, GBPfile_handle_type fd) {
+  FORCE_INLINE pair_min<PTE*, char*> Pin(fpage_id_type fpage_id,
+                                         GBPfile_handle_type fd) {
     fpage_id_type fpage_id_inpool =
         partitioner_->GetFPageIdInPartition(fpage_id);
 

@@ -33,6 +33,7 @@
 #include "../utils.h"
 
 #include "buffer_block_imp6.h"
+#include "buffer_block_imp8.h"
 
 #ifdef GRAPHSCOPE
 #include "flex/utils/property/types.h"
@@ -1300,11 +1301,11 @@ class BufferBlockImp5 {
  private:
   FORCE_INLINE bool InitPage(size_t page_id) const {
     // bitset_[page_id / 8] |= 1 << (page_id % 8);
-    if constexpr (LAZY_SSD_IO) {
-      if (!ptes_[page_id]->initialized) {
-        return LoadPage(page_id);
-      }
+#if LAZY_SSD_IO_NEW
+    if (!ptes_[page_id]->initialized) {
+      return LoadPage(page_id);
     }
+#endif
     return true;
   }
 
@@ -1416,7 +1417,7 @@ class BufferObjectImp4 {
 #endif
 };
 
-using BufferBlock = BufferBlockImp6;
+using BufferBlock = BufferBlockImp7;
 
 #endif
 

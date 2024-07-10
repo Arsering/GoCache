@@ -151,10 +151,24 @@ class PageTableInner {
       auto old_packed = atomic_packed.fetch_add(1);
       PTE& old_unpacked = PTE::FromPacked(old_packed);
 
-      // 此处表明本页处于busy阶段或本页已用于存储其他文件页的内容
       if (old_unpacked.busy || old_unpacked.fpage_id_cur != fpage_id ||
-          old_unpacked.fd_cur != fd) {
+          old_unpacked.fd_cur !=
+              fd) {  // 此处表明本页处于busy阶段或本页已用于存储其他文件页的内容
         atomic_packed.fetch_sub(1);
+        return false;
+      }
+      return true;
+    }
+    // 需要获得文件页的相关信息，因为该内存页可能被用于存储其他文件页
+    FORCE_INLINE bool IncRefCount2(fpage_id_type fpage_id,
+                                   GBPfile_handle_type fd) {
+      auto old_packed = as_atomic(AsPacked()).fetch_add(1);
+      PTE& old_unpacked = PTE::FromPacked(old_packed);
+
+      if (old_unpacked.busy || old_unpacked.fpage_id_cur != fpage_id ||
+          old_unpacked.fd_cur !=
+              fd) {  // 此处表明本页处于busy阶段或本页已用于存储其他文件页的内容
+        as_atomic(AsPacked()).fetch_sub(1);
         return false;
       }
       return true;
@@ -194,7 +208,7 @@ class PageTableInner {
 #else
     // 无需获得文件页的相关信息，因为该内存页的 ref_count >0
     // 时不可能被用于存储其他文件页
-    void DecRefCount(bool is_write, bool write_to_ssd = false) {
+    FORCE_INLINE void DecRefCount(bool is_write, bool write_to_ssd = false) {
       std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
       if (is_write)
         atomic_packed.fetch_or(1 << 30);
@@ -205,10 +219,7 @@ class PageTableInner {
     }
     // 无需获得文件页的相关信息，因为该内存页的 ref_count >0
     // 时不可能被用于存储其他文件页
-    void DecRefCount() {
-      std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
-      atomic_packed.fetch_sub(1);
-    }
+    FORCE_INLINE void DecRefCount() { as_atomic(AsPacked()).fetch_sub(1); }
 #endif
 
     bool SetDirty(bool _dirty) {
