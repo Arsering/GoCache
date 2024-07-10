@@ -277,7 +277,6 @@ class BufferBlockImp6 {
     assert(datas_.data != nullptr);
     assert(offset < size_);
 #endif
-    // com_mark_ = true;
 
     size_t size_left = std::min((size_ - offset), right.size()),
            offset_t = offset;
@@ -455,7 +454,7 @@ class BufferBlockImp6 {
 #if ASSERT_ENABLE
     assert(ret != nullptr);
 #endif
-    return {reinterpret_cast<T*>(ret), target_pte};
+    return {(T*) ret, target_pte};
   }
 
  private:
@@ -470,18 +469,20 @@ class BufferBlockImp6 {
   };
 
   FORCE_INLINE bool InitPage(size_t page_id) const {
-    if constexpr (LAZY_SSD_IO) {
-      if (likely(page_num_ == 1)) {
-        assert(page_id == 0);
-        if (!ptes_.pte->initialized) {
-          return LoadPage(page_id);
-        }
-      } else {
-        if (!ptes_.ptes[page_id]->initialized) {
-          return LoadPage(page_id);
-        }
+#if LAZY_SSD_IO_NEW
+    if (likely(page_num_ == 1)) {
+#if ASSERT_ENABLE
+      assert(page_id == 0);
+#endif
+      if (!ptes_.pte->initialized) {
+        return LoadPage(page_id);
+      }
+    } else {
+      if (!ptes_.ptes[page_id]->initialized) {
+        return LoadPage(page_id);
       }
     }
+#endif
     return true;
   }
 

@@ -6,11 +6,12 @@
 
 #pragma once
 
-// #define GRAPHSCOPE
+#define GRAPHSCOPE
 
 #define ASSERT_ENABLE false
 #define EVICTION_SYNC_ENABLE true
 #define BPM_SYNC_ENABLE true
+#define LAZY_SSD_IO_NEW false
 // #define USING_EDGE_ITER
 
 #ifdef GRAPHSCOPE
@@ -48,8 +49,6 @@ constexpr bool DEBUG = false;
 constexpr bool EVICTION_BATCH_ENABLE = false;
 constexpr size_t EVICTION_BATCH_SIZE = 10;
 constexpr static size_t EVICTION_FIBER_CHANNEL_DEPTH = 10;
-
-constexpr bool LAZY_SSD_IO = false;
 
 constexpr uint32_t INVALID_PAGE_ID =
     std::numeric_limits<uint32_t>::max();  // representing an invalid page id

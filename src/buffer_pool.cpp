@@ -255,36 +255,34 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
   auto file_size = disk_manager_->GetFileSizeShort(fd);
   assert(fpage_id < CEIL(file_size, PAGE_SIZE_MEMORY));
 #endif
+  auto ret = Pin(fpage_id, fd);
+  if (ret.first) {  // 1.1
+    return ret;
+  }
 
-  // std::lock_guard<std::mutex> lck(latch_);
   auto stat = BP_async_request_type::Phase::Begin;
-
 #if ASSERT_ENABLE
   assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
 #endif
 
   fpage_id_type fpage_id_inpool = partitioner_->GetFPageIdInPartition(fpage_id);
-  pair_min<PTE*, char*> ret;
 
   while (true) {
     switch (stat) {
     case BP_async_request_type::Phase::Begin: {
-      ret = Pin(fpage_id, fd);
-
-      if (ret.first) {  // 1.1
-        stat = BP_async_request_type::Phase::End;
-        break;
-      }
       auto [locked, mpage_id] = page_table_->LockMapping(fd, fpage_id_inpool);
 
-      if (locked) {
-        if (mpage_id == PageMapping::Mapping::EMPTY_VALUE)
-          stat = BP_async_request_type::Phase::Initing;
-        else {
+      if (locked && mpage_id == PageMapping::Mapping::EMPTY_VALUE) {
+        stat = BP_async_request_type::Phase::Initing;
+      } else {
+        if (locked)
           page_table_->UnLockMapping(fd, fpage_id_inpool, mpage_id);
-          // std::this_thread::yield();
-          // std::this_thread::sleep_for(
-          //     std::chrono::microseconds(ASYNC_SSDIO_SLEEP_TIME_MICROSECOND));
+        while (true) {
+          ret = Pin(fpage_id, fd);
+          if (ret.first) {  // 1.1
+            stat = BP_async_request_type::Phase::End;
+            break;
+          }
         }
       }
       break;
@@ -348,19 +346,15 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
     case BP_async_request_type::Phase::Loading: {  // 4
       thread_local static PTE tmp;
       tmp.Clean();
-      if constexpr (LAZY_SSD_IO) {
-        *reinterpret_cast<fpage_id_type*>(ret.second) = fpage_id;
-        tmp.initialized = false;
-      } else {
-#ifdef DEBUG_BITMAP
-        assert(disk_manager_->GetUsedMark(fd, fpage_id) == false);
-        disk_manager_->SetUsedMark(fd, fpage_id, true);
-        assert(disk_manager_->GetUsedMark(fd, fpage_id) == true);
+
+#if LAZY_SSD_IO_NEW
+      *reinterpret_cast<fpage_id_type*>(ret.second) = fpage_id;
+      tmp.initialized = false;
+#else
+      assert(ReadWriteSync(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
+                           ret.second, PAGE_SIZE_MEMORY, fd, true));
+      tmp.initialized = true;
 #endif
-        assert(ReadWriteSync(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
-                             ret.second, PAGE_SIZE_MEMORY, fd, true));
-        tmp.initialized = true;
-      }
       tmp.ref_count = 1;
       tmp.fpage_id_cur = fpage_id_inpool;
       tmp.fd_cur = fd;
@@ -441,15 +435,6 @@ bool BufferPool::FetchPageAsyncInner(BP_async_request_type& req) {
     }
     case BP_async_request_type::Phase::Evicting: {  // 2
 
-#ifdef DEBUG_BITMAP
-      size_t fd_old = ret.first->fd;
-      size_t fpage_id_old =
-          partitioner_->GetFPageIdGlobal(pool_ID_, ret.first->fpage_id);
-
-      assert(disk_manager_->GetUsedMark(fd_old, fpage_id_old) == true);
-      disk_manager_->SetUsedMark(fd_old, fpage_id_old, false);
-      assert(disk_manager_->GetUsedMark(fd_old, fpage_id_old) == false);
-#endif
       if (req.response.first->dirty) {
         req.ssd_IO_req.Init(req.response.second, PAGE_SIZE_MEMORY,
                             partitioner_->GetFPageIdGlobal(
@@ -478,37 +463,39 @@ bool BufferPool::FetchPageAsyncInner(BP_async_request_type& req) {
       break;
     }
     case BP_async_request_type::Phase::Loading: {  // 4
-      req.response.first->Clean();
 
-      if constexpr (LAZY_SSD_IO) {
-        *reinterpret_cast<fpage_id_type*>(req.response.second) =
-            fpage_id;  // 传递参数
-        req.response.first->initialized = false;
-      } else {
-        req.ssd_io_finish->Reset();
-        // if (req.ssd_IO_req != nullptr) {
-        //   delete req.ssd_io_finish;
-        //   req.ssd_io_finish = new AsyncMesg1();
-        // }
-        req.ssd_IO_req.Init(req.response.second, PAGE_SIZE_MEMORY,
-                            fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_FILE, req.fd,
-                            req.ssd_io_finish, true);
-      }
-      assert(!io_server_->ProcessFunc(req.ssd_IO_req));
+      req.tmp.Clean();
       req.runtime_phase = BP_async_request_type::Phase::LoadingFinish;
 
+#if LAZY_SSD_IO_NEW
+      *reinterpret_cast<fpage_id_type*>(req.response.second) =
+          fpage_id;  // 传递参数
+      req.tmp.initialized = false;
+      break;
+#else
+      req.ssd_io_finish->Reset();
+      // if (req.ssd_IO_req != nullptr) {
+      //   delete req.ssd_io_finish;
+      //   req.ssd_io_finish = new AsyncMesg1();
+      // }
+      req.ssd_IO_req.Init(req.response.second, PAGE_SIZE_MEMORY,
+                          fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_FILE, req.fd,
+                          req.ssd_io_finish, true);
+      assert(!io_server_->ProcessFunc(req.ssd_IO_req));
       return false;
+#endif
     }
     case BP_async_request_type::Phase::LoadingFinish: {
-      if constexpr (!LAZY_SSD_IO) {
-        if (!io_server_->ProcessFunc(req.ssd_IO_req))
-          return false;
-        req.response.first->initialized = true;
-      }
+#if !LAZY_SSD_IO_NEW
+      if (!io_server_->ProcessFunc(req.ssd_IO_req))
+        return false;
+      req.tmp.initialized = true;
+#endif
 
-      req.response.first->ref_count = 1;
-      req.response.first->fpage_id_cur = fpage_id_inpool;
-      req.response.first->fd_cur = req.fd;
+      req.tmp.ref_count = 1;
+      req.tmp.fpage_id_cur = fpage_id_inpool;
+      req.tmp.fd_cur = req.fd;
+      as_atomic(req.response.first->AsPacked()).store(req.tmp.AsPacked());
 
       assert(replacer_->Insert(page_table_->ToPageId(req.response.first)));
       std::atomic_thread_fence(std::memory_order_release);
