@@ -18,6 +18,7 @@
 
 #include "config.h"
 #include "debug.h"
+#include "partitioner.h"
 #include "utils.h"
 
 namespace gbp {
@@ -397,13 +398,13 @@ class PageMapping {
   ~PageMapping() { Resize(0); }
 
   FORCE_INLINE pair_min<bool, mpage_id_type> FindMapping(
-      fpage_id_type fpage_id) const {
+      fpage_id_type fpage_id_inpool) const {
 #if ASSERT_ENABLE
     assert(fpage_id < size_);
 #endif
 
     std::atomic<mpage_id_type>& atomic_data =
-        as_atomic((mpage_id_type&) mappings_[fpage_id]);
+        as_atomic((mpage_id_type&) mappings_[fpage_id_inpool]);
     mpage_id_type data = atomic_data.load(std::memory_order_relaxed);
 
     auto& unpacked_data = Mapping::FromPacked(data);
@@ -415,12 +416,12 @@ class PageMapping {
       return {true, unpacked_data.mpage_id};
   }
 
-  bool CreateMapping(fpage_id_type fpage_id, mpage_id_type mpage_id) {
+  bool CreateMapping(fpage_id_type fpage_id_inpool, mpage_id_type mpage_id) {
 #if ASSERT_ENABLE
     assert(fpage_id < size_);
 #endif
     std::atomic<mpage_id_type>& atomic_data =
-        as_atomic((mpage_id_type&) mappings_[fpage_id]);
+        as_atomic((mpage_id_type&) mappings_[fpage_id_inpool]);
     mpage_id_type old_data = atomic_data.load(std::memory_order_relaxed),
                   new_data;
 
@@ -438,12 +439,12 @@ class PageMapping {
     return true;
   }
 
-  bool DeleteMapping(fpage_id_type fpage_id) {
+  bool DeleteMapping(fpage_id_type fpage_id_inpool) {
 #if ASSERT_ENABLE
     assert(fpage_id < size_);
 #endif
     std::atomic<mpage_id_type>& atomic_data =
-        as_atomic((mpage_id_type&) mappings_[fpage_id]);
+        as_atomic((mpage_id_type&) mappings_[fpage_id_inpool]);
     mpage_id_type old_data = atomic_data.load(std::memory_order_relaxed),
                   new_data;
 
@@ -462,12 +463,12 @@ class PageMapping {
     return true;
   }
 
-  pair_min<bool, mpage_id_type> LockMapping(fpage_id_type fpage_id) {
+  pair_min<bool, mpage_id_type> LockMapping(fpage_id_type fpage_id_inpool) {
 #if ASSERT_ENABLE
     assert(fpage_id < size_);
 #endif
     std::atomic<mpage_id_type>& atomic_data =
-        as_atomic((mpage_id_type&) mappings_[fpage_id]);
+        as_atomic((mpage_id_type&) mappings_[fpage_id_inpool]);
     mpage_id_type old_data = atomic_data.load(std::memory_order_relaxed),
                   new_data;
 
@@ -528,8 +529,9 @@ class PageMapping {
 
 class PageTable {
  public:
-  PageTable() : mappings_(), page_table_inner_() {}
-  PageTable(mpage_id_type mpage_num) {
+  PageTable() : mappings_(), page_table_inner_(), partitioner_(nullptr) {}
+  PageTable(mpage_id_type mpage_num, RoundRobinPartitioner* partitioner)
+      : partitioner_(partitioner) {
     page_table_inner_ = new PageTableInner(mpage_num);
   }
   ~PageTable() {
@@ -565,7 +567,8 @@ class PageTable {
     assert(fd < mappings_.size());
     assert(mappings_[fd] != nullptr);
 #endif
-    return mappings_[fd]->FindMapping(fpage_id);
+    return mappings_[fd]->FindMapping(
+        partitioner_->GetFPageIdInPartition(fpage_id));
   }
 
   /**
@@ -583,7 +586,8 @@ class PageTable {
     assert(fd < mappings_.size());
     assert(mappings_[fd] != nullptr);
 #endif
-    return mappings_[fd]->CreateMapping(fpage_id, mpage_id);
+    return mappings_[fd]->CreateMapping(
+        partitioner_->GetFPageIdInPartition(fpage_id), mpage_id);
   }
 
   /**
@@ -599,7 +603,8 @@ class PageTable {
     assert(fd < mappings_.size());
     assert(mappings_[fd] != nullptr);
 #endif
-    return mappings_[fd]->DeleteMapping(fpage_id);
+    return mappings_[fd]->DeleteMapping(
+        partitioner_->GetFPageIdInPartition(fpage_id));
   }
 
   /**
@@ -617,7 +622,8 @@ class PageTable {
     assert(fd < mappings_.size());
     assert(mappings_[fd] != nullptr);
 #endif
-    auto [success, mpage_id] = mappings_[fd]->LockMapping(fpage_id);
+    auto fpage_id_inpool = partitioner_->GetFPageIdInPartition(fpage_id);
+    auto [success, mpage_id] = mappings_[fd]->LockMapping(fpage_id_inpool);
 
     if (!success)
       return {false, 0};
@@ -627,8 +633,9 @@ class PageTable {
     auto* tar = FromPageId(mpage_id);
     // 在mapping被锁住之前，有其他正常的访问到达了pte，导致pte的锁住失败
     if (!tar->Lock()) {
-      assert(mappings_[fd]->CreateMapping(
-          fpage_id, mpage_id));  // 一旦锁pte失败，则必须释放
+      assert(
+          mappings_[fd]->CreateMapping(fpage_id_inpool,
+                                       mpage_id));  // 一旦锁pte失败，则必须释放
       return {false, 0};
     }
     // 一旦mapping被锁住，那说明tar->fpage_id != fpage_id && tar->fd ==
@@ -664,7 +671,8 @@ class PageTable {
     assert(mappings_[fd] != nullptr);
 #endif
 
-    if (!mappings_[fd]->CreateMapping(fpage_id, mpage_id))
+    if (!mappings_[fd]->CreateMapping(
+            partitioner_->GetFPageIdInPartition(fpage_id), mpage_id))
       return false;
 
     return true;
@@ -695,6 +703,7 @@ class PageTable {
 
  private:
   std::vector<PageMapping*> mappings_;
+  RoundRobinPartitioner* partitioner_;
   PageTableInner* page_table_inner_;
 };
 }  // namespace gbp

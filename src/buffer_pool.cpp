@@ -45,7 +45,7 @@ void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
 
   // a consecutive memory space for buffer pool
   memory_pool_ = memory_pool;
-  page_table_ = new PageTable(pool_size_);
+  page_table_ = new PageTable(pool_size_, partitioner_);
 
   // replacer_ = new FIFOReplacer(page_table_);
   // replacer_ = new FIFOReplacer_v2(page_table_, pool_size_);
@@ -107,9 +107,7 @@ void BufferPool::CloseFile(GBPfile_handle_type fd) {
  * NOTE: make sure page_id != INVALID_PAGE_ID
  */
 bool BufferPool::FlushPage(fpage_id_type fpage_id, GBPfile_handle_type fd) {
-  fpage_id_type fpage_id_inpool = partitioner_->GetFPageIdInPartition(fpage_id);
-
-  auto [locked, mpage_id] = page_table_->LockMapping(fd, fpage_id_inpool);
+  auto [locked, mpage_id] = page_table_->LockMapping(fd, fpage_id);
   if (!locked)
     return false;
 
@@ -123,7 +121,7 @@ bool BufferPool::FlushPage(fpage_id_type fpage_id, GBPfile_handle_type fd) {
       tar->dirty = false;
     }
   }
-  assert(page_table_->UnLockMapping(fd, fpage_id_inpool, mpage_id));
+  assert(page_table_->UnLockMapping(fd, fpage_id, mpage_id));
   return true;
 }
 
@@ -265,18 +263,16 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
   assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
 #endif
 
-  fpage_id_type fpage_id_inpool = partitioner_->GetFPageIdInPartition(fpage_id);
-
   while (true) {
     switch (stat) {
     case BP_async_request_type::Phase::Begin: {
-      auto [locked, mpage_id] = page_table_->LockMapping(fd, fpage_id_inpool);
+      auto [locked, mpage_id] = page_table_->LockMapping(fd, fpage_id);
 
       if (locked && mpage_id == PageMapping::Mapping::EMPTY_VALUE) {
         stat = BP_async_request_type::Phase::Initing;
       } else {
         if (locked)
-          page_table_->UnLockMapping(fd, fpage_id_inpool, mpage_id);
+          page_table_->UnLockMapping(fd, fpage_id, mpage_id);
         while (true) {
           ret = Pin(fpage_id, fd);
           if (ret.first) {  // 1.1
@@ -330,11 +326,9 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
       assert(disk_manager_->GetUsedMark(fd_old, fpage_id_old) == false);
 #endif
       if (ret.first->dirty) {
-        assert(ReadWriteSync(
-            partitioner_->GetFPageIdGlobal(pool_ID_, ret.first->fpage_id_cur) *
-                PAGE_SIZE_FILE,
-            PAGE_SIZE_FILE, ret.second, PAGE_SIZE_MEMORY, ret.first->fd_cur,
-            false));
+        assert(ReadWriteSync(ret.first->fpage_id_cur * PAGE_SIZE_FILE,
+                             PAGE_SIZE_FILE, ret.second, PAGE_SIZE_MEMORY,
+                             ret.first->fd_cur, false));
       }
 
       assert(page_table_->DeleteMapping(ret.first->fd_cur,
@@ -356,13 +350,13 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
       tmp.initialized = true;
 #endif
       tmp.ref_count = 1;
-      tmp.fpage_id_cur = fpage_id_inpool;
+      tmp.fpage_id_cur = fpage_id;
       tmp.fd_cur = fd;
       as_atomic(ret.first->AsPacked()).store(tmp.AsPacked());
       assert(replacer_->Insert(page_table_->ToPageId(ret.first)));
 
       std::atomic_thread_fence(std::memory_order_release);
-      assert(page_table_->CreateMapping(fd, fpage_id_inpool,
+      assert(page_table_->CreateMapping(fd, fpage_id,
                                         page_table_->ToPageId(ret.first)));
       stat = BP_async_request_type::Phase::End;
     }
@@ -385,19 +379,17 @@ bool BufferPool::FetchPageAsyncInner(BP_async_request_type& req) {
   assert(partitioner_->GetPartitionId(req.fpage_id) == pool_ID_);
 #endif
   fpage_id_type fpage_id = req.file_offset / PAGE_SIZE_FILE;
-  fpage_id_type fpage_id_inpool = partitioner_->GetFPageIdInPartition(fpage_id);
 
   while (true) {
     switch (req.runtime_phase) {
     case BP_async_request_type::Phase::Begin: {
-      auto [locked, mpage_id] =
-          page_table_->LockMapping(req.fd, fpage_id_inpool);
+      auto [locked, mpage_id] = page_table_->LockMapping(req.fd, fpage_id);
 
       if (locked) {
         if (mpage_id == PageMapping::Mapping::EMPTY_VALUE)
           req.runtime_phase = BP_async_request_type::Phase::Initing;
         else {
-          page_table_->UnLockMapping(req.fd, fpage_id_inpool, mpage_id);
+          page_table_->UnLockMapping(req.fd, fpage_id, mpage_id);
           req.runtime_phase = BP_async_request_type::Phase::Rebegin;
           return false;
         }
@@ -437,9 +429,7 @@ bool BufferPool::FetchPageAsyncInner(BP_async_request_type& req) {
 
       if (req.response.first->dirty) {
         req.ssd_IO_req.Init(req.response.second, PAGE_SIZE_MEMORY,
-                            partitioner_->GetFPageIdGlobal(
-                                pool_ID_, req.response.first->fpage_id_cur) *
-                                PAGE_SIZE_FILE,
+                            req.response.first->fpage_id_cur * PAGE_SIZE_FILE,
                             PAGE_SIZE_FILE, req.response.first->fd_cur,
                             req.ssd_io_finish, false);
         if (!io_server_->ProcessFunc(req.ssd_IO_req)) {
@@ -493,7 +483,7 @@ bool BufferPool::FetchPageAsyncInner(BP_async_request_type& req) {
 #endif
 
       req.tmp.ref_count = 1;
-      req.tmp.fpage_id_cur = fpage_id_inpool;
+      req.tmp.fpage_id_cur = fpage_id;
       req.tmp.fd_cur = req.fd;
       as_atomic(req.response.first->AsPacked()).store(req.tmp.AsPacked());
 
@@ -501,7 +491,7 @@ bool BufferPool::FetchPageAsyncInner(BP_async_request_type& req) {
       std::atomic_thread_fence(std::memory_order_release);
 
       assert(page_table_->CreateMapping(
-          req.fd, fpage_id_inpool, page_table_->ToPageId(req.response.first)));
+          req.fd, fpage_id, page_table_->ToPageId(req.response.first)));
 
       req.runtime_phase = BP_async_request_type::Phase::End;
       break;
