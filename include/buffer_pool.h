@@ -197,15 +197,12 @@ class BufferPool {
 
   FORCE_INLINE pair_min<PTE*, char*> Pin(fpage_id_type fpage_id,
                                          GBPfile_handle_type fd) {
-    fpage_id_type fpage_id_inpool =
-        partitioner_->GetFPageIdInPartition(fpage_id);
-
     // 1.1
-    auto [success, mpage_id] = page_table_->FindMapping(fd, fpage_id_inpool);
+    auto [success, mpage_id] = page_table_->FindMapping(fd, fpage_id);
     if (success) {
       auto tar = page_table_->FromPageId(mpage_id);
       // auto [has_inc, pre_ref_count] = tar->IncRefCount(fpage_id_inpool, fd);
-      auto has_inc = tar->IncRefCount1(fpage_id_inpool, fd);
+      auto has_inc = tar->IncRefCount1(fpage_id, fd);
 
       if (has_inc) {
         assert(replacer_->Promote(page_table_->ToPageId(tar)));
