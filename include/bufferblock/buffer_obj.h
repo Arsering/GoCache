@@ -34,6 +34,7 @@
 
 #include "buffer_block_imp6.h"
 #include "buffer_block_imp8.h"
+#include "buffer_block_imp9.h"
 
 #ifdef GRAPHSCOPE
 #include "flex/utils/property/types.h"

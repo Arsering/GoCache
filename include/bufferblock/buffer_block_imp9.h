@@ -115,6 +115,9 @@ class BufferBlockImp9 {
 #if ASSERT_ENABLE
     assert(idx < page_num_);
 #endif
+    // if (pte->fd_cur == 26 && pte->fpage_id_cur == 76)
+    //   GBPLOG << "gt" << mark << (uintptr_t) this << " " << size_ << " "
+    //          << page_num_;
     if (page_num_ == 1) {
       datas_.data = data;
       ptes_.pte = pte;
@@ -198,7 +201,11 @@ class BufferBlockImp9 {
     dst.marks_ = src.marks_;
     dst.ptes_ = src.ptes_;
     dst.size_ = src.size_;
-
+    // if (dst.page_num_ == 1 && dst.ptes_.pte->fd_cur == 26 &&
+    //     dst.ptes_.pte->fpage_id_cur == 76)
+    //   GBPLOG << (uintptr_t) &src << " " << src.size_ << " " << (uintptr_t)
+    //   &dst
+    //          << " " << dst.size_;
     const_cast<BufferBlockImp9&>(src).size_ = 0;
   }
 
@@ -216,7 +223,6 @@ class BufferBlockImp9 {
     // 如果ptes不为空，则free
     if (size_ != 0) {
       if (likely(page_num_ == 1)) {
-        // ptes_.pte->DecRefCount();
         if (!marks_.mark)
           ptes_.pte->DecRefCount();
         else

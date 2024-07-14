@@ -167,13 +167,13 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
   while (count != 0) {
     count--;
     // size_t query_count = get_trace_global()[thread_id].size();
-    size_t query_count = 50000000;
+    size_t query_count = 5000;
 
     // for (io_id = 0; io_id < io_num; io_id += io_size_in / sizeof(size_t)) {
     // io_size = sizeof(size_t);
 
     while (query_count != 0) {
-      // query_count--;
+      query_count--;
       io_id = rnd(gen);
 
       // io_id = ZipfianGenerator::GetGen().generate() *
@@ -205,8 +205,11 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
         // auto ret = bpm.GetBlockAsync(curr_io_fileoffset, io_size);
         // auto block = ret.get();
 
-        auto block = bpm.GetBlockSync(curr_io_fileoffset, io_size);
-        if constexpr (true) {
+        // auto block = bpm.GetBlockSync(curr_io_fileoffset, io_size);
+        auto block =
+            bpm.GetBlockWithDirectCacheSync(curr_io_fileoffset, io_size);
+
+        if constexpr (false) {
           // auto ret_new = bpm.GetObject(curr_io_fileoffset, io_size);
           // auto iter = gbp::BufferBlockIter<size_t>(ret_new);
           for (size_t i = 0; i < io_size / sizeof(size_t); i++) {

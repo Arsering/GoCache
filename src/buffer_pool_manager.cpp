@@ -474,4 +474,70 @@ std::future<BufferBlock> BufferPoolManager::GetBlockAsync(
   }
   assert(false);
 }
+
+const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(
+    size_t file_offset, size_t block_size, GBPfile_handle_type fd) const {
+  size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
+  size_t num_page =
+      fpage_offset == 0 || (block_size <= (PAGE_SIZE_FILE - fpage_offset))
+          ? CEIL(block_size, PAGE_SIZE_FILE)
+          : (CEIL(block_size - (PAGE_SIZE_FILE - fpage_offset),
+                  PAGE_SIZE_FILE) +
+             1);
+  BufferBlock ret(block_size, num_page);
+
+  fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
+  if (likely(num_page == 1)) {
+    auto pte = DirectCache::GetDirectCache().Find(fd, fpage_id);
+    if (pte) {
+      auto pool = pools_[partitioner_->GetPartitionId(fpage_id)];
+      auto data = (char*) pool->memory_pool_.FromPageId(
+          pool->page_table_->ToPageId(pte));
+
+      ret.InsertPage(0, data + fpage_offset, pte);
+    } else {
+      auto mpage =
+          pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
+              fpage_id, fd);
+
+#if ASSERT_ENABLE
+      assert(mpage.first != nullptr && mpage.second != nullptr);
+#endif
+
+      ret.InsertPage(
+          0, mpage.second + fpage_offset, mpage.first,
+          DirectCache::GetDirectCache().Insert(fd, fpage_id, mpage.first));
+    }
+  } else {
+    size_t page_id = 0;
+    while (page_id < num_page) {
+      auto pte = DirectCache::GetDirectCache().Find(fd, fpage_id);
+      if (pte) {
+        auto pool = pools_[partitioner_->GetPartitionId(fpage_id)];
+        auto data = (char*) pool->memory_pool_.FromPageId(
+            pool->page_table_->ToPageId(pte));
+        ret.InsertPage(page_id, data + fpage_offset, pte);
+      } else {
+        auto mpage =
+            pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
+                fpage_id, fd);
+
+#if ASSERT_ENABLE
+        assert(mpage.first != nullptr && mpage.second != nullptr);
+#endif
+
+        ret.InsertPage(
+            page_id, mpage.second + fpage_offset, mpage.first,
+            DirectCache::GetDirectCache().Insert(fd, fpage_id, mpage.first));
+      }
+      page_id++;
+      fpage_offset = 0;
+      fpage_id++;
+    }
+  }
+  // gbp::get_counter_global(11).fetch_add(ret.PageNum());
+
+  return ret;
+}
+
 }  // namespace gbp
