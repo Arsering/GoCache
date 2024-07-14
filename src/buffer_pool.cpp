@@ -262,7 +262,6 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
 #if ASSERT_ENABLE
   assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
 #endif
-
   while (true) {
     switch (stat) {
     case BP_async_request_type::Phase::Begin: {

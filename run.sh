@@ -19,11 +19,11 @@ cd ..
 
 CUR_DIR=.
 
-export FILE_SIZE_MB=$((1024*10))
+export FILE_SIZE_MB=$((1024*2))
 export WORKER_NUM=10
 export POOL_NUM=2
 export IO_SERVER_NUM=${POOL_NUM}
-export POOL_SIZE_MB=$((1024*3))
+export POOL_SIZE_MB=$((1024*1))
 export IO_SIZE_Byte=$((8*512))
 # export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD
 

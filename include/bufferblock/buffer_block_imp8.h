@@ -130,6 +130,10 @@ class BufferBlockImp7 {
     }
   }
 
+  void InsertPage(size_t idx, char* data, PTE* pte, bool mark) {
+    assert(false);
+  }
+
   static BufferBlockImp7 Copy(const BufferBlockImp7& rhs) {
     BufferBlockImp7 ret(rhs.size_);
 #if ASSERT_ENABLE

@@ -86,7 +86,8 @@ class BufferPoolManager {
 
   std::future<BufferBlock> GetBlockAsync(size_t file_offset, size_t block_size,
                                          GBPfile_handle_type fd = 0) const;
-
+  const BufferBlock GetBlockWithDirectCacheSync(
+      size_t file_offset, size_t block_size, GBPfile_handle_type fd = 0) const;
   int SetBlock(const BufferBlock& buf, size_t file_offset, size_t block_size,
                GBPfile_handle_type fd = 0, bool flush = false);
 
