@@ -10,12 +10,12 @@
             "request": "launch",
             "program": "${workspaceFolder}/bin/graphscope_bufferpool", //指定C/C++程序位置
             "args": [
-                10,
-                1,
-                1,
-                1,
-                1,
-                10240,
+                30720,
+                100,
+                8,
+                1024,
+                8,
+                4096,
                 "."
             ], //指定运行参数
             "stopAtEntry": false,

@@ -103,7 +103,9 @@ class IOServer {
   bool SendRequest(GBPfile_handle_type fd, size_t offset, size_t size,
                    char* buf, AsyncMesg* finish, bool is_read = true,
                    bool blocked = true) {
+#if ASSERT_ENABLE
     assert(buf != nullptr);
+#endif
     async_SSD_IO_request_type* req = new async_SSD_IO_request_type();
     req->Init(buf, PAGE_SIZE_FILE, offset, size, fd, finish, is_read);
     return SendRequest(req, blocked);
@@ -134,7 +136,6 @@ class IOServer {
       req.async_context.state = context_type::State::Poll;
       return false;
     }
-
     case context_type::State::Poll: {
       io_backend_->Progress();
       if (req.async_context.finish->TryWait()) {

@@ -12,6 +12,7 @@
 #include <immintrin.h>
 #include <sys/mman.h>
 #include <algorithm>
+#include <boost/functional/hash.hpp>
 #include <cstring>
 #include <iostream>
 #include <optional>
@@ -717,31 +718,38 @@ class DirectCache {
     PTE* pte_cur;
   };
 
-  DirectCache(size_t capacity) : capacity_(capacity) {
+  DirectCache(size_t capacity = DIRECT_CACHE_SIZE) : capacity_(capacity) {
     cache_.resize(capacity_);
   }
+
   ~DirectCache() {
-    size_t count = 0;
     for (auto& page : cache_) {
       if (page.pte_cur != nullptr) {
         // if (page.count != 0)
         //   GBPLOG << page.count << " " << page.pte_cur->fd_cur << " "
         //          << page.pte_cur->fpage_id_cur;
         // assert(page.count == 0);
-        count++;
         page.pte_cur->DecRefCount();
       }
     }
     // GBPLOG << hit << " " << miss;
+    // LOG(INFO) << "cp";
   }
   FORCE_INLINE bool Insert(GBPfile_handle_type fd, fpage_id_type fpage_id,
                            PTE* pte) {
-    size_t index = ((fd + 1) * fpage_id) % capacity_;
+    size_t index = ((fd << sizeof(fpage_id_type)) + fpage_id) % capacity_;
+    // size_t index = 0;
+    // boost::hash_combine(index, fd);
+    // boost::hash_combine(index, fpage_id);
+    // index = index % capacity_;
+
     if (cache_[index].pte_cur == nullptr || cache_[index].count == 0) {
       if (cache_[index].pte_cur != nullptr) {
         cache_[index].pte_cur->DecRefCount();
+#if ASSERT_ENABLE
         assert(!(fd == cache_[index].pte_cur->fd_cur &&
                  fpage_id == cache_[index].pte_cur->fpage_id_cur));
+#endif
       }
       cache_[index].pte_cur = pte;
       cache_[index].count = 1;
@@ -750,7 +758,12 @@ class DirectCache {
     return false;
   }
   FORCE_INLINE PTE* Find(GBPfile_handle_type fd, fpage_id_type fpage_id) {
-    size_t index = ((fd + 1) * fpage_id) % capacity_;
+    size_t index = ((fd << sizeof(fpage_id_type)) + fpage_id) % capacity_;
+    // size_t index = 0;
+    // boost::hash_combine(index, fd);
+    // boost::hash_combine(index, fpage_id);
+    // index = index % capacity_;
+
     if (cache_[index].pte_cur != nullptr &&
         cache_[index].pte_cur->fd_cur == fd &&
         cache_[index].pte_cur->fpage_id_cur == fpage_id) {
@@ -762,21 +775,32 @@ class DirectCache {
     return nullptr;
   }
   FORCE_INLINE void Erase(GBPfile_handle_type fd, fpage_id_type fpage_id) {
-    size_t index = ((fd + 1) * fpage_id) % capacity_;
+#if ASSERT_ENABLE
+    assert(cache_[index].pte_cur != nullptr);
+#endif
+    size_t index = ((fd << sizeof(fpage_id_type)) + fpage_id) % capacity_;
+    // size_t index = 0;
+    // boost::hash_combine(index, fd);
+    // boost::hash_combine(index, fpage_id);
+    // index = index % capacity_;
     if (cache_[index].pte_cur != nullptr) {
       cache_[index].count--;
-    } else {
-      // assert(false);
     }
   }
 
   FORCE_INLINE static DirectCache& GetDirectCache() {
+    // #if ASSERT_ENABLE
+    // assert(get_thread_id() < 40);
+    // #endif
+    // static std::vector<DirectCache> direct_caches(40);
+    // return direct_caches[get_thread_id()];
+
     static thread_local DirectCache direct_cache{DIRECT_CACHE_SIZE};
     return direct_cache;
   }
 
  private:
-  constexpr static size_t DIRECT_CACHE_SIZE = 256 * 4;
+  constexpr static size_t DIRECT_CACHE_SIZE = 256 * 64 - 3;
   std::vector<Node> cache_;
   size_t capacity_;
   // size_t hit = 0;

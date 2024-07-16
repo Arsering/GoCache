@@ -11,6 +11,7 @@ size_t get_thread_id() {
   static thread_local size_t thread_id_local = thread_id_global++;
   return thread_id_local;
 }
+
 std::string& get_log_dir() {
   static std::string log_dir = ".";
   return log_dir;

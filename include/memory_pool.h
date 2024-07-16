@@ -81,7 +81,7 @@ class MemoryPool {
     assert(ptr < pool_ + num_pages_ * PAGE_SIZE_MEMORY);
 #endif
 
-    return ((char*) ptr - pool_) / PAGE_SIZE_MEMORY;
+    return ((char*) ptr - pool_) >> LOG_PAGE_SIZE_MEMORY;
   }
 #ifdef DEBUG_BITMAP
   FORCE_INLINE boost::dynamic_bitset<>& GetUsedMark() { return used_; }

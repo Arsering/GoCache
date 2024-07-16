@@ -336,8 +336,10 @@ class IOURing : public IOBackend {
     auto num_ready = io_uring_peek_batch_cqe(&ring_, cqes_, IOURing_MAX_DEPTH);
     for (int i = 0; i < num_ready; i++) {
       void* finish = io_uring_cqe_get_data(cqes_[i]);
-      if (finish)
+
+      if (finish != nullptr) {
         ((AsyncMesg*) finish)->Post();
+      }
     }
     io_uring_cq_advance(&ring_, num_ready);
     num_processing_ -= num_ready;

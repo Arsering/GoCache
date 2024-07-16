@@ -19,9 +19,9 @@ cd ..
 
 CUR_DIR=.
 
-export FILE_SIZE_MB=$((1024*2))
+export FILE_SIZE_MB=$((1024*30))
 export WORKER_NUM=10
-export POOL_NUM=2
+export POOL_NUM=8
 export IO_SERVER_NUM=${POOL_NUM}
 export POOL_SIZE_MB=$((1024*1))
 export IO_SIZE_Byte=$((8*512))

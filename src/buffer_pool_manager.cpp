@@ -144,7 +144,7 @@ bool BufferPoolManager::ReadWrite(size_t offset, size_t file_size, char* buf,
                                   size_t buf_size, GBPfile_handle_type fd,
                                   bool is_read) {
   auto io_server =
-      io_servers_[partitioner_->GetPartitionId(offset / PAGE_SIZE_FILE) %
+      io_servers_[partitioner_->GetPartitionId(offset >> LOG_PAGE_SIZE_FILE) %
                   io_servers_.size()];
 
   if constexpr (USING_FIBER_ASYNC_RESPONSE) {
@@ -218,7 +218,7 @@ int BufferPoolManager::GetBlock(char* buf, size_t file_offset,
                                 size_t block_size,
                                 GBPfile_handle_type fd) const {
   // std::lock_guard<std::mutex> lck(latch_);
-  fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
+  fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
   size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
   size_t object_size_t = 0;
   size_t st, latency;
@@ -244,7 +244,7 @@ int BufferPoolManager::GetBlock(char* buf, size_t file_offset,
 int BufferPoolManager::SetBlock(const char* buf, size_t file_offset,
                                 size_t block_size, GBPfile_handle_type fd,
                                 bool flush) {
-  fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
+  fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
   size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
   size_t object_size_t = 0;
 
@@ -278,7 +278,7 @@ int BufferPoolManager::SetBlock(const BufferBlock& buf, size_t file_offset,
   assert(buf.Size() == block_size);
 #endif
 
-  fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
+  fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
   size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
 
   size_t buf_size = 0, object_size_t = 0;
@@ -321,7 +321,7 @@ const BufferBlock BufferPoolManager::GetBlockSync(
              1);
   BufferBlock ret(block_size, num_page);
 
-  fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
+  fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
   if (likely(num_page == 1)) {
     auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
         fpage_id, fd);
@@ -358,7 +358,7 @@ const BufferBlock BufferPoolManager::GetBlockSync(
 #endif
   BufferBlock ret(block_size, num_page);
 
-  fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
+  fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
   if (likely(num_page == 1)) {
     auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
         fpage_id, fd);
@@ -389,7 +389,7 @@ const BufferBlock BufferPoolManager::GetBlockSync(
 // const BufferBlock BufferPoolManager::GetBlockAsync(
 //     size_t file_offset, size_t block_size, GBPfile_handle_type fd) const {
 //   size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
-//   fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
+//   fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
 //   size_t num_page =
 //       fpage_offset == 0 || (block_size <= (PAGE_SIZE_FILE - fpage_offset))
 //           ? CEIL(block_size, PAGE_SIZE_FILE)
@@ -446,7 +446,7 @@ std::future<BufferBlock> BufferPoolManager::GetBlockAsync(
              1);
 
   if (num_page == 1) {
-    fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
+    fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
     auto mpage =
         pools_[partitioner_->GetPartitionId(fpage_id)]->Pin(fpage_id, fd);
     if (mpage.first != nullptr) {
@@ -460,6 +460,7 @@ std::future<BufferBlock> BufferPoolManager::GetBlockAsync(
           fd, file_offset, block_size);
     }
   } else {
+    assert(false);
     auto* req = new async_request_type(fd, file_offset, block_size, num_page);
     auto ret = req->promise.get_future();
 
@@ -486,7 +487,7 @@ const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(
              1);
   BufferBlock ret(block_size, num_page);
 
-  fpage_id_type fpage_id = file_offset / PAGE_SIZE_FILE;
+  fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
   if (likely(num_page == 1)) {
     auto pte = DirectCache::GetDirectCache().Find(fd, fpage_id);
     if (pte) {
