@@ -24,6 +24,8 @@
 using namespace gbp;
 
 namespace test {
+std::atomic<size_t> query_count = 0;
+const size_t query_count_max = 100000 * 2 / 3;
 
 void set_cpu_affinity() {
   static std::atomic<size_t> cpu_id = 0;
@@ -163,17 +165,18 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
 
   size_t curr_io_fileoffset, ret, io_size;
   size_t st, io_id;
+  size_t count_page = 10;
+  std::vector<std::future<BufferBlock>> block_container(count_page);
   int count = 1;
   while (count != 0) {
     count--;
     // size_t query_count = get_trace_global()[thread_id].size();
-    size_t query_count = 5000;
 
     // for (io_id = 0; io_id < io_num; io_id += io_size_in / sizeof(size_t)) {
     // io_size = sizeof(size_t);
 
-    while (query_count != 0) {
-      query_count--;
+    while (query_count.fetch_add(1) < (query_count_max - 1)) {
+      // query_count--;
       io_id = rnd(gen);
 
       // io_id = ZipfianGenerator::GetGen().generate() *
@@ -186,63 +189,64 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
       io_size = io_size_in;
       io_id = io_id / 512 * 512;
 
-#ifdef DEBUG_1
-      for (size_t i = 0; i < 14; i++)
-        gbp::get_counter(i) = 0;
-#endif
-
       curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
 
       // curr_io_fileoffset =
       //     get_trace_global()[thread_id][query_count] - 139874067804160;
-
-      // curr_io_fileoffset = 27354042368;
       io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
-      // std::cout << "ff = " << curr_io_fileoffset << std::endl;
 
-      // st = gbp::GetSystemTime();
-      {
+      st = gbp::GetSystemTime();
+      size_t count_page_tmp = 0;
+      while (count_page != count_page_tmp) {
+        io_id = rnd(gen);
+        io_size = io_size_in;
+        io_id = io_id / 512 * 512;
+        curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
+        io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
+
+        block_container[count_page_tmp] =
+            bpm.GetBlockAsync(curr_io_fileoffset, io_size);
         // auto ret = bpm.GetBlockAsync(curr_io_fileoffset, io_size);
         // auto block = ret.get();
+        count_page_tmp++;
 
         // auto block = bpm.GetBlockSync(curr_io_fileoffset, io_size);
-        auto block =
-            bpm.GetBlockWithDirectCacheSync(curr_io_fileoffset, io_size);
+        // auto block =
+        //     bpm.GetBlockWithDirectCacheSync(curr_io_fileoffset, io_size);
 
-        if constexpr (false) {
-          // auto ret_new = bpm.GetObject(curr_io_fileoffset, io_size);
-          // auto iter = gbp::BufferBlockIter<size_t>(ret_new);
-          for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
-            if (gbp::BufferBlock::Ref<size_t>(block, i) !=
-                (curr_io_fileoffset / sizeof(size_t) + i)) {
-              GBPLOG << gbp::BufferBlock::Ref<size_t>(block, i) << " "
-                     << (curr_io_fileoffset / sizeof(size_t) + i) << std::endl;
-            }
+        // if constexpr (false) {
+        //   // auto ret_new = bpm.GetObject(curr_io_fileoffset, io_size);
+        //   // auto iter = gbp::BufferBlockIter<size_t>(ret_new);
+        //   for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
+        //     if (gbp::BufferBlock::Ref<size_t>(block, i) !=
+        //         (curr_io_fileoffset / sizeof(size_t) + i)) {
+        //       GBPLOG << gbp::BufferBlock::Ref<size_t>(block, i) << " "
+        //              << (curr_io_fileoffset / sizeof(size_t) + i) <<
+        //              std::endl;
+        //     }
 
-            assert(gbp::BufferBlock::Ref<size_t>(block, i) ==
-                   (curr_io_fileoffset / sizeof(size_t) + i));
-            // assert(*(iter.current()) ==
-            //        (curr_io_fileoffset / sizeof(size_t) + i));
-            // iter.next();
-          }
-          // assert(iter.current() == nullptr);
-        }
+        //     assert(gbp::BufferBlock::Ref<size_t>(block, i) ==
+        //            (curr_io_fileoffset / sizeof(size_t) + i));
+        //     // assert(*(iter.current()) ==
+        //     //        (curr_io_fileoffset / sizeof(size_t) + i));
+        //     // iter.next();
+        //   }
+        //   // assert(iter.current() == nullptr);
+        // }
+      }
+      for (auto& block : block_container) {
+        block.get();
       }
 
-      // st = gbp::GetSystemTime() - st;
+      st = gbp::GetSystemTime() - st;
+      latency_log << st << std::endl;
       // latency_log << st << " | " << gbp::get_counter(1) << " | "
       //             << gbp::get_counter(2) << " | " << gbp::get_counter(11)
       //             << " | " << gbp::get_counter(12) << std::endl;
 
-#ifdef DEBUG_1
-      for (size_t i = 0; i < 14; i++)
-        latency_log << gbp::get_counter(i) << " | ";
-      latency_log << std::endl;
-#endif
       gbp::PerformanceLogServer::GetPerformanceLogger()
           .GetClientReadThroughputByte()
-          .fetch_add(io_size);
-      // return;
+          .fetch_add(io_size_in * count_page);
     }
   }
   latency_log.flush();

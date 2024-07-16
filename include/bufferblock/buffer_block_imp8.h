@@ -222,6 +222,7 @@ class BufferBlockImp7 {
   void free() {
     // 如果ptes不为空，则free
     if (size_ != 0) {
+      // std::this_thread::sleep_for(std::chrono::nanoseconds(5));
       if (likely(page_num_ == 1)) {
         ptes_.pte->DecRefCount();
       } else if (page_num_ > 1) {

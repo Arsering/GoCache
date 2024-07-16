@@ -179,7 +179,7 @@ class BufferPoolManager {
       case async_request_type::Phase::Begin: {
         req.run_time_phase = async_request_type::Phase::End;
 
-        fpage_id_type fpage_id = req.file_offset / PAGE_SIZE_FILE;
+        fpage_id_type fpage_id = req.file_offset >> LOG_PAGE_SIZE_FILE;
         size_t fpage_offset = req.file_offset % PAGE_SIZE_FILE;
 
         size_t page_id = 0;

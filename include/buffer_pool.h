@@ -57,9 +57,8 @@ class BP_async_request_type {
       : fd(_fd), file_offset(_file_offset), block_size(_block_size) {
     req_type = _req_type;
     runtime_phase = Phase::Begin;
-    ssd_io_finish = new AsyncMesg1();
   }
-  virtual ~BP_async_request_type() { delete ssd_io_finish; }
+  virtual ~BP_async_request_type() {}
   virtual void PromiseSetValue() = 0;
 
  protected:
@@ -78,7 +77,6 @@ class BP_async_request_type {
   const GBPfile_handle_type fd;
   const size_t file_offset;
   const size_t block_size;
-  AsyncMesg* ssd_io_finish;
   IOServer::async_SSD_IO_request_type ssd_IO_req;
   Phase runtime_phase;
   pair_min<PTE*, char*> response;
@@ -229,10 +227,13 @@ class BufferPool {
                                                     size_t block_size) {
     auto req = new BP_async_request_type_instance<pair_min<PTE*, char*>>(
         BP_async_request_type::in_req_type::miss, fd, file_offset, block_size);
+    auto ret =
+        req->promise
+            .get_future();  // 存在push完后req就被立刻释放的可能，所以需要在此处就获得future
 
     while (!request_channel_.push(req))
       ;
-    return req->promise.get_future();
+    return ret;
   }
 
   std::future<BufferBlock> FetchBlockAsync(GBPfile_handle_type fd,
@@ -240,10 +241,13 @@ class BufferPool {
                                            size_t block_size) {
     auto req = new BP_async_request_type_instance<BufferBlock>(
         BP_async_request_type::in_req_type::miss, fd, file_offset, block_size);
+    auto ret =
+        req->promise
+            .get_future();  // 存在push完后req就被立刻释放的可能，所以需要在此处就获得future
 
     while (!request_channel_.push(req))
       ;
-    return req->promise.get_future();
+    return ret;
   }
 
  private:
@@ -256,6 +260,7 @@ class BufferPool {
     switch (req.req_type) {
     case BP_async_request_type::in_req_type::
         hit: {  // TODO:会出现promote失败的场景
+      assert(false);
       return true;
     }
     case BP_async_request_type::in_req_type::miss: {

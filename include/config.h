@@ -22,6 +22,7 @@
 #include <sys/mman.h>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstdint>
 #include <utility>
 
@@ -55,13 +56,17 @@ constexpr uint32_t INVALID_PAGE_ID =
 constexpr uint16_t INVALID_FILE_HANDLE = std::numeric_limits<uint16_t>::max();
 constexpr static size_t PAGE_SIZE_MEMORY =
     4096;  // size of a memory page in byte
+constexpr static size_t LOG_PAGE_SIZE_MEMORY =
+    12;  // size of a memory page in byte
 constexpr static size_t PAGE_SIZE_FILE = 4096;
+constexpr static size_t LOG_PAGE_SIZE_FILE = 12;
+
 constexpr static size_t CACHELINE_SIZE = 64;
 
 constexpr static size_t ASYNC_SSDIO_SLEEP_TIME_MICROSECOND = 500;
 constexpr int IO_BACKEND_TYPE = 1;  // 1: pread; 2: IO_Uring
 constexpr bool USING_FIBER_ASYNC_RESPONSE = false;
-constexpr static size_t IOURing_MAX_DEPTH = 16;
+constexpr static size_t IOURing_MAX_DEPTH = 8;
 constexpr static size_t BATCH_SIZE_IO_SERVER =
     IOURing_MAX_DEPTH * 1.5;  // 这个值高点好？？？
 constexpr static size_t FIBER_CHANNEL_IO_SERVER = BATCH_SIZE_IO_SERVER * 1.5;
