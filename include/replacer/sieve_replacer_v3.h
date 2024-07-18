@@ -67,8 +67,7 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
         return false;
       }
       while (list_.getValue(to_evict).load() > 0) {
-        if (list_.getValue(to_evict).load() == 1)
-          list_.getValue(to_evict).store(0);
+        list_.getValue(to_evict).fetch_sub(1);
         to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
                        ? list_.GetTail()
                        : list_.getPrevNodeIndex(to_evict);
@@ -189,8 +188,8 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
           }
           return false;
         }
-        while (list_.getValue(to_evict)) {
-          list_.getValue(to_evict) = false;
+        while (list_.getValue(to_evict) > 0) {
+          list_.getValue(to_evict).fetch_sub(1);
           to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
                          ? list_.GetTail()
                          : list_.getPrevNodeIndex(to_evict);

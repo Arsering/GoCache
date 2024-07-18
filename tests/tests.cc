@@ -24,8 +24,9 @@
 using namespace gbp;
 
 namespace test {
+std::atomic<bool> mark_stop = true;
 std::atomic<size_t> query_count = 0;
-const size_t query_count_max = 100000 * 2 / 3;
+const size_t query_count_max = 100000;
 
 void set_cpu_affinity() {
   static std::atomic<size_t> cpu_id = 0;
@@ -168,6 +169,8 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
   size_t count_page = 10;
   std::vector<std::future<BufferBlock>> block_container(count_page);
   int count = 1;
+  while (mark_stop)
+    ;
   while (count != 0) {
     count--;
     // size_t query_count = get_trace_global()[thread_id].size();
@@ -239,7 +242,7 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
       }
 
       st = gbp::GetSystemTime() - st;
-      latency_log << st << std::endl;
+      latency_log << st << " " << gbp::GetSystemTime() << std::endl;
       // latency_log << st << " | " << gbp::get_counter(1) << " | "
       //             << gbp::get_counter(2) << " | " << gbp::get_counter(11)
       //             << " | " << gbp::get_counter(12) << std::endl;
@@ -714,6 +717,9 @@ int test_concurrency(int argc, char** argv) {
     // thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte,
     // io_size, i);
   }
+  sleep(1);
+  mark_stop = false;
+  GBPLOG << gbp::GetSystemTime();
   for (auto& thread : thread_pool) {
     thread.join();
   }
