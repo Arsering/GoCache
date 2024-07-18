@@ -717,6 +717,8 @@ class DirectCache {
     uint32_t count = 0;
     PTE* pte_cur;
   };
+#define DirectCache_HASH_FUNC(fd, fpage_id, capacity_) \
+  (((fd << sizeof(fpage_id_type)) + fpage_id) % capacity_)
 
   DirectCache(size_t capacity = DIRECT_CACHE_SIZE) : capacity_(capacity) {
     cache_.resize(capacity_);
@@ -737,7 +739,7 @@ class DirectCache {
   }
   FORCE_INLINE bool Insert(GBPfile_handle_type fd, fpage_id_type fpage_id,
                            PTE* pte) {
-    size_t index = ((fd << sizeof(fpage_id_type)) + fpage_id) % capacity_;
+    size_t index = DirectCache_HASH_FUNC(fd, fpage_id, capacity_);
     // size_t index = 0;
     // boost::hash_combine(index, fd);
     // boost::hash_combine(index, fpage_id);
@@ -758,7 +760,8 @@ class DirectCache {
     return false;
   }
   FORCE_INLINE PTE* Find(GBPfile_handle_type fd, fpage_id_type fpage_id) {
-    size_t index = ((fd << sizeof(fpage_id_type)) + fpage_id) % capacity_;
+    size_t index = DirectCache_HASH_FUNC(fd, fpage_id, capacity_);
+
     // size_t index = 0;
     // boost::hash_combine(index, fd);
     // boost::hash_combine(index, fpage_id);
@@ -778,7 +781,8 @@ class DirectCache {
 #if ASSERT_ENABLE
     assert(cache_[index].pte_cur != nullptr);
 #endif
-    size_t index = ((fd << sizeof(fpage_id_type)) + fpage_id) % capacity_;
+    size_t index = DirectCache_HASH_FUNC(fd, fpage_id, capacity_);
+
     // size_t index = 0;
     // boost::hash_combine(index, fd);
     // boost::hash_combine(index, fpage_id);
@@ -800,7 +804,7 @@ class DirectCache {
   }
 
  private:
-  constexpr static size_t DIRECT_CACHE_SIZE = 256 * 64 - 3;
+  constexpr static size_t DIRECT_CACHE_SIZE = 256 * 8;
   std::vector<Node> cache_;
   size_t capacity_;
   // size_t hit = 0;

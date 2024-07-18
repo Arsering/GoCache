@@ -30,6 +30,8 @@ class DiskManager {
       if (fd.second)
         close(fd.first);
     }
+    // for (size_t file_id = 0; file_id < fd_oss_.size(); file_id++)
+    //   LOG(INFO) << file_id << " " << file_names_[file_id];
   }
 
   FORCE_INLINE OSfile_handle_type

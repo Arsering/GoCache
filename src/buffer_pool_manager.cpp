@@ -312,6 +312,11 @@ int BufferPoolManager::SetBlock(const BufferBlock& buf, size_t file_offset,
 
 const BufferBlock BufferPoolManager::GetBlockSync(
     size_t file_offset, size_t block_size, GBPfile_handle_type fd) const {
+  // if (gbp::warmup_mark() == 1 && get_query_id() < 100000)
+  //   get_thread_logfile() << GetSystemTime() << " " << get_query_id() << " "
+  //                        << fd << " " << file_offset << " " << block_size
+  //                        << std::endl;
+
   size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
   size_t num_page =
       fpage_offset == 0 || (block_size <= (PAGE_SIZE_FILE - fpage_offset))
