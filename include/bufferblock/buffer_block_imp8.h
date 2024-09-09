@@ -251,6 +251,16 @@ class BufferBlockImp7 {
     return *obj.Decode<OBJ_Type>(idx);
   }
 
+  // FIXME:
+  // 此函数慎用！！！只有当确认bufferblock中的OBJ_Type类型的对象数量为1时才可使用
+  template <typename OBJ_Type>
+  FORCE_INLINE static const OBJ_Type& RefSingle(const BufferBlockImp7& obj) {
+#if ASSERT_ENABLE
+    assert(size_ == sizeof(OBJ_Type));
+#endif
+    return *reinterpret_cast<OBJ_Type*>(obj.datas_.data);
+  }
+
   template <typename OBJ_Type>
   FORCE_INLINE static void UpdateContent(std::function<void(OBJ_Type&)> cb,
                                          const BufferBlockImp7& obj,
@@ -356,6 +366,8 @@ class BufferBlockImp7 {
       ret = size_ - right.size_;
     return ret;
   }
+  FORCE_INLINE size_t GetSize() const { return size_; }
+  FORCE_INLINE size_t GetPageNum() const { return page_num_; }
 
  private:
   bool LoadPage(size_t page_id) const;
@@ -669,6 +681,11 @@ class BufferBlockImp8 {
   FORCE_INLINE static const OBJ_Type& Ref(const BufferBlockImp8& obj,
                                           size_t idx = 0) {
     return BufferBlockImp7::Ref<OBJ_Type>(*(obj.inner_), idx);
+  }
+
+  template <typename OBJ_Type>
+  FORCE_INLINE static const OBJ_Type& RefSingle(const BufferBlockImp8& obj) {
+    return BufferBlockImp7::RefSingle<OBJ_Type>(*(obj.inner_));
   }
 
   template <typename OBJ_Type>

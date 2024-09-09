@@ -20,5 +20,8 @@ namespace debug {
     target_fun;                          \
     latency = GetSystemTime();           \
   }
+
+uintptr_t& get_memory_pool();
+
 }  // namespace debug
 }  // namespace gbp

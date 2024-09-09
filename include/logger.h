@@ -30,6 +30,7 @@
 namespace gbp {
 size_t get_thread_id();
 std::string& get_log_dir();
+std::string& get_db_dir();
 std::ofstream& get_thread_logfile();
 
 enum MmapArrayType {
@@ -178,10 +179,11 @@ class ThreadLo {
 
 std::atomic<bool>& warmup_mark();  // 1: 需要warmup; 0: 无需warmup
 
-std::ofstream& get_query_file(std::string query_file_path = " ");
-std::ofstream& get_result_file(std::string result_file_path = " ");
-std::string& get_db_dir();
+// 为了replay
 std::vector<std::string>& get_results_vec();
+void write_to_query_file(std::string_view query, bool flush = false);
+void write_to_result_file(std::string_view result, bool flush = false);
+
 std::atomic<bool>& log_enable();
 std::atomic<size_t>& get_counter_query();
 std::mutex& get_log_lock();

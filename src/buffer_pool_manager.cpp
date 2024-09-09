@@ -34,7 +34,9 @@ BufferPoolManager::~BufferPoolManager() {
     delete io_server;
 
   delete disk_manager_;
+
   delete partitioner_;
+
   delete eviction_server_;
 }
 
@@ -333,6 +335,12 @@ const BufferBlock BufferPoolManager::GetBlockSync(
 #if ASSERT_ENABLE
     assert(mpage.first != nullptr && mpage.second != nullptr);
 #endif
+    // {
+    //   pools_[partitioner_->GetPartitionId(fpage_id)]
+    //       ->memory_usages_[pools_[partitioner_->GetPartitionId(fpage_id)]
+    //                            ->memory_pool_.ToPageId(mpage.second)] +=
+    //       block_size;
+    // }
     ret.InsertPage(0, mpage.second + fpage_offset, mpage.first);
   } else {
     size_t page_id = 0;
@@ -343,6 +351,13 @@ const BufferBlock BufferPoolManager::GetBlockSync(
 #if ASSERT_ENABLE
       assert(mpage.first != nullptr && mpage.second != nullptr);
 #endif
+      // {
+      //   pools_[partitioner_->GetPartitionId(fpage_id)]
+      //       ->memory_usages_[pools_[partitioner_->GetPartitionId(fpage_id)]
+      //                            ->memory_pool_.ToPageId(mpage.second)] +=
+      //       std::min(block_size, PAGE_SIZE_MEMORY - fpage_offset);
+      //   block_size -= PAGE_SIZE_MEMORY - fpage_offset;
+      // }
       ret.InsertPage(page_id, mpage.second + fpage_offset, mpage.first);
       page_id++;
       fpage_offset = 0;

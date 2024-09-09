@@ -30,8 +30,10 @@ class DiskManager {
       if (fd.second)
         close(fd.first);
     }
-    // for (size_t file_id = 0; file_id < fd_oss_.size(); file_id++)
-    //   LOG(INFO) << file_id << " " << file_names_[file_id];
+    for (size_t file_id = 0; file_id < fd_oss_.size(); file_id++)
+      LOG(INFO) << file_id << " | " << file_names_[file_id] << " | "
+                << file_size_inBytes_[file_id] << " | "
+                << counts_[file_id].first << " | " << counts_[file_id].second;
   }
 
   FORCE_INLINE OSfile_handle_type
@@ -78,6 +80,7 @@ class DiskManager {
         ceil(file_size_inBytes_[fd_oss_.size() - 1], PAGE_SIZE_MEMORY));
 #endif
 
+    counts_.emplace_back(0, 0);
     return fd_oss_.size() - 1;
   }
 
@@ -123,6 +126,8 @@ class DiskManager {
   std::vector<std::pair<OSfile_handle_type, bool>> fd_oss_;
   std::vector<std::string> file_names_;
   std::vector<size_t> file_size_inBytes_;
+
+  std::vector<std::pair<size_t, size_t>> counts_;
 #ifdef DEBUG_BITMAP
   std::vector<bitset_dynamic> used_;
 #endif

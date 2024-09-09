@@ -24,6 +24,56 @@ std::ofstream& get_thread_logfile() {
   }
   return log_file;
 }
+// 为了replay
+void write_to_query_file(std::string_view query, bool flush) {
+  static FILE* query_file_string;
+  static FILE* query_file_string_view;
+  static bool marker = false;
+
+  if (!marker) {
+    query_file_string =
+        ::fopen((get_log_dir() + "/query_file_string.log").c_str(), "w");
+    query_file_string_view =
+        ::fopen((get_log_dir() + "/query_file_string_view.log").c_str(), "w");
+    assert(query_file_string != nullptr);
+    assert(query_file_string_view != nullptr);
+
+    marker = true;
+  }
+  if (flush) {
+    ::fclose(query_file_string);
+    ::fclose(query_file_string_view);
+    return;
+  }
+  size_t size = query.size();
+  ::fwrite(query.data(), query.size(), 1, query_file_string);
+  ::fwrite(&size, sizeof(size_t), 1, query_file_string_view);
+}
+// 为了replay
+void write_to_result_file(std::string_view result, bool flush) {
+  static FILE* result_file_string;
+  static FILE* result_file_string_view;
+  static size_t length = 0;
+  static bool marker = false;
+
+  if (!marker) {
+    result_file_string =
+        ::fopen((get_log_dir() + "/result_file_string.log").c_str(), "w");
+    result_file_string_view =
+        ::fopen((get_log_dir() + "/result_file_string_view.log").c_str(), "w");
+    assert(result_file_string != nullptr);
+    assert(result_file_string_view != nullptr);
+    marker = true;
+  }
+  if (flush) {
+    ::fclose(result_file_string);
+    ::fclose(result_file_string_view);
+    return;
+  }
+  size_t size = result.size();
+  ::fwrite(result.data(), result.size(), 1, result_file_string);
+  ::fwrite(&size, sizeof(size_t), 1, result_file_string_view);
+}
 
 // marker of warmup
 std::atomic<bool>& warmup_mark() {
@@ -43,26 +93,6 @@ std::atomic<size_t>& get_counter_query() {
 std::mutex& get_log_lock() {
   static std::mutex latch;
   return latch;
-}
-// 为了replay
-std::ofstream& get_query_file(std::string query_file_path) {
-  static std::ofstream query_file;
-  static bool marker = false;
-  if (!marker) {
-    query_file.open(query_file_path + "/query_file.log", std::ios::out);
-    marker = true;
-  }
-  return query_file;
-}
-// 为了replay
-std::ofstream& get_result_file(std::string result_file_path) {
-  static std::ofstream result_file;
-  static bool marker = false;
-  if (!marker) {
-    result_file.open(result_file_path + "/result_file.log", std::ios::out);
-    marker = true;
-  }
-  return result_file;
 }
 
 // for replay
