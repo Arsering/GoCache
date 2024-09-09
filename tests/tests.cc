@@ -76,7 +76,7 @@ void read_mmap(char* data_file_mmaped, size_t file_size_inByte,
   std::ofstream latency_log(gbp::get_log_dir() + "/" +
                             std::to_string(thread_id) + ".log");
   latency_log << "read_mmap" << std::endl;
-  size_t io_num = file_size_inByte / sizeof(size_t);
+  size_t io_num = file_size_inByte / sizeof(size_t) - 10;
 
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -93,7 +93,7 @@ void read_mmap(char* data_file_mmaped, size_t file_size_inByte,
 
     // for (io_id = 0; io_id < io_num; io_id += io_size_in / sizeof(size_t)) {
     while (query_count != 0) {
-      query_count--;
+      // query_count--;
       // io_id = rnd(gen);
       // io_id = ZipfianGenerator::GetGen().generate() *
       //             (io_num / ZipfianGenerator::GetGen().GetN()) +
@@ -106,9 +106,9 @@ void read_mmap(char* data_file_mmaped, size_t file_size_inByte,
       io_size = io_size_in;
       io_id = io_id / 512 * 512;
 
-      // curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
-      curr_io_fileoffset =
-          get_trace_global()[thread_id][query_count] - 139874067804160;
+      curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
+      // curr_io_fileoffset =
+      //     get_trace_global()[thread_id][query_count] - 139874067804160;
       io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
 
 #ifdef DEBUG_1
@@ -690,8 +690,8 @@ int test_concurrency(int argc, char** argv) {
     // thread_pool.emplace_back(write_mmap, data_file_mmaped,
     //                          (1024LU * 1024LU * 1024LU * 1), io_size,
     //                          (1024LU * 1024LU * 1024LU * 1) * i, i);
-    // thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
-    //                          io_size, 0, i);
+    thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
+                             io_size, 0, i);
     // thread_pool.emplace_back(read_pread, io_backend, file_size_inByte,
     // io_size,
     //                          0, i);
@@ -709,7 +709,8 @@ int test_concurrency(int argc, char** argv) {
     //   thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte,
     //   io_size, i);
     // else
-    thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size, i);
+    // thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size,
+    // i);
 
     // thread_pool.emplace_back(randwrite_bufferpool, 0, file_size_inByte,
     // io_size,

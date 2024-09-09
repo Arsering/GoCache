@@ -5,5 +5,10 @@
 #include <vector>
 
 namespace gbp {
-namespace debug {}  // namespace debug
+namespace debug {
+uintptr_t& get_memory_pool() {
+  static uintptr_t pool;
+  return pool;
+}
+}  // namespace debug
 }  // namespace gbp

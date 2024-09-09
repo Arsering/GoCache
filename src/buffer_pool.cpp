@@ -63,6 +63,8 @@ void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
 #if !BPM_SYNC_ENABLE
   server_ = std::thread([this]() { Run(); });
 #endif
+
+  // memory_usages_.resize(pool_size_, 0);
 }
 
 /*
@@ -70,6 +72,29 @@ void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
  * WARNING: Do Not Edit This Function
  */
 BufferPool::~BufferPool() {
+  // for (size_t idx = 0; idx < memory_pool_.GetSize(); idx++) {
+  //   size_t page_id =
+  //       ((uintptr_t) memory_pool_.FromPageId(idx) - debug::get_memory_pool())
+  //       >> LOG_PAGE_SIZE_MEMORY;
+  //   LOG(INFO) << "cp" << debug::get_memory_size_visited().size() << " "
+  //             << page_id;
+
+  //   auto& aa = debug::get_memory_size_visited();
+  //
+  //   get_thread_logfile() << page_table_->FromPageId(idx)->fd_cur << " "
+  //                        << BufferPoolManager::;
+  //
+  // }
+  //
+
+  // {
+  //   for (auto idx = 0; idx < memory_pool_.GetSize(); idx++)
+  //     get_thread_logfile() << page_table_->FromPageId(idx)->fd_cur << " "
+  //                          << page_table_->FromPageId(idx)->fpage_id_cur << "
+  //                          "
+  //                          << as_atomic(memory_usages_[idx]) << std::endl;
+  // }
+
   delete page_table_;
 
   delete replacer_;
@@ -245,8 +270,12 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
 #endif
   auto ret = Pin(fpage_id, fd);
   if (ret.first) {  // 1.1
+    // if (gbp::warmup_mark() == 1)
+    //   as_atomic(disk_manager_->counts_[fd].first)++;
     return ret;
   }
+  // if (gbp::warmup_mark() == 1)
+  //   as_atomic(disk_manager_->counts_[fd].second)++;
 
   auto stat = BP_async_request_type::Phase::Begin;
 #if ASSERT_ENABLE
@@ -320,6 +349,13 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
                              PAGE_SIZE_FILE, ret.second, PAGE_SIZE_MEMORY,
                              ret.first->fd_cur, false));
       }
+      // {
+      //   get_thread_logfile()
+      //       << ret.first->fd_cur << " " << ret.first->fpage_id_cur << " "
+      //       << as_atomic(memory_usages_[memory_pool_.ToPageId(ret.second)])
+      //       << std::endl;
+      //   as_atomic(memory_usages_[memory_pool_.ToPageId(ret.second)]) = 0;
+      // }
 
       assert(page_table_->DeleteMapping(ret.first->fd_cur,
                                         ret.first->fpage_id_cur));

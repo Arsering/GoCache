@@ -789,6 +789,12 @@ class DirectCache {
     // index = index % capacity_;
     if (cache_[index].pte_cur != nullptr) {
       cache_[index].count--;
+      // {
+      //   if (cache_[index].count == 0) {
+      //     cache_[index].pte_cur->DecRefCount();
+      //     cache_[index].pte_cur = nullptr;
+      //   }
+      // }
     }
   }
 

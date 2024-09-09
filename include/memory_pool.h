@@ -19,12 +19,13 @@
 #include <cassert>
 
 #include "config.h"
+#include "debug.h"
 #include "page_table.h"
 
 namespace gbp {
 class MemoryPool {
  public:
-  MemoryPool() : num_pages_(0), need_free_(false), pool_(nullptr){};
+  MemoryPool() : num_pages_(0), need_free_(false), pool_(nullptr) {};
   MemoryPool(mpage_id_type num_pages) : num_pages_(num_pages) {
     pool_ = (char*) ::aligned_alloc(PAGE_SIZE_MEMORY,
                                     PAGE_SIZE_MEMORY * num_pages_);
@@ -34,6 +35,7 @@ class MemoryPool {
     madvise(pool_, num_pages_ * PAGE_SIZE_MEMORY, MADV_RANDOM);
     need_free_ = true;
 
+    debug::get_memory_pool() = (uintptr_t) pool_;
 #ifdef DEBUG_BITMAP
     used_.resize(num_pages);
     used_.reset();

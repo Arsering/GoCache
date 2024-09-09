@@ -332,6 +332,9 @@ class BufferPool {
   // LockFreeQueue<async_BPM_request_type*> request_channel_{
   //     FIBER_CHANNEL_BUFFER_POOL};
   std::atomic<bool> stop_;
+
+ public:
+  // std::vector<size_t> memory_usages_;
 };
 
 }  // namespace gbp
