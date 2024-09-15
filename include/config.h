@@ -6,7 +6,7 @@
 
 #pragma once
 
-// #define GRAPHSCOPE
+#define GRAPHSCOPE
 
 #define ASSERT_ENABLE true
 #define EVICTION_SYNC_ENABLE true
