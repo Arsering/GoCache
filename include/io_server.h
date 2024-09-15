@@ -115,11 +115,11 @@ class IOServer {
     switch (req.async_context.state) {
     case context_type::State::Commit: {  // 将read request提交至io_uring
       if (req.read) {
-        auto ret = io_backend_->Read(req.file_offset, req.io_vec.data(), req.fd,
-                                     req.async_context.finish);
+        auto ret = io_backend_->Read(req.file_offset, req.io_vec.data(), 1,
+                                     req.fd, req.async_context.finish);
         while (!ret) {
           ret = io_backend_->Read(
-              req.file_offset, req.io_vec.data(), req.fd,
+              req.file_offset, req.io_vec.data(), 1, req.fd,
               req.async_context.finish);  // 不断尝试提交请求直至提交成功
         }
       } else {

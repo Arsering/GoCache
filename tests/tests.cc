@@ -213,6 +213,7 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
 
         {
           auto block = bpm.GetBlockSync(curr_io_fileoffset, io_size);
+
           // auto block =
           //     bpm.GetBlockWithDirectCacheSync(curr_io_fileoffset,
           // io_size);
@@ -223,8 +224,11 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
               // if (gbp::BufferBlock::Ref<size_t>(block, i) !=
               //     (curr_io_fileoffset / sizeof(size_t) + i)) {
               //   GBPLOG << gbp::BufferBlock::Ref<size_t>(block, i) << " "
-              //          << (curr_io_fileoffset / sizeof(size_t) + i) <<
-              //          std::endl;
+              //          << (curr_io_fileoffset / sizeof(size_t) + i) << " "
+              //          << curr_io_fileoffset << " " << i << " "
+              //          << (uintptr_t) (&gbp::BufferBlock::Ref<size_t>(block,
+              //          0))
+              //          << std::endl;
               // }
 
               assert(gbp::BufferBlock::Ref<size_t>(block, i) ==
@@ -703,8 +707,9 @@ int test_concurrency(int argc, char** argv) {
     //                          (1024LU * 1024LU * 1024LU * 1) * i, i);
     // thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
     //                          io_size, 0, i);
-    thread_pool.emplace_back(read_pread, io_backend, file_size_inByte, io_size,
-                             0, i);
+    // thread_pool.emplace_back(read_pread, io_backend, file_size_inByte,
+    // io_size,
+    //                          0, i);
     // thread_pool.emplace_back(write_pwrite, io_backend, file_size_inByte,
     //                          io_size, i);
     // thread_pool.emplace_back(fiber_pread_1_2, &disk_manager,
@@ -719,8 +724,7 @@ int test_concurrency(int argc, char** argv) {
     //   thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte,
     //   io_size, i);
     // else
-    // thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size,
-    // i);
+    thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size, i);
 
     // thread_pool.emplace_back(randwrite_bufferpool, 0, file_size_inByte,
     // io_size,
@@ -730,7 +734,7 @@ int test_concurrency(int argc, char** argv) {
   }
   sleep(1);
   mark_stop = false;
-  GBPLOG << gbp::GetSystemTime();
+
   for (auto& thread : thread_pool) {
     thread.join();
   }

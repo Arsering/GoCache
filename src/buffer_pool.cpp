@@ -394,6 +394,141 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
   assert(false);
 }
 
+bool BufferPool::FetchPageSync1(BP_sync_request_type& req) {
+#if ASSERT_ENABLE
+  assert(req.fpage_id <
+         CEIL(disk_manager_->GetFileSizeFast(req.fd), PAGE_SIZE_FILE));
+#endif
+
+#if ASSERT_ENABLE
+  assert(partitioner_->GetPartitionId(req.fpage_id) == pool_ID_);
+#endif
+  while (true) {
+    switch (req.runtime_phase) {
+    case BP_sync_request_type::Phase::Begin: {
+      auto [locked, mpage_id] = page_table_->LockMapping(req.fd, req.fpage_id);
+
+      if (locked && mpage_id == PageMapping::Mapping::EMPTY_VALUE) {
+        req.runtime_phase = BP_sync_request_type::Phase::Initing;
+      } else {
+        if (locked)
+          page_table_->UnLockMapping(req.fd, req.fpage_id, mpage_id);
+        while (true) {
+          req.response = Pin(req.fpage_id, req.fd);
+          if (req.response.first) {  // 1.1
+            req.runtime_phase = BP_sync_request_type::Phase::End;
+            break;
+          }
+        }
+      }
+      break;
+    }
+    case BP_sync_request_type::Phase::ReBegin: {
+      req.response = Pin(req.fpage_id, req.fd);
+      if (req.response.first) {  // 1.1
+        req.runtime_phase = BP_sync_request_type::Phase::End;
+        break;
+      }
+      return false;
+    }
+    case BP_sync_request_type::Phase::Initing: {  // 1.2
+      mpage_id_type mpage_id;
+      if (free_list_->Poll(mpage_id)) {
+        req.runtime_phase = BP_sync_request_type::Phase::Loading;
+        req.response.first = page_table_->FromPageId(mpage_id);
+        req.response.second = (char*) memory_pool_.FromPageId(mpage_id);
+        return false;
+      } else {
+        if constexpr (EVICTION_BATCH_ENABLE) {
+          if (!replacer_->GetFinishMark())  // 单个replacer只允许一个async
+                                            // requst存在
+            break;
+          assert(eviction_server_->SendRequest(
+              replacer_, free_list_, EVICTION_BATCH_SIZE,
+              &replacer_->GetFinishMark(), true));
+          // while (!replacer_->GetFinishMark()) {
+          //   // FIXME: 此处会导致本次query
+          //   latency变大，导致整个workload的tail
+          //   // latency变大
+          //   std::this_thread::yield();
+          // }
+          std::this_thread::yield();
+          break;
+        } else {
+          if (!replacer_->Victim(mpage_id)) {
+            assert(false);
+            break;
+          }
+        }
+        req.runtime_phase = BP_sync_request_type::Phase::Evicting;
+      }
+
+      req.response.first = page_table_->FromPageId(mpage_id);
+      req.response.second = (char*) memory_pool_.FromPageId(mpage_id);
+      break;
+    }
+    case BP_sync_request_type::Phase::Evicting: {  // 2
+#ifdef DEBUG_BITMAP
+      size_t fd_old = ret.first->fd;
+      size_t fpage_id_old =
+          partitioner_->GetFPageIdGlobal(pool_ID_, ret.first->fpage_id);
+
+      assert(disk_manager_->GetUsedMark(fd_old, fpage_id_old) == true);
+      disk_manager_->SetUsedMark(fd_old, fpage_id_old, false);
+      assert(disk_manager_->GetUsedMark(fd_old, fpage_id_old) == false);
+#endif
+      if (req.response.first->dirty) {
+        assert(ReadWriteSync(req.response.first->fpage_id_cur * PAGE_SIZE_FILE,
+                             PAGE_SIZE_FILE, req.response.second,
+                             PAGE_SIZE_MEMORY, req.response.first->fd_cur,
+                             false));
+      }
+      // {
+      //   get_thread_logfile()
+      //       << ret.first->fd_cur << " " << ret.first->fpage_id_cur << " "
+      //       << as_atomic(memory_usages_[memory_pool_.ToPageId(ret.second)])
+      //       << std::endl;
+      //   as_atomic(memory_usages_[memory_pool_.ToPageId(ret.second)]) = 0;
+      // }
+
+      assert(page_table_->DeleteMapping(req.response.first->fd_cur,
+                                        req.response.first->fpage_id_cur));
+
+      req.runtime_phase = BP_sync_request_type::Phase::Loading;
+      return false;
+    }
+    case BP_sync_request_type::Phase::Loading: {  // 4
+      thread_local static PTE tmp;
+      tmp.Clean();
+
+#if LAZY_SSD_IO_NEW
+      *reinterpret_cast<fpage_id_type*>(ret.second) = fpage_id;
+      tmp.initialized = false;
+#else
+      // assert(ReadWriteSync(req.fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
+      //                      req.response.second, PAGE_SIZE_MEMORY, req.fd,
+      //                      true));
+      tmp.initialized = true;
+#endif
+      tmp.ref_count = 1;
+      tmp.fpage_id_cur = req.fpage_id;
+      tmp.fd_cur = req.fd;
+      as_atomic(req.response.first->AsPacked()).store(tmp.AsPacked());
+      assert(replacer_->Insert(page_table_->ToPageId(req.response.first)));
+
+      std::atomic_thread_fence(std::memory_order_release);
+      assert(page_table_->CreateMapping(
+          req.fd, req.fpage_id, page_table_->ToPageId(req.response.first)));
+      req.runtime_phase = BP_sync_request_type::Phase::End;
+    }
+    case BP_sync_request_type::Phase::End: {
+      return true;
+    }
+    }
+  }
+  assert(false);
+}
+
 bool BufferPool::FetchPageAsyncInner(BP_async_request_type& req) {
 #if ASSERT_ENABLE
   assert(req.file_offset < disk_manager_->GetFileSizeFast(req.fd));

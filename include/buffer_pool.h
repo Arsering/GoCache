@@ -61,7 +61,7 @@ class BP_async_request_type {
   virtual ~BP_async_request_type() {}
   virtual void PromiseSetValue() = 0;
 
- protected:
+ public:
   enum Phase {
     Begin,
     Rebegin,
@@ -106,6 +106,36 @@ void BP_async_request_type_instance<
 
 template <>
 void BP_async_request_type_instance<BufferBlock>::PromiseSetValue();
+
+class BP_sync_request_type {
+  friend class BufferPool;
+
+ public:
+  BP_sync_request_type() { runtime_phase = Phase::Begin; }
+  BP_sync_request_type(GBPfile_handle_type _fd, size_t _fpage_id)
+      : fd(_fd), fpage_id(_fpage_id) {
+    runtime_phase = Phase::Begin;
+  }
+  ~BP_sync_request_type() = default;
+
+ public:
+  enum Phase {
+    Begin,
+    ReBegin,
+    Rebegin,
+    Initing,
+    Evicting,
+    EvictingFinish,
+    Loading,
+    LoadingFinish,
+    End
+  };
+
+  GBPfile_handle_type fd;
+  size_t fpage_id;
+  Phase runtime_phase;
+  pair_min<PTE*, char*> response;
+};
 
 class BufferPool {
   friend class BufferPoolManager;
@@ -192,7 +222,7 @@ class BufferPool {
 
   pair_min<PTE*, char*> FetchPageSync(fpage_id_type fpage_id,
                                       GBPfile_handle_type fd);
-
+  bool FetchPageSync1(BP_sync_request_type& req);
   FORCE_INLINE pair_min<PTE*, char*> Pin(fpage_id_type fpage_id,
                                          GBPfile_handle_type fd) {
     // 1.1

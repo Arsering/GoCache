@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <algorithm>
 #include <atomic>
 #include <boost/algorithm/string.hpp>
 #include <cassert>
@@ -153,8 +154,8 @@ class IOBackend {
                     GBPfile_handle_type fd, AsyncMesg* finish = nullptr) = 0;
   virtual bool Read(size_t offset, char* data, size_t size,
                     GBPfile_handle_type fd, AsyncMesg* finish = nullptr) = 0;
-  virtual bool Read(size_t offset, ::iovec* io_info, GBPfile_handle_type fd,
-                    AsyncMesg* finish = nullptr) = 0;
+  virtual bool Read(size_t offset, ::iovec* io_info, size_t count,
+                    GBPfile_handle_type fd, AsyncMesg* finish = nullptr) = 0;
   virtual bool Progress() = 0;
 
   FORCE_INLINE OSfile_handle_type
@@ -303,8 +304,8 @@ class IOURing : public IOBackend {
     return true;
   }
 
-  bool Read(size_t offset, ::iovec* io_info, GBPfile_handle_type fd,
-            AsyncMesg* finish = nullptr) override {
+  bool Read(size_t offset, ::iovec* io_info, size_t count,
+            GBPfile_handle_type fd, AsyncMesg* finish = nullptr) override {
 #if ASSERT_ENABLE
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
@@ -322,7 +323,7 @@ class IOURing : public IOBackend {
         sqe,  // 用这个 SQE 准备一个待提交的 read 操作
         disk_manager_->fd_oss_[fd].first,  // 从 fd 打开的文件中读取数据
         io_info,  // iovec 地址，读到的数据写入 iovec 缓冲区
-        1,        // iovec 数量
+        count,    // iovec 数量
         offset);  // 读取操作的起始地址偏移量
     io_uring_sqe_set_data(sqe, finish);
     num_preparing_++;
@@ -400,7 +401,7 @@ class RWSysCall : public IOBackend {
 #endif
 
     auto ret = ::pwrite(disk_manager_->fd_oss_[fd].first, data, size, offset);
-    
+
 #if ASSERT_ENABLE
     assert(ret == size);  // check for I/O error
 #endif
@@ -479,6 +480,7 @@ class RWSysCall : public IOBackend {
            disk_manager_
                ->file_size_inBytes_[fd]);  // check if read beyond file length
 #endif
+
     auto ret = ::pread(disk_manager_->fd_oss_[fd].first, data, size, offset);
 
 #if ASSERT_ENABLE
@@ -494,8 +496,8 @@ class RWSysCall : public IOBackend {
     return true;
   }
 
-  bool Read(size_t offset, ::iovec* io_info, GBPfile_handle_type fd,
-            AsyncMesg* finish = nullptr) override {
+  bool Read(size_t offset, ::iovec* io_info, size_t io_count,
+            GBPfile_handle_type fd, AsyncMesg* finish = nullptr) override {
 #if ASSERT_ENABLE
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
@@ -503,14 +505,43 @@ class RWSysCall : public IOBackend {
            disk_manager_
                ->file_size_inBytes_[fd]);  // check if read beyond file length
 #endif
+    const static size_t iovec_max = 512;
 
-    auto ret = ::pread(disk_manager_->fd_oss_[fd].first, io_info[0].iov_base,
-                       PAGE_SIZE_FILE, offset);
+    auto ret = ::preadv(disk_manager_->fd_oss_[fd].first, io_info,
+                        std::min(io_count, (size_t) iovec_max), offset);
+
+#if ASSERT_ENABLE
+    if (ret == -1)
+      LOG(INFO) << io_count << " " << (intptr_t) io_info[io_count - 1].iov_base
+                << " " << io_info[0].iov_len;
+    assert(ret != -1);
+#endif
+    if (unlikely(io_count > iovec_max)) {
+      io_count -= iovec_max;
+      io_info += iovec_max;
+      size_t size_cur = 0;
+      while (io_count > 0) {
+        size_cur = std::min(io_count, (size_t) iovec_max);
+        ret = ::preadv(disk_manager_->fd_oss_[fd].first, io_info, size_cur,
+                       offset);
+
+#if ASSERT_ENABLE
+        if (ret == -1)
+          LOG(INFO) << io_count << " "
+                    << (intptr_t) io_info[io_count - 1].iov_base << " "
+                    << io_info[0].iov_len;
+        assert(ret != -1);
+#endif
+
+        io_count -= size_cur;
+        io_info += size_cur;
+      }
+    }
 
     // if file ends before reading PAGE_SIZE
-    if (ret < PAGE_SIZE_FILE) {
-      memset((char*) io_info->iov_base + ret, 0, PAGE_SIZE_FILE - ret);
-    }
+    // if (ret < PAGE_SIZE_FILE) {
+    //   memset((char*) io_info->iov_base + ret, 0, PAGE_SIZE_FILE - ret);
+    // }
     if (finish != nullptr)
       ((AsyncMesg*) finish)->Post();
 

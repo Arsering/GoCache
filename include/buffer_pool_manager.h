@@ -80,9 +80,8 @@ class BufferPoolManager {
 
   const BufferBlock GetBlockSync(size_t file_offset, size_t block_size,
                                  GBPfile_handle_type fd = 0) const;
-  const BufferBlock GetBlockSync(size_t file_offset, size_t block_size,
-                                 size_t num_page,
-                                 GBPfile_handle_type fd = 0) const;
+  const BufferBlock GetBlockSync1(size_t file_offset, size_t block_size,
+                                  GBPfile_handle_type fd = 0) const;
 
   std::future<BufferBlock> GetBlockAsync(size_t file_offset, size_t block_size,
                                          GBPfile_handle_type fd = 0) const;
@@ -146,7 +145,7 @@ class BufferPoolManager {
   bool Flush();
 
   bool ReadWrite(size_t offset, size_t file_size, char* buf, size_t buf_size,
-                 GBPfile_handle_type fd, bool is_read = true);
+                 GBPfile_handle_type fd, bool is_read = true) const;
   bool LoadPage(pair_min<PTE*, char*> mpage);
   bool Clean();
 
