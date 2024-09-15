@@ -88,7 +88,7 @@ class IOServer {
       io_backend_ = new RWSysCall(disk_manager);
     else if constexpr (IO_BACKEND_TYPE == 2) {
       io_backend_ = new IOURing(disk_manager);
-      if constexpr (USING_FIBER_ASYNC_RESPONSE)
+      if constexpr (IO_SERVER_ENABLE)
         server_ = std::thread([this]() { Run(); });
     } else
       assert(false);

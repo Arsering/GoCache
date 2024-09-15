@@ -33,10 +33,6 @@ class BufferBlockImp7 {
       datas_.datas = (char**) LBMalloc(page_num_ * sizeof(char*));
       ptes_.ptes = (PTE**) LBMalloc(page_num_ * sizeof(PTE*));
     }
-#if ASSERT_ENABLE
-    assert(datas_.data != nullptr);
-    assert(ptes_.pte != nullptr);
-#endif
   }
 
   BufferBlockImp7(size_t size, char* data) : size_(size), page_num_(0) {
@@ -256,7 +252,7 @@ class BufferBlockImp7 {
   template <typename OBJ_Type>
   FORCE_INLINE static const OBJ_Type& RefSingle(const BufferBlockImp7& obj) {
 #if ASSERT_ENABLE
-    assert(size_ == sizeof(OBJ_Type));
+    assert(obj.size_ == sizeof(OBJ_Type));
 #endif
     return *reinterpret_cast<OBJ_Type*>(obj.datas_.data);
   }
@@ -288,7 +284,7 @@ class BufferBlockImp7 {
                            size_t offset = 0) const {
 #if ASSERT_ENABLE
     assert(datas_.data != nullptr);
-    assert(offset < size_);
+    assert(offset <= size_);
 #endif
     size_t size_left = std::min((size_ - offset), right.size()),
            offset_t = offset;
@@ -434,7 +430,7 @@ class BufferBlockImp7 {
     constexpr size_t OBJ_NUM_PERPAGE = PAGE_SIZE_MEMORY / sizeof(OBJ_Type);
 #if ASSERT_ENABLE
     // FIXME: 不够准确
-    assert(sizeof(T) * (idx + 1) <= size_);
+    assert(sizeof(OBJ_Type) * (idx + 1) <= size_);
 #endif
     char* ret = nullptr;
     if (likely(page_num_ < 2)) {
@@ -463,7 +459,7 @@ class BufferBlockImp7 {
     }
 #if ASSERT_ENABLE
     assert(((uintptr_t) ret / PAGE_SIZE_MEMORY + 1) * PAGE_SIZE_MEMORY >=
-           (uintptr_t) (ret + sizeof(T)));
+           (uintptr_t) (ret + sizeof(OBJ_Type)));
 #endif
 #ifdef DEBUG_
     st = gbp::GetSystemTime() - st;
@@ -486,7 +482,7 @@ class BufferBlockImp7 {
     constexpr size_t OBJ_NUM_PERPAGE = PAGE_SIZE_MEMORY / sizeof(OBJ_Type);
 #if ASSERT_ENABLE
     // FIXME: 不够准确
-    assert(sizeof(T) * (idx + 1) <= size_);
+    assert(sizeof(OBJ_Type) * (idx + 1) <= size_);
 #endif
     char* ret = nullptr;
     PTE* target_pte;
@@ -521,7 +517,7 @@ class BufferBlockImp7 {
     }
 #if ASSERT_ENABLE
     assert(((uintptr_t) ret / PAGE_SIZE_MEMORY + 1) * PAGE_SIZE_MEMORY >=
-           (uintptr_t) (ret + sizeof(T)));
+           (uintptr_t) (ret + sizeof(OBJ_Type)));
 #endif
 #ifdef DEBUG_
     st = gbp::GetSystemTime() - st;

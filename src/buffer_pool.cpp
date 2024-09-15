@@ -60,9 +60,9 @@ void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
   }
 
   stop_ = false;
-#if !BPM_SYNC_ENABLE
-  server_ = std::thread([this]() { Run(); });
-#endif
+  if constexpr (BP_ASYNC_ENABLE) {
+    server_ = std::thread([this]() { Run(); });
+  }
 
   // memory_usages_.resize(pool_size_, 0);
 }
@@ -108,7 +108,7 @@ BufferPool::~BufferPool() {
 
 void BufferPool::RegisterFile(GBPfile_handle_type fd) {
   page_table_->RegisterFile(
-      ceil(disk_manager_->GetFileSizeShort(fd), PAGE_SIZE_FILE));
+      ceil(disk_manager_->GetFileSizeFast(fd), PAGE_SIZE_FILE));
 }
 
 void BufferPool::CloseFile(GBPfile_handle_type fd) {
@@ -143,7 +143,7 @@ bool BufferPool::FlushPage(fpage_id_type fpage_id, GBPfile_handle_type fd) {
 bool BufferPool::ReadWriteSync(size_t offset, size_t file_size, char* buf,
                                size_t buf_size, GBPfile_handle_type fd,
                                bool is_read) {
-  if constexpr (USING_FIBER_ASYNC_RESPONSE) {
+  if constexpr (IO_BACKEND_TYPE == 2) {
     AsyncMesg* ssd_io_finished = new AsyncMesg4();
     assert(io_server_->SendRequest(fd, offset, file_size, buf, ssd_io_finished,
                                    is_read));
@@ -265,8 +265,7 @@ PTE* BufferPool::GetVictimPage() {
 pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
                                                 GBPfile_handle_type fd) {
 #if ASSERT_ENABLE
-  auto file_size = disk_manager_->GetFileSizeShort(fd);
-  assert(fpage_id < CEIL(file_size, PAGE_SIZE_MEMORY));
+  assert(fpage_id < CEIL(disk_manager_->GetFileSizeFast(fd), PAGE_SIZE_MEMORY));
 #endif
   auto ret = Pin(fpage_id, fd);
   if (ret.first) {  // 1.1
@@ -397,14 +396,13 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
 
 bool BufferPool::FetchPageAsyncInner(BP_async_request_type& req) {
 #if ASSERT_ENABLE
-  auto file_size = disk_manager_->GetFileSizeShort(req.fd);
-  assert(req.fpage_id < CEIL(file_size, PAGE_SIZE_MEMORY));
+  assert(req.file_offset < disk_manager_->GetFileSizeFast(req.fd));
 #endif
 
-#if ASSERT_ENABLE
-  assert(partitioner_->GetPartitionId(req.fpage_id) == pool_ID_);
-#endif
   fpage_id_type fpage_id = req.file_offset >> LOG_PAGE_SIZE_FILE;
+#if ASSERT_ENABLE
+  assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
+#endif
 
   while (true) {
     switch (req.runtime_phase) {

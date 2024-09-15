@@ -73,9 +73,9 @@ void BufferPoolManager::init(uint16_t pool_num,
   }
   initialized_ = true;
 
-#if !BPM_SYNC_ENABLE
-  server_ = std::thread([this]() { Run(); });
-#endif
+  if constexpr (BP_ASYNC_ENABLE) {
+    server_ = std::thread([this]() { Run(); });
+  }
 }
 
 bool BufferPoolManager::FlushPage(fpage_id_type fpage_id,
@@ -101,7 +101,7 @@ bool BufferPoolManager::FlushFile(GBPfile_handle_type fd) {
 }
 
 bool BufferPoolManager::LoadFile(GBPfile_handle_type fd) {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
   assert(disk_manager_->ValidFD(fd));
 #endif
   bool ret = true;
@@ -149,7 +149,7 @@ bool BufferPoolManager::ReadWrite(size_t offset, size_t file_size, char* buf,
       io_servers_[partitioner_->GetPartitionId(offset >> LOG_PAGE_SIZE_FILE) %
                   io_servers_.size()];
 
-  if constexpr (USING_FIBER_ASYNC_RESPONSE) {
+  if constexpr (IO_BACKEND_TYPE == 2) {
     AsyncMesg* ssd_io_finished = new AsyncMesg2();
     assert(io_server->SendRequest(fd, offset, file_size, buf, ssd_io_finished,
                                   is_read));
@@ -228,7 +228,7 @@ int BufferPoolManager::GetBlock(char* buf, size_t file_offset,
   while (block_size > 0) {
     auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
         fpage_id, fd);
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(mpage.first != nullptr && mpage.second != nullptr);
 #endif
     object_size_t =
@@ -276,7 +276,7 @@ int BufferPoolManager::SetBlock(const char* buf, size_t file_offset,
 int BufferPoolManager::SetBlock(const BufferBlock& buf, size_t file_offset,
                                 size_t block_size, GBPfile_handle_type fd,
                                 bool flush) {
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
   assert(buf.Size() == block_size);
 #endif
 
@@ -287,7 +287,7 @@ int BufferPoolManager::SetBlock(const BufferBlock& buf, size_t file_offset,
   while (block_size > 0) {
     auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
         fpage_id, fd);
-#if (ASSERT_ENABLE)
+#if ASSERT_ENABLE
     assert(mpage.first != nullptr && mpage.second != nullptr);
 #endif
     object_size_t = buf.Copy(mpage.second + fpage_offset,

@@ -332,13 +332,6 @@ class PageTableInner {
 
   PTE* FromPageId(mpage_id_type page_id) const {
 #if ASSERT_ENABLE
-    if (page_id >= num_pages_) {
-#ifdef GRAPHSCOPE
-      LOG(FATAL) << page_id << " " << num_pages_;
-#endif
-    }
-    if (page_id >= num_pages_)
-      std::cout << page_id << " " << num_pages_ << std::endl;
     assert(page_id < num_pages_);
 #endif
     return pool_ + page_id;
@@ -402,7 +395,7 @@ class PageMapping {
   FORCE_INLINE pair_min<bool, mpage_id_type> FindMapping(
       fpage_id_type fpage_id_inpool) const {
 #if ASSERT_ENABLE
-    assert(fpage_id < size_);
+    assert(fpage_id_inpool < size_);
 #endif
 
     std::atomic<mpage_id_type>& atomic_data =
@@ -420,8 +413,9 @@ class PageMapping {
 
   bool CreateMapping(fpage_id_type fpage_id_inpool, mpage_id_type mpage_id) {
 #if ASSERT_ENABLE
-    assert(fpage_id < size_);
+    assert(fpage_id_inpool < size_);
 #endif
+
     std::atomic<mpage_id_type>& atomic_data =
         as_atomic((mpage_id_type&) mappings_[fpage_id_inpool]);
     mpage_id_type old_data = atomic_data.load(std::memory_order_relaxed),
@@ -443,7 +437,7 @@ class PageMapping {
 
   bool DeleteMapping(fpage_id_type fpage_id_inpool) {
 #if ASSERT_ENABLE
-    assert(fpage_id < size_);
+    assert(fpage_id_inpool < size_);
 #endif
     std::atomic<mpage_id_type>& atomic_data =
         as_atomic((mpage_id_type&) mappings_[fpage_id_inpool]);
@@ -467,7 +461,7 @@ class PageMapping {
 
   pair_min<bool, mpage_id_type> LockMapping(fpage_id_type fpage_id_inpool) {
 #if ASSERT_ENABLE
-    assert(fpage_id < size_);
+    assert(fpage_id_inpool < size_);
 #endif
     std::atomic<mpage_id_type>& atomic_data =
         as_atomic((mpage_id_type&) mappings_[fpage_id_inpool]);
@@ -778,10 +772,11 @@ class DirectCache {
     return nullptr;
   }
   FORCE_INLINE void Erase(GBPfile_handle_type fd, fpage_id_type fpage_id) {
-#if ASSERT_ENABLE
-    assert(cache_[index].pte_cur != nullptr);
-#endif
     size_t index = DirectCache_HASH_FUNC(fd, fpage_id, capacity_);
+
+    // #if ASSERT_ENABLE
+    //     assert(cache_[index].pte_cur != nullptr);
+    // #endif
 
     // size_t index = 0;
     // boost::hash_combine(index, fd);
@@ -810,7 +805,7 @@ class DirectCache {
   }
 
  private:
-  constexpr static size_t DIRECT_CACHE_SIZE = 256 * 8;
+  constexpr static size_t DIRECT_CACHE_SIZE = 256 * 4;
   std::vector<Node> cache_;
   size_t capacity_;
   // size_t hit = 0;

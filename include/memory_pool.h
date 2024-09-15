@@ -33,6 +33,7 @@ class MemoryPool {
     LOG(INFO) << (uintptr_t) pool_ << " | " << PAGE_SIZE_MEMORY * num_pages_;
 #endif
     madvise(pool_, num_pages_ * PAGE_SIZE_MEMORY, MADV_RANDOM);
+    // ::memset(pool_, 0, PAGE_SIZE_MEMORY * num_pages_);
     need_free_ = true;
 
     debug::get_memory_pool() = (uintptr_t) pool_;

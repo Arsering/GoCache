@@ -30,10 +30,11 @@ class DiskManager {
       if (fd.second)
         close(fd.first);
     }
-    for (size_t file_id = 0; file_id < fd_oss_.size(); file_id++)
-      LOG(INFO) << file_id << " | " << file_names_[file_id] << " | "
-                << file_size_inBytes_[file_id] << " | "
-                << counts_[file_id].first << " | " << counts_[file_id].second;
+    // for (size_t file_id = 0; file_id < fd_oss_.size(); file_id++)
+    //   LOG(INFO) << file_id << " | " << file_names_[file_id] << " | "
+    //             << file_size_inBytes_[file_id] << " | "
+    //             << counts_[file_id].first << " | " <<
+    //             counts_[file_id].second;
   }
 
   FORCE_INLINE OSfile_handle_type
@@ -47,14 +48,12 @@ class DiskManager {
   /**
    * Public helper function to get disk file size
    */
-  FORCE_INLINE size_t GetFileSizeShort(GBPfile_handle_type fd) const {
+  FORCE_INLINE size_t GetFileSizeFast(GBPfile_handle_type fd) const {
     return file_size_inBytes_[fd];
   }
 
   int Resize(GBPfile_handle_type fd, size_t new_size_inByte) {
-#if ASSERT_ENABLE
     assert(::ftruncate(GetFileDescriptor(fd), new_size_inByte) == 0);
-#endif
     file_size_inBytes_[fd] = new_size_inByte;
 
 #ifdef DEBUG_BITMAP
@@ -167,7 +166,7 @@ class IOBackend {
    * Public helper function to get disk file size
    */
   FORCE_INLINE size_t GetFileSize(OSfile_handle_type fd) const {
-    return disk_manager_->GetFileSizeShort(fd);
+    return disk_manager_->GetFileSizeFast(fd);
   }
 
   FORCE_INLINE int Resize(GBPfile_handle_type fd, size_t new_size) {
@@ -399,7 +398,9 @@ class RWSysCall : public IOBackend {
     assert(fd < disk_manager_->fd_oss_.size() &&
            disk_manager_->fd_oss_[fd].second);
 #endif
+
     auto ret = ::pwrite(disk_manager_->fd_oss_[fd].first, data, size, offset);
+    
 #if ASSERT_ENABLE
     assert(ret == size);  // check for I/O error
 #endif
@@ -478,11 +479,10 @@ class RWSysCall : public IOBackend {
            disk_manager_
                ->file_size_inBytes_[fd]);  // check if read beyond file length
 #endif
-
     auto ret = ::pread(disk_manager_->fd_oss_[fd].first, data, size, offset);
 
 #if ASSERT_ENABLE
-    assert(ret != 0);
+    assert(ret != -1);
 #endif
 
     if (ret < size) {
