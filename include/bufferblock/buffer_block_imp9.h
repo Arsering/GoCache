@@ -261,6 +261,16 @@ class BufferBlockImp9 {
     return *obj.Decode<OBJ_Type>(idx);
   }
 
+  // FIXME:
+  // 此函数慎用！！！只有当确认bufferblock中的OBJ_Type类型的对象数量为1时才可使用
+  template <typename OBJ_Type>
+  FORCE_INLINE static const OBJ_Type& RefSingle(const BufferBlockImp9& obj) {
+#if ASSERT_ENABLE
+    assert(obj.size_ == sizeof(OBJ_Type));
+#endif
+    return *reinterpret_cast<OBJ_Type*>(obj.datas_.data);
+  }
+
   template <typename OBJ_Type>
   FORCE_INLINE static void UpdateContent(std::function<void(OBJ_Type&)> cb,
                                          const BufferBlockImp9& obj,
@@ -288,7 +298,7 @@ class BufferBlockImp9 {
                            size_t offset = 0) const {
 #if ASSERT_ENABLE
     assert(datas_.data != nullptr);
-    assert(offset < size_);
+    assert(offset <= size_);
 #endif
     size_t size_left = std::min((size_ - offset), right.size()),
            offset_t = offset;

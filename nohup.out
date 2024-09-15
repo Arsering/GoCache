@@ -1,0 +1,509 @@
++ export LD_LIBRARY_PATH=/usr/local/lib:
++ LD_LIBRARY_PATH=/usr/local/lib:
++ cd build
++ rm -rf ./CMakeCache.txt ./CMakeFiles ./cmake_install.cmake ./Makefile ./src ./tests
++ cmake ..
+-- The C compiler identification is GNU 9.4.0
+-- The CXX compiler identification is GNU 9.4.0
+-- Detecting C compiler ABI info
+-- Detecting C compiler ABI info - done
+-- Check for working C compiler: /usr/bin/gcc - skipped
+-- Detecting C compile features
+-- Detecting C compile features - done
+-- Detecting CXX compiler ABI info
+-- Detecting CXX compiler ABI info - done
+-- Check for working CXX compiler: /usr/bin/g++ - skipped
+-- Detecting CXX compile features
+-- Detecting CXX compile features - done
+-- Found Boost: /usr/local/lib/cmake/Boost-1.84.0/BoostConfig.cmake (found suitable version "1.84.0", minimum required is "1.84") found components: system filesystem fiber program_options regex thread 
+-- Configuring done (0.9s)
+-- Generating done (0.0s)
+-- Build files have been written to: /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/build
++ make -j
+[ 14%] Building CXX object tests/CMakeFiles/tests.dir/fiber_test.cc.o
+[ 14%] Building CXX object src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o
+[ 28%] Building CXX object src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o
+[ 28%] Building CXX object tests/CMakeFiles/tests.dir/tests.cc.o
+[ 35%] Building CXX object src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o
+[ 42%] Building CXX object src/CMakeFiles/bufferpool.dir/config.cpp.o
+[ 50%] Building CXX object src/CMakeFiles/bufferpool.dir/debug.cpp.o
+[ 57%] Building CXX object src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.o
+[ 64%] Building CXX object src/CMakeFiles/bufferpool.dir/logger.cc.o
+[ 71%] Building CXX object src/CMakeFiles/bufferpool.dir/utils.cpp.o
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/logger.h:13,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/page_table.h:22,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/extendible_hash.cpp:4:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/partitioner.h: In constructor ‘gbp::RoundRobinPartitioner::RoundRobinPartitioner(gbp::partition_id_type)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/partitioner.h:27:27: warning: comparison of integer expressions of different signedness: ‘gbp::partition_id_type’ {aka ‘unsigned int’} and ‘int’ [-Wsign-compare]
+   27 |     assert(num_partitions == 1 << log2_num_partitions_);
+      |            ~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/extendible_hash.cpp:4:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/page_table.h: In member function ‘bool gbp::PageMapping::Resize(gbp::fpage_id_type)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/page_table.h:509:23: warning: comparison of integer expressions of different signedness: ‘int’ and ‘gbp::fpage_id_type’ {aka ‘unsigned int’} [-Wsign-compare]
+  509 |     for (int i = 0; i < new_size; i++) {
+      |                     ~~^~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/page_table.h:510:13: warning: comparison of integer expressions of different signedness: ‘int’ and ‘gbp::mpage_id_type’ {aka ‘unsigned int’} [-Wsign-compare]
+  510 |       if (i < size_)
+      |           ~~^~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/bufferblock/../debug.h:3,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/bufferblock/../page_table.h:21,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/bufferblock/buffer_obj.h:32,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/buffer_pool.h:20,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/buffer_pool_manager.h:19,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.h:1,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.cc:21:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/bufferblock/../partitioner.h: In constructor ‘gbp::RoundRobinPartitioner::RoundRobinPartitioner(gbp::partition_id_type)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/bufferblock/../partitioner.h:27:27: warning: comparison of integer expressions of different signedness: ‘gbp::partition_id_type’ {aka ‘unsigned int’} and ‘int’ [-Wsign-compare]
+   27 |     assert(num_partitions == 1 << log2_num_partitions_);
+      |            ~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/bufferblock/buffer_obj.h:32,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/buffer_pool.h:20,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/buffer_pool_manager.h:19,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.h:1,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.cc:21:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/bufferblock/../page_table.h: In member function ‘bool gbp::PageMapping::Resize(gbp::fpage_id_type)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/bufferblock/../page_table.h:509:23: warning: comparison of integer expressions of different signedness: ‘int’ and ‘gbp::fpage_id_type’ {aka ‘unsigned int’} [-Wsign-compare]
+  509 |     for (int i = 0; i < new_size; i++) {
+      |                     ~~^~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/bufferblock/../page_table.h:510:13: warning: comparison of integer expressions of different signedness: ‘int’ and ‘gbp::mpage_id_type’ {aka ‘unsigned int’} [-Wsign-compare]
+  510 |       if (i < size_)
+      |           ~~^~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../debug.h:3,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../page_table.h:21,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/buffer_obj.h:32,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_obj.cpp:1:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../partitioner.h: In constructor ‘gbp::RoundRobinPartitioner::RoundRobinPartitioner(gbp::partition_id_type)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../partitioner.h:27:27: warning: comparison of integer expressions of different signedness: ‘gbp::partition_id_type’ {aka ‘unsigned int’} and ‘int’ [-Wsign-compare]
+   27 |     assert(num_partitions == 1 << log2_num_partitions_);
+      |            ~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../debug.h:3,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../page_table.h:21,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/buffer_obj.h:32,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool.h:20,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool_manager.h:19,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool_manager.cpp:1:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../partitioner.h: In constructor ‘gbp::RoundRobinPartitioner::RoundRobinPartitioner(gbp::partition_id_type)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../partitioner.h:27:27: warning: comparison of integer expressions of different signedness: ‘gbp::partition_id_type’ {aka ‘unsigned int’} and ‘int’ [-Wsign-compare]
+   27 |     assert(num_partitions == 1 << log2_num_partitions_);
+      |            ~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/buffer_obj.h:32,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_obj.cpp:1:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../page_table.h: In member function ‘bool gbp::PageMapping::Resize(gbp::fpage_id_type)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../page_table.h:509:23: warning: comparison of integer expressions of different signedness: ‘int’ and ‘gbp::fpage_id_type’ {aka ‘unsigned int’} [-Wsign-compare]
+  509 |     for (int i = 0; i < new_size; i++) {
+      |                     ~~^~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../page_table.h:510:13: warning: comparison of integer expressions of different signedness: ‘int’ and ‘gbp::mpage_id_type’ {aka ‘unsigned int’} [-Wsign-compare]
+  510 |       if (i < size_)
+      |           ~~^~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/buffer_obj.h:32,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool.h:20,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool_manager.h:19,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool_manager.cpp:1:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../page_table.h: In member function ‘bool gbp::PageMapping::Resize(gbp::fpage_id_type)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../page_table.h:509:23: warning: comparison of integer expressions of different signedness: ‘int’ and ‘gbp::fpage_id_type’ {aka ‘unsigned int’} [-Wsign-compare]
+  509 |     for (int i = 0; i < new_size; i++) {
+      |                     ~~^~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../page_table.h:510:13: warning: comparison of integer expressions of different signedness: ‘int’ and ‘gbp::mpage_id_type’ {aka ‘unsigned int’} [-Wsign-compare]
+  510 |       if (i < size_)
+      |           ~~^~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../debug.h:3,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../page_table.h:21,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/buffer_obj.h:32,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool.h:20,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool.cpp:1:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../partitioner.h: In constructor ‘gbp::RoundRobinPartitioner::RoundRobinPartitioner(gbp::partition_id_type)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../partitioner.h:27:27: warning: comparison of integer expressions of different signedness: ‘gbp::partition_id_type’ {aka ‘unsigned int’} and ‘int’ [-Wsign-compare]
+   27 |     assert(num_partitions == 1 << log2_num_partitions_);
+      |            ~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/buffer_obj.h:32,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool.h:20,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool.cpp:1:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../page_table.h: In member function ‘bool gbp::PageMapping::Resize(gbp::fpage_id_type)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../page_table.h:509:23: warning: comparison of integer expressions of different signedness: ‘int’ and ‘gbp::fpage_id_type’ {aka ‘unsigned int’} [-Wsign-compare]
+  509 |     for (int i = 0; i < new_size; i++) {
+      |                     ~~^~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/bufferblock/../page_table.h:510:13: warning: comparison of integer expressions of different signedness: ‘int’ and ‘gbp::mpage_id_type’ {aka ‘unsigned int’} [-Wsign-compare]
+  510 |       if (i < size_)
+      |           ~~^~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/buffer_pool.h:29,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/buffer_pool_manager.h:19,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.h:1,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.cc:21:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/io_backend.h: In member function ‘virtual bool gbp::IOURing::Progress()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/io_backend.h:345:23: warning: comparison of integer expressions of different signedness: ‘int’ and ‘unsigned int’ [-Wsign-compare]
+  345 |     for (int i = 0; i < num_ready; i++) {
+      |                     ~~^~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/io_backend.h: In member function ‘virtual bool gbp::RWSysCall::Read(size_t, std::string_view, gbp::GBPfile_handle_type, gbp::AsyncMesg*)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/io_backend.h:460:13: warning: comparison of integer expressions of different signedness: ‘long int’ and ‘std::basic_string_view<char>::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  460 |     if (ret < data.size()) {
+      |         ~~~~^~~~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/io_backend.h: In member function ‘virtual bool gbp::RWSysCall::Read(size_t, char*, size_t, gbp::GBPfile_handle_type, gbp::AsyncMesg*)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/io_backend.h:488:13: warning: comparison of integer expressions of different signedness: ‘long int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+  488 |     if (ret < size) {
+      |         ~~~~^~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/io_backend.h: In member function ‘virtual bool gbp::RWSysCall::Read(size_t, iovec*, gbp::GBPfile_handle_type, gbp::AsyncMesg*)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/io_backend.h:511:13: warning: comparison of integer expressions of different signedness: ‘long int’ and ‘const size_t’ {aka ‘const long unsigned int’} [-Wsign-compare]
+  511 |     if (ret < PAGE_SIZE_FILE) {
+      |         ~~~~^~~~~~~~~~~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool.h:29,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool_manager.h:19,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_obj.cpp:2:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h: In member function ‘virtual bool gbp::IOURing::Progress()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h:345:23: warning: comparison of integer expressions of different signedness: ‘int’ and ‘unsigned int’ [-Wsign-compare]
+  345 |     for (int i = 0; i < num_ready; i++) {
+      |                     ~~^~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h: In member function ‘virtual bool gbp::RWSysCall::Read(size_t, std::string_view, gbp::GBPfile_handle_type, gbp::AsyncMesg*)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h:460:13: warning: comparison of integer expressions of different signedness: ‘long int’ and ‘std::basic_string_view<char>::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  460 |     if (ret < data.size()) {
+      |         ~~~~^~~~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h: In member function ‘virtual bool gbp::RWSysCall::Read(size_t, char*, size_t, gbp::GBPfile_handle_type, gbp::AsyncMesg*)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h:488:13: warning: comparison of integer expressions of different signedness: ‘long int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+  488 |     if (ret < size) {
+      |         ~~~~^~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h: In member function ‘virtual bool gbp::RWSysCall::Read(size_t, iovec*, gbp::GBPfile_handle_type, gbp::AsyncMesg*)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h:511:13: warning: comparison of integer expressions of different signedness: ‘long int’ and ‘const size_t’ {aka ‘const long unsigned int’} [-Wsign-compare]
+  511 |     if (ret < PAGE_SIZE_FILE) {
+      |         ~~~~^~~~~~~~~~~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool.h:29,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool_manager.h:19,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool_manager.cpp:1:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h: In member function ‘virtual bool gbp::IOURing::Progress()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h:345:23: warning: comparison of integer expressions of different signedness: ‘int’ and ‘unsigned int’ [-Wsign-compare]
+  345 |     for (int i = 0; i < num_ready; i++) {
+      |                     ~~^~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h: In member function ‘virtual bool gbp::RWSysCall::Read(size_t, std::string_view, gbp::GBPfile_handle_type, gbp::AsyncMesg*)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h:460:13: warning: comparison of integer expressions of different signedness: ‘long int’ and ‘std::basic_string_view<char>::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  460 |     if (ret < data.size()) {
+      |         ~~~~^~~~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h: In member function ‘virtual bool gbp::RWSysCall::Read(size_t, char*, size_t, gbp::GBPfile_handle_type, gbp::AsyncMesg*)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h:488:13: warning: comparison of integer expressions of different signedness: ‘long int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+  488 |     if (ret < size) {
+      |         ~~~~^~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h: In member function ‘virtual bool gbp::RWSysCall::Read(size_t, iovec*, gbp::GBPfile_handle_type, gbp::AsyncMesg*)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h:511:13: warning: comparison of integer expressions of different signedness: ‘long int’ and ‘const size_t’ {aka ‘const long unsigned int’} [-Wsign-compare]
+  511 |     if (ret < PAGE_SIZE_FILE) {
+      |         ~~~~^~~~~~~~~~~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool.h:29,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool.cpp:1:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h: In member function ‘virtual bool gbp::IOURing::Progress()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h:345:23: warning: comparison of integer expressions of different signedness: ‘int’ and ‘unsigned int’ [-Wsign-compare]
+  345 |     for (int i = 0; i < num_ready; i++) {
+      |                     ~~^~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h: In member function ‘virtual bool gbp::RWSysCall::Read(size_t, std::string_view, gbp::GBPfile_handle_type, gbp::AsyncMesg*)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h:460:13: warning: comparison of integer expressions of different signedness: ‘long int’ and ‘std::basic_string_view<char>::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  460 |     if (ret < data.size()) {
+      |         ~~~~^~~~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h: In member function ‘virtual bool gbp::RWSysCall::Read(size_t, char*, size_t, gbp::GBPfile_handle_type, gbp::AsyncMesg*)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h:488:13: warning: comparison of integer expressions of different signedness: ‘long int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+  488 |     if (ret < size) {
+      |         ~~~~^~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h: In member function ‘virtual bool gbp::RWSysCall::Read(size_t, iovec*, gbp::GBPfile_handle_type, gbp::AsyncMesg*)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/io_backend.h:511:13: warning: comparison of integer expressions of different signedness: ‘long int’ and ‘const size_t’ {aka ‘const long unsigned int’} [-Wsign-compare]
+  511 |     if (ret < PAGE_SIZE_FILE) {
+      |         ~~~~^~~~~~~~~~~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/buffer_pool_manager.h:19,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.h:1,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.cc:21:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/buffer_pool.h: In member function ‘void gbp::BufferPool::WarmUp()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/buffer_pool.h:161:33: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<long unsigned int>::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  161 |     for (int fd_gbp = 0; fd_gbp < disk_manager_->file_size_inBytes_.size();
+      |                          ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool_manager.h:19,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_obj.cpp:2:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool.h: In member function ‘void gbp::BufferPool::WarmUp()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool.h:161:33: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<long unsigned int>::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  161 |     for (int fd_gbp = 0; fd_gbp < disk_manager_->file_size_inBytes_.size();
+      |                          ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool_manager.h:19,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool_manager.cpp:1:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool.h: In member function ‘void gbp::BufferPool::WarmUp()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool.h:161:33: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<long unsigned int>::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  161 |     for (int fd_gbp = 0; fd_gbp < disk_manager_->file_size_inBytes_.size();
+      |                          ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.h:1,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.cc:21:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/buffer_pool_manager.h: In member function ‘void gbp::BufferPoolManager::WarmUp()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/../include/buffer_pool_manager.h:118:25: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<std::pair<unsigned int, bool> >::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  118 |     for (int fd = 0; fd < disk_manager_->fd_oss_.size(); fd++) {
+      |                      ~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool.cpp:1:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool.h: In member function ‘void gbp::BufferPool::WarmUp()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool.h:161:33: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<long unsigned int>::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  161 |     for (int fd_gbp = 0; fd_gbp < disk_manager_->file_size_inBytes_.size();
+      |                          ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.cc: In function ‘std::string test::random_str(size_t)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.cc:337:21: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+  337 |   for (int i = 0; i < rnd_len; i++) {
+      |                   ~~^~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.cc: In function ‘std::vector<std::vector<long unsigned int> > test::read_trace(const string&, size_t)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/tests.cc:598:37: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+  598 |   for (int thread_id = 1; thread_id < work_num + 1; thread_id++) {
+      |                           ~~~~~~~~~~^~~~~~~~~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_obj.cpp:2:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool_manager.h: In member function ‘void gbp::BufferPoolManager::WarmUp()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool_manager.h:118:25: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<std::pair<unsigned int, bool> >::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  118 |     for (int fd = 0; fd < disk_manager_->fd_oss_.size(); fd++) {
+      |                      ~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool_manager.cpp:1:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool_manager.h: In member function ‘void gbp::BufferPoolManager::WarmUp()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/../include/buffer_pool_manager.h:118:25: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<std::pair<unsigned int, bool> >::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  118 |     for (int fd = 0; fd < disk_manager_->fd_oss_.size(); fd++) {
+      |                      ~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool.cpp: In member function ‘void gbp::BufferPool::init(u_int32_t, gbp::mpage_id_type, gbp::MemoryPool, gbp::IOServer*, gbp::RoundRobinPartitioner*, gbp::EvictionServer*)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool.cpp:51:21: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<std::pair<unsigned int, bool> >::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+   51 |   for (int i = 0; i < disk_manager_->fd_oss_.size(); i++) {
+      |                   ~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool_manager.cpp: In member function ‘bool gbp::BufferPoolManager::Flush()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool_manager.cpp:125:23: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<std::pair<unsigned int, bool> >::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  125 |   for (int fd = 0; fd < disk_manager_->fd_oss_.size(); fd++) {
+      |                    ~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool.cpp: In member function ‘gbp::pair_min<gbp::PageTableInner::PTE*, char*> gbp::BufferPool::FetchPageSync(gbp::fpage_id_type, gbp::GBPfile_handle_type)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool.cpp:387:12: warning: this statement may fall through [-Wimplicit-fallthrough=]
+  387 |       stat = BP_async_request_type::Phase::End;
+      |       ~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/src/buffer_pool.cpp:389:5: note: here
+  389 |     case BP_async_request_type::Phase::End: {
+      |     ^~~~
+[ 78%] Linking CXX shared library /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/lib/libbufferpool.so
+[ 78%] Built target bufferpool
+[ 85%] Linking CXX shared library /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/lib/libtests.so
+[ 85%] Built target tests
+[ 92%] Building CXX object CMakeFiles/graphscope_bufferpool.dir/main.cpp.o
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/orgin_mmap.h:34,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:23:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/value.h:24: warning: "LBMalloc" redefined
+   24 | #define LBMalloc(size) malloc(size)
+      | 
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/bufferblock/buffer_obj.h:30,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool.h:20,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool_manager.h:19,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:20:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/bufferblock/../config.h:34: note: this is the location of the previous definition
+   34 | #define LBMalloc(size) ::malloc(size)
+      | 
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/orgin_mmap.h:34,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:23:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/value.h:25: warning: "LBFree" redefined
+   25 | #define LBFree(p) free(p)
+      | 
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/bufferblock/buffer_obj.h:30,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool.h:20,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool_manager.h:19,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:20:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/bufferblock/../config.h:35: note: this is the location of the previous definition
+   35 | #define LBFree(p) ::free(p)
+      | 
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/orgin_mmap.h:34,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:23:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/value.h:26: warning: "LBRealloc" redefined
+   26 | #define LBRealloc(p, size) realloc((p), (size))
+      | 
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/bufferblock/buffer_obj.h:30,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool.h:20,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool_manager.h:19,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:20:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/bufferblock/../config.h:36: note: this is the location of the previous definition
+   36 | #define LBRealloc(p, size) ::realloc((p), (size))
+      | 
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/bufferblock/../debug.h:3,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/bufferblock/../page_table.h:21,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/bufferblock/buffer_obj.h:32,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool.h:20,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool_manager.h:19,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:20:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/bufferblock/../partitioner.h: In constructor ‘gbp::RoundRobinPartitioner::RoundRobinPartitioner(gbp::partition_id_type)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/bufferblock/../partitioner.h:27:27: warning: comparison of integer expressions of different signedness: ‘gbp::partition_id_type’ {aka ‘unsigned int’} and ‘int’ [-Wsign-compare]
+   27 |     assert(num_partitions == 1 << log2_num_partitions_);
+      |            ~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/bufferblock/buffer_obj.h:32,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool.h:20,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool_manager.h:19,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:20:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/bufferblock/../page_table.h: In member function ‘bool gbp::PageMapping::Resize(gbp::fpage_id_type)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/bufferblock/../page_table.h:509:23: warning: comparison of integer expressions of different signedness: ‘int’ and ‘gbp::fpage_id_type’ {aka ‘unsigned int’} [-Wsign-compare]
+  509 |     for (int i = 0; i < new_size; i++) {
+      |                     ~~^~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/bufferblock/../page_table.h:510:13: warning: comparison of integer expressions of different signedness: ‘int’ and ‘gbp::mpage_id_type’ {aka ‘unsigned int’} [-Wsign-compare]
+  510 |       if (i < size_)
+      |           ~~^~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool.h:29,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool_manager.h:19,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:20:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/io_backend.h: In member function ‘virtual bool gbp::IOURing::Progress()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/io_backend.h:345:23: warning: comparison of integer expressions of different signedness: ‘int’ and ‘unsigned int’ [-Wsign-compare]
+  345 |     for (int i = 0; i < num_ready; i++) {
+      |                     ~~^~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/io_backend.h: In member function ‘virtual bool gbp::RWSysCall::Read(size_t, std::string_view, gbp::GBPfile_handle_type, gbp::AsyncMesg*)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/io_backend.h:460:13: warning: comparison of integer expressions of different signedness: ‘long int’ and ‘std::basic_string_view<char>::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  460 |     if (ret < data.size()) {
+      |         ~~~~^~~~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/io_backend.h: In member function ‘virtual bool gbp::RWSysCall::Read(size_t, char*, size_t, gbp::GBPfile_handle_type, gbp::AsyncMesg*)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/io_backend.h:488:13: warning: comparison of integer expressions of different signedness: ‘long int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+  488 |     if (ret < size) {
+      |         ~~~~^~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/io_backend.h: In member function ‘virtual bool gbp::RWSysCall::Read(size_t, iovec*, gbp::GBPfile_handle_type, gbp::AsyncMesg*)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/io_backend.h:511:13: warning: comparison of integer expressions of different signedness: ‘long int’ and ‘const size_t’ {aka ‘const long unsigned int’} [-Wsign-compare]
+  511 |     if (ret < PAGE_SIZE_FILE) {
+      |         ~~~~^~~~~~~~~~~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool_manager.h:19,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:20:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool.h: In member function ‘void gbp::BufferPool::WarmUp()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool.h:161:33: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<long unsigned int>::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  161 |     for (int fd_gbp = 0; fd_gbp < disk_manager_->file_size_inBytes_.size();
+      |                          ~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:20:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool_manager.h: In member function ‘void gbp::BufferPoolManager::WarmUp()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/include/buffer_pool_manager.h:118:25: warning: comparison of integer expressions of different signedness: ‘int’ and ‘std::vector<std::pair<unsigned int, bool> >::size_type’ {aka ‘long unsigned int’} [-Wsign-compare]
+  118 |     for (int fd = 0; fd < disk_manager_->fd_oss_.size(); fd++) {
+      |                      ~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp: In function ‘int test_read(gbp::BufferPoolManager&, size_t)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:38:23: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+   38 |     for (int i = 0; i < file_size; i++) {
+      |                     ~~^~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:54:1: warning: no return statement in function returning non-void [-Wreturn-type]
+   54 | }
+      | ^
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp: In function ‘int test1()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:96:23: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+   96 |     for (int i = 0; i < file_size; i++) {
+      |                     ~~^~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp: In function ‘int test3()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:153:23: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+  153 |     for (int i = 0; i < file_size; i++) {
+      |                     ~~^~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp: In function ‘void test_mmap_array()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:234:21: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+  234 |   for (int i = 0; i < degree_list.size(); i++) {
+      |                   ~~^~~~~~~~~~~~~~~~~~~~
+In file included from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/utils.h:1,
+                 from /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:25:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:244:26: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+  244 |     assert(item.GetAge() == i + 20);
+      |            ~~~~~~~~~~~~~~^~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp: In function ‘void test_string()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:280:21: warning: comparison of integer expressions of different signedness: ‘int’ and ‘size_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+  280 |   for (int i = 0; i < student_list.size(); i++) {
+      |                   ~~^~~~~~~~~~~~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp: In function ‘void generate_string()’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:302:36: warning: comparison of integer expressions of different signedness: ‘int’ and ‘uint64_t’ {aka ‘long unsigned int’} [-Wsign-compare]
+  302 |     for (int j = offset_list[i]; j < offset_list[i] + length_list[i]; j++) {
+      |                                  ~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp: In function ‘int test_aa(const string&)’:
+/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/main.cpp:506:1: warning: control reaches end of non-void function [-Wreturn-type]
+  506 | }
+      | ^
+[100%] Linking CXX executable /data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/bin/graphscope_bufferpool
+[100%] Built target graphscope_bufferpool
++ '[' 0 -ne 0 ']'
++ echo -e '\033[41;36m Compile succeed \033[0m'
+[41;36m Compile succeed [0m
++ cd ..
++ CUR_DIR=.
++ export FILE_SIZE_MB=10240
++ FILE_SIZE_MB=10240
++ export WORKER_NUM=60
++ WORKER_NUM=60
++ export POOL_NUM=4
++ POOL_NUM=4
++ export IO_SERVER_NUM=4
++ IO_SERVER_NUM=4
++ export POOL_SIZE_MB=2048
++ POOL_SIZE_MB=2048
++ export IO_SIZE_Byte=8192
++ IO_SIZE_Byte=8192
++ for BLOCK_SIZE in 1 2 3 4 5 6 7 8
++ export IO_SIZE_Byte=4096
++ IO_SIZE_Byte=4096
+++ date +%Y-%m-%d-%H:%M:%S
++ export time=2024-09-12-21:34:56
++ time=2024-09-12-21:34:56
++ export LOG_DIR=./logs/2024-09-12-21:34:56
++ LOG_DIR=./logs/2024-09-12-21:34:56
++ mkdir -p ./logs/2024-09-12-21:34:56
++ cp -r ./run.sh ./logs/2024-09-12-21:34:56/run.sh
++ echo 1
++ timeout 320s ./bin/graphscope_bufferpool 10240 60 4 2048 4 4096 ./logs/2024-09-12-21:34:56
++ for BLOCK_SIZE in 1 2 3 4 5 6 7 8
++ export IO_SIZE_Byte=8192
++ IO_SIZE_Byte=8192
+++ date +%Y-%m-%d-%H:%M:%S
++ export time=2024-09-12-21:40:16
++ time=2024-09-12-21:40:16
++ export LOG_DIR=./logs/2024-09-12-21:40:16
++ LOG_DIR=./logs/2024-09-12-21:40:16
++ mkdir -p ./logs/2024-09-12-21:40:16
++ cp -r ./run.sh ./logs/2024-09-12-21:40:16/run.sh
++ echo 1
++ timeout 320s ./bin/graphscope_bufferpool 10240 60 4 2048 4 8192 ./logs/2024-09-12-21:40:16
++ for BLOCK_SIZE in 1 2 3 4 5 6 7 8
++ export IO_SIZE_Byte=12288
++ IO_SIZE_Byte=12288
+++ date +%Y-%m-%d-%H:%M:%S
++ export time=2024-09-12-21:45:36
++ time=2024-09-12-21:45:36
++ export LOG_DIR=./logs/2024-09-12-21:45:36
++ LOG_DIR=./logs/2024-09-12-21:45:36
++ mkdir -p ./logs/2024-09-12-21:45:36
++ cp -r ./run.sh ./logs/2024-09-12-21:45:36/run.sh
++ echo 1
++ timeout 320s ./bin/graphscope_bufferpool 10240 60 4 2048 4 12288 ./logs/2024-09-12-21:45:36
++ for BLOCK_SIZE in 1 2 3 4 5 6 7 8
++ export IO_SIZE_Byte=16384
++ IO_SIZE_Byte=16384
+++ date +%Y-%m-%d-%H:%M:%S
++ export time=2024-09-12-21:50:56
++ time=2024-09-12-21:50:56
++ export LOG_DIR=./logs/2024-09-12-21:50:56
++ LOG_DIR=./logs/2024-09-12-21:50:56
++ mkdir -p ./logs/2024-09-12-21:50:56
++ cp -r ./run.sh ./logs/2024-09-12-21:50:56/run.sh
++ echo 1
++ timeout 320s ./bin/graphscope_bufferpool 10240 60 4 2048 4 16384 ./logs/2024-09-12-21:50:56
++ for BLOCK_SIZE in 1 2 3 4 5 6 7 8
++ export IO_SIZE_Byte=20480
++ IO_SIZE_Byte=20480
+++ date +%Y-%m-%d-%H:%M:%S
++ export time=2024-09-12-21:56:16
++ time=2024-09-12-21:56:16
++ export LOG_DIR=./logs/2024-09-12-21:56:16
++ LOG_DIR=./logs/2024-09-12-21:56:16
++ mkdir -p ./logs/2024-09-12-21:56:16
++ cp -r ./run.sh ./logs/2024-09-12-21:56:16/run.sh
++ echo 1
++ timeout 320s ./bin/graphscope_bufferpool 10240 60 4 2048 4 20480 ./logs/2024-09-12-21:56:16
++ for BLOCK_SIZE in 1 2 3 4 5 6 7 8
++ export IO_SIZE_Byte=24576
++ IO_SIZE_Byte=24576
+++ date +%Y-%m-%d-%H:%M:%S
++ export time=2024-09-12-22:01:37
++ time=2024-09-12-22:01:37
++ export LOG_DIR=./logs/2024-09-12-22:01:37
++ LOG_DIR=./logs/2024-09-12-22:01:37
++ mkdir -p ./logs/2024-09-12-22:01:37
++ cp -r ./run.sh ./logs/2024-09-12-22:01:37/run.sh
++ echo 1
++ timeout 320s ./bin/graphscope_bufferpool 10240 60 4 2048 4 24576 ./logs/2024-09-12-22:01:37
++ for BLOCK_SIZE in 1 2 3 4 5 6 7 8
++ export IO_SIZE_Byte=28672
++ IO_SIZE_Byte=28672
+++ date +%Y-%m-%d-%H:%M:%S
++ export time=2024-09-12-22:06:57
++ time=2024-09-12-22:06:57
++ export LOG_DIR=./logs/2024-09-12-22:06:57
++ LOG_DIR=./logs/2024-09-12-22:06:57
++ mkdir -p ./logs/2024-09-12-22:06:57
++ cp -r ./run.sh ./logs/2024-09-12-22:06:57/run.sh
++ echo 1
++ timeout 320s ./bin/graphscope_bufferpool 10240 60 4 2048 4 28672 ./logs/2024-09-12-22:06:57
++ for BLOCK_SIZE in 1 2 3 4 5 6 7 8
++ export IO_SIZE_Byte=32768
++ IO_SIZE_Byte=32768
+++ date +%Y-%m-%d-%H:%M:%S
++ export time=2024-09-12-22:12:17
++ time=2024-09-12-22:12:17
++ export LOG_DIR=./logs/2024-09-12-22:12:17
++ LOG_DIR=./logs/2024-09-12-22:12:17
++ mkdir -p ./logs/2024-09-12-22:12:17
++ cp -r ./run.sh ./logs/2024-09-12-22:12:17/run.sh
++ echo 1
++ timeout 320s ./bin/graphscope_bufferpool 10240 60 4 2048 4 32768 ./logs/2024-09-12-22:12:17
