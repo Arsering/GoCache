@@ -267,6 +267,9 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
 #if ASSERT_ENABLE
   assert(fpage_id < CEIL(disk_manager_->GetFileSizeFast(fd), PAGE_SIZE_MEMORY));
 #endif
+#if ASSERT_ENABLE
+  assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
+#endif
   auto ret = Pin(fpage_id, fd);
   if (ret.first) {  // 1.1
     // if (gbp::warmup_mark() == 1)
@@ -277,26 +280,26 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
   //   as_atomic(disk_manager_->counts_[fd].second)++;
 
   auto stat = BP_async_request_type::Phase::Begin;
-#if ASSERT_ENABLE
-  assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
-#endif
+  size_t count = 0;
   while (true) {
     switch (stat) {
     case BP_async_request_type::Phase::Begin: {
       auto [locked, mpage_id] = page_table_->LockMapping(fd, fpage_id);
-
-      if (locked && mpage_id == PageMapping::Mapping::EMPTY_VALUE) {
-        stat = BP_async_request_type::Phase::Initing;
-      } else {
-        if (locked)
-          page_table_->UnLockMapping(fd, fpage_id, mpage_id);
-        while (true) {
+      if (locked) {
+        if (mpage_id == PageMapping::Mapping::EMPTY_VALUE) {
+          stat = BP_async_request_type::Phase::Initing;
+        } else {  // 说明本页早已被load到内存了
+          assert(page_table_->UnLockMapping(fd, fpage_id, mpage_id));
           ret = Pin(fpage_id, fd);
-          if (ret.first) {  // 1.1
+          if (ret.first) {  // pin成功了就返回
             stat = BP_async_request_type::Phase::End;
-            break;
-          }
+          }  // pin失败了就重新执行一遍Begin
         }
+      } else if (mpage_id != PageMapping::Mapping::BUSY_VALUE) {
+        ret = Pin(fpage_id, fd);
+        if (ret.first) {  // pin成功了就返回
+          stat = BP_async_request_type::Phase::End;
+        }  // pin失败了就重新执行一遍Begin
       }
       break;
     }
@@ -407,20 +410,19 @@ bool BufferPool::FetchPageSync1(BP_sync_request_type& req) {
     switch (req.runtime_phase) {
     case BP_sync_request_type::Phase::Begin: {
       auto [locked, mpage_id] = page_table_->LockMapping(req.fd, req.fpage_id);
-
-      if (locked && mpage_id == PageMapping::Mapping::EMPTY_VALUE) {
-        req.runtime_phase = BP_sync_request_type::Phase::Initing;
-      } else {
-        if (locked)
-          page_table_->UnLockMapping(req.fd, req.fpage_id, mpage_id);
-        while (true) {
+      if (locked) {
+        if (mpage_id == PageMapping::Mapping::EMPTY_VALUE) {
+          req.runtime_phase = BP_sync_request_type::Phase::Initing;
+        } else if (mpage_id != PageMapping::Mapping::
+                                   BUSY_VALUE) {  // 说明本页早已被load到内存了
+          assert(page_table_->UnLockMapping(req.fd, req.fpage_id, mpage_id));
           req.response = Pin(req.fpage_id, req.fd);
-          if (req.response.first) {  // 1.1
+          if (req.response.first) {  // pin成功了就返回
             req.runtime_phase = BP_sync_request_type::Phase::End;
-            break;
-          }
-        }
-      }
+          }  // pin失败了就重新执行一遍Begin
+        } else
+          assert(false);
+      }  // lock失败了就重新执行一遍Begin
       break;
     }
     case BP_sync_request_type::Phase::ReBegin: {
@@ -483,13 +485,6 @@ bool BufferPool::FetchPageSync1(BP_sync_request_type& req) {
                              PAGE_SIZE_MEMORY, req.response.first->fd_cur,
                              false));
       }
-      // {
-      //   get_thread_logfile()
-      //       << ret.first->fd_cur << " " << ret.first->fpage_id_cur << " "
-      //       << as_atomic(memory_usages_[memory_pool_.ToPageId(ret.second)])
-      //       << std::endl;
-      //   as_atomic(memory_usages_[memory_pool_.ToPageId(ret.second)]) = 0;
-      // }
 
       assert(page_table_->DeleteMapping(req.response.first->fd_cur,
                                         req.response.first->fpage_id_cur));

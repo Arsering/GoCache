@@ -176,6 +176,7 @@ bool BufferPoolManager::ReadWrite(size_t offset, size_t file_size, char* buf,
 
 bool BufferPoolManager::LoadPage(pair_min<PTE*, char*> mpage) {
   while (!mpage.first->initialized) {
+    // FIXME: 非常危险
     if (mpage.first->Lock()) {
       if (mpage.first->initialized) {
         assert(mpage.first->UnLock());

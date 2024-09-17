@@ -511,9 +511,6 @@ class RWSysCall : public IOBackend {
                         std::min(io_count, (size_t) iovec_max), offset);
 
 #if ASSERT_ENABLE
-    if (ret == -1)
-      LOG(INFO) << io_count << " " << (intptr_t) io_info[io_count - 1].iov_base
-                << " " << io_info[0].iov_len;
     assert(ret != -1);
 #endif
     if (unlikely(io_count > iovec_max)) {
@@ -526,10 +523,6 @@ class RWSysCall : public IOBackend {
                        offset);
 
 #if ASSERT_ENABLE
-        if (ret == -1)
-          LOG(INFO) << io_count << " "
-                    << (intptr_t) io_info[io_count - 1].iov_base << " "
-                    << io_info[0].iov_len;
         assert(ret != -1);
 #endif
 

@@ -155,7 +155,7 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
                             std::to_string(thread_id) + ".log");
   latency_log << "read_bufferpool" << std::endl;
 
-  size_t io_num = file_size_inByte / sizeof(size_t) - 10;
+  size_t io_num = (file_size_inByte - io_size_in) / sizeof(size_t) - 10;
 
   std::random_device rd;
   std::mt19937 gen(rd());
@@ -212,7 +212,9 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
         // block_container[count_page_tmp].second = curr_io_fileoffset;
 
         {
+          gbp::get_counter_global(gbp::get_thread_id())++;
           auto block = bpm.GetBlockSync(curr_io_fileoffset, io_size);
+          gbp::get_counter_global(gbp::get_thread_id())++;
 
           // auto block =
           //     bpm.GetBlockWithDirectCacheSync(curr_io_fileoffset,
@@ -684,6 +686,7 @@ int test_concurrency(int argc, char** argv) {
       "file_size_MB = %lu\tworker_num = %lu\tpool_num = %lu\tpool_size_MB = "
       "%lu\tio_server_num = %lu\tio_size = %lu\n",
       file_size_MB, worker_num, pool_num, pool_size_MB, io_server_num, io_size);
+  GBPLOG << "cp";
   // warmup(data_file_mmaped, file_size_inByte, io_size);
 
   std::filesystem::create_directory(std::string{argv[7]} + "/latency");
@@ -734,7 +737,22 @@ int test_concurrency(int argc, char** argv) {
   }
   sleep(1);
   mark_stop = false;
-
+  std::vector<std::pair<size_t, size_t>> times(worker_num, {100, 100});
+  while (true) {
+    for (auto worker_id = 0; worker_id < worker_num; worker_id++) {
+      size_t v_cur = gbp::get_counter_global(worker_id);
+      if (v_cur % 2 == 1) {
+        if (v_cur == times[worker_id].first &&
+            gbp::GetSystemTime() - times[worker_id].second > 2.7e9) {
+          assert(false);
+        }
+        if (v_cur != times[worker_id].first) {
+          times[worker_id].first = v_cur;
+          times[worker_id].second = gbp::GetSystemTime();
+        }
+      }
+    }
+  }
   for (auto& thread : thread_pool) {
     thread.join();
   }
