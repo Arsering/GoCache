@@ -20,16 +20,15 @@ cd ..
 CUR_DIR=.
 
 export FILE_SIZE_MB=$((1024*10))
-export WORKER_NUM=1
-export POOL_NUM=4
+export WORKER_NUM=30
+export POOL_NUM=8
 export IO_SERVER_NUM=${POOL_NUM}
 export POOL_SIZE_MB=$((1024*1))
-export IO_SIZE_Byte=$((512*8*2))
+export IO_SIZE_Byte=$((512*8*3))
 # export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD
 # 2 3 4 5 7 9 11 13 15 20 25 30
 # for BLOCK_SIZE in 1 2 3 4 5 6 7 8
 # do
-export IO_SIZE_Byte=$((512*8*${BLOCK_SIZE}))
 
 export time=$(date "+%Y-%m-%d-%H:%M:%S")
 export LOG_DIR=${CUR_DIR}/logs/${time}
