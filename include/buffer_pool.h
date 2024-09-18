@@ -228,13 +228,13 @@ class BufferPool {
     // 1.1
     auto [success, mpage_id] = page_table_->FindMapping(fd, fpage_id);
     if (success) {
-      auto tar = page_table_->FromPageId(mpage_id);
+      auto pte = page_table_->FromPageId(mpage_id);
       // auto [has_inc, pre_ref_count] = tar->IncRefCount(fpage_id_inpool, fd);
-      auto has_inc = tar->IncRefCount1(fpage_id, fd);
+      auto has_inc = pte->IncRefCount1(fpage_id, fd);
 
       if (has_inc) {
-        assert(replacer_->Promote(page_table_->ToPageId(tar)));
-        return {tar, (char*) memory_pool_.FromPageId(mpage_id)};
+        assert(replacer_->Promote(page_table_->ToPageId(pte)));
+        return {pte, (char*) memory_pool_.FromPageId(mpage_id)};
       }
     }
     return {nullptr, nullptr};

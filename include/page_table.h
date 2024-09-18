@@ -258,7 +258,6 @@ class PageTableInner {
             new_header.busy)
           return false;
         new_header.busy = true;
-
       } while (!atomic_packed.compare_exchange_weak(old_packed, new_packed,
                                                     std::memory_order_release,
                                                     std::memory_order_relaxed));
@@ -643,9 +642,9 @@ class PageTable {
     if (mpage_id == PageMapping::Mapping::EMPTY_VALUE)
       return {true, mpage_id};
 
-    auto* tar = FromPageId(mpage_id);
+    auto* pte = FromPageId(mpage_id);
     // 在mapping被锁住之前，有其他正常的访问到达了pte，导致pte的锁住失败
-    if (!tar->Lock()) {
+    if (!pte->Lock()) {
       assert(mappings_[fd]->CreateMapping(
           fpage_id_inpool,
           mpage_id));  // 一旦锁pte失败，则必须释放MMAP
@@ -671,11 +670,11 @@ class PageTable {
 #endif
 
     if (mpage_id != PageMapping::Mapping::EMPTY_VALUE) {
-      auto* tar = FromPageId(mpage_id);
-      if (tar->fpage_id_cur != fpage_id && tar->fd_cur == fd) {
+      auto pte = FromPageId(mpage_id);
+      if (pte->fpage_id_cur != fpage_id && pte->fd_cur == fd) {
         return false;
       }
-      if (!tar->UnLock())
+      if (!pte->UnLock())
         return false;
     }
     std::atomic_thread_fence(std::memory_order_release);
