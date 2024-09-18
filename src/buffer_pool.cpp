@@ -96,7 +96,6 @@ BufferPool::~BufferPool() {
   // }
 
   delete page_table_;
-
   delete replacer_;
   // delete io_server_;
   delete free_list_;
@@ -422,7 +421,12 @@ bool BufferPool::FetchPageSync1(BP_sync_request_type& req) {
           }  // pin失败了就重新执行一遍Begin
         } else
           assert(false);
-      }  // lock失败了就重新执行一遍Begin
+      } else if (mpage_id != PageMapping::Mapping::BUSY_VALUE) {
+        req.response = Pin(req.fpage_id, req.fd);
+        if (req.response.first) {  // pin成功了就返回
+          req.runtime_phase = BP_sync_request_type::Phase::End;
+        }  // pin失败了就重新执行一遍Begin
+      }
       break;
     }
     case BP_sync_request_type::Phase::ReBegin: {

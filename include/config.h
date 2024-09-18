@@ -58,7 +58,7 @@ using GBPfile_handle_type = uint32_t;
 using OSfile_handle_type = uint32_t;
 using partition_id_type = uint32_t;
 
-constexpr bool PERSISTENT = true;
+constexpr bool PERSISTENT = false;
 constexpr bool DEBUG = false;
 
 constexpr bool EVICTION_BATCH_ENABLE = false;

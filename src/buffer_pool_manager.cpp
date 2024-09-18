@@ -388,20 +388,17 @@ const BufferBlock BufferPoolManager::GetBlockSync1(
 
   fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
   if (likely(num_page == 1)) {
-    auto tmp =
-        pools_[partitioner_->GetPartitionId(fpage_id)]->Pin(fpage_id, fd);
-    if (tmp.first) {  // 1.1
-      ret.InsertPage(0, tmp.second + fpage_offset, tmp.first);
-      return ret;
-    }
-    BP_sync_request_type req = BP_sync_request_type(fd, fpage_id);
+    // BP_sync_request_type req = BP_sync_request_type(fd, fpage_id);
 
-    if (!pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync1(req)) {
-      assert(ReadWrite(req.fpage_id * PAGE_SIZE_MEMORY, PAGE_SIZE_MEMORY,
-                       req.response.second, PAGE_SIZE_MEMORY, req.fd, true));
-      pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync1(req);
-    }
-    ret.InsertPage(0, req.response.second + fpage_offset, req.response.first);
+    // if (!pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync1(req))
+    // {
+    //   assert(ReadWrite(req.fpage_id * PAGE_SIZE_MEMORY, PAGE_SIZE_MEMORY,
+    //                    req.response.second, PAGE_SIZE_MEMORY, req.fd, true));
+    //   pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync1(req);
+    // }
+    auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
+        fpage_id, fd);
+    ret.InsertPage(0, mpage.second + fpage_offset, mpage.first);
   } else {
     size_t count_t = 0;
     size_t page_id = 0;
