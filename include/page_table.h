@@ -737,10 +737,10 @@ class DirectCache {
   ~DirectCache() {
     for (auto& page : cache_) {
       if (page.pte_cur != nullptr) {
-        // if (page.count != 0)
-        //   GBPLOG << page.count << " " << page.pte_cur->fd_cur << " "
-        //          << page.pte_cur->fpage_id_cur;
-        // assert(page.count == 0);
+        if (page.count != 0)
+          GBPLOG << page.count << " " << page.pte_cur->fd_cur << " "
+                 << page.pte_cur->fpage_id_cur << " " << get_thread_id();
+
         page.pte_cur->DecRefCount();
       }
     }
@@ -809,16 +809,7 @@ class DirectCache {
     }
   }
 
-  FORCE_INLINE static DirectCache& GetDirectCache() {
-    // #if ASSERT_ENABLE
-    // assert(get_thread_id() < 40);
-    // #endif
-    // static std::vector<DirectCache> direct_caches(40);
-    // return direct_caches[get_thread_id()];
-
-    static thread_local DirectCache direct_cache{DIRECT_CACHE_SIZE};
-    return direct_cache;
-  }
+  static DirectCache& GetDirectCache();
 
  private:
   constexpr static size_t DIRECT_CACHE_SIZE = 256 * 4;

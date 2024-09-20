@@ -1418,8 +1418,8 @@ class BufferObjectImp4 {
 #endif
 };
 
-using BufferBlock = BufferBlockImp7;
-// using BufferBlock = BufferBlockImp9;
+// using BufferBlock = BufferBlockImp7;
+using BufferBlock = BufferBlockImp9;
 
 #endif
 
