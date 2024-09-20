@@ -7,7 +7,7 @@
 namespace gbp {
 
 size_t get_thread_id() {
-  static size_t thread_id_global = 0;
+  static std::atomic<size_t> thread_id_global = 0;
   static thread_local size_t thread_id_local = thread_id_global++;
   return thread_id_local;
 }
