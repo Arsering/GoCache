@@ -635,10 +635,10 @@ class PageTable {
     assert(mappings_[fd] != nullptr);
 #endif
     auto fpage_id_inpool = partitioner_->GetFPageIdInPartition(fpage_id);
-    auto [success, mpage_id] = mappings_[fd]->LockMapping(fpage_id_inpool);
+    auto [success, mpage_id] = mappings_[fd]->LockMapping(fpage_id_inpool);//return old page id，now actual mappings_[fd][fpageid].mpageid == BUSY_VALUE
 
     if (!success)
-      return {false, 0};
+      return {false, 0};//other thread lock this page
     if (mpage_id == PageMapping::Mapping::EMPTY_VALUE)
       return {true, mpage_id};
 
