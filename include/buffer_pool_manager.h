@@ -20,6 +20,7 @@
 #include "bufferblock/buffer_obj.h"
 #include "config.h"
 #include "debug.h"
+#include "directcache/direct_cache.h"
 #include "extendible_hash.h"
 #include "io_backend.h"
 #include "logger.h"
