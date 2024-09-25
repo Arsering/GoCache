@@ -28,6 +28,7 @@
 #include <vector>
 
 #include "../config.h"
+#include "../directcache/direct_cache.h"
 #include "../logger.h"
 #include "../page_table.h"
 #include "../utils.h"

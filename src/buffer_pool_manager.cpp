@@ -534,7 +534,6 @@ std::future<BufferBlock> BufferPoolManager::GetBlockAsync(
           fd, file_offset, block_size);
     }
   } else {
-    assert(false);
     auto* req = new async_request_type(fd, file_offset, block_size, num_page);
     auto ret = req->promise.get_future();
 

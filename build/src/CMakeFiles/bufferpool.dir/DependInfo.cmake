@@ -9,6 +9,7 @@ set(CMAKE_DEPENDS_CHECK_CXX
   "/data-1/yichengzhang/data/flex_bp/graphscope_bufferpool/src/buffer_pool_manager.cpp" "/data-1/yichengzhang/data/flex_bp/graphscope_bufferpool/build/src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o"
   "/data-1/yichengzhang/data/flex_bp/graphscope_bufferpool/src/config.cpp" "/data-1/yichengzhang/data/flex_bp/graphscope_bufferpool/build/src/CMakeFiles/bufferpool.dir/config.cpp.o"
   "/data-1/yichengzhang/data/flex_bp/graphscope_bufferpool/src/debug.cpp" "/data-1/yichengzhang/data/flex_bp/graphscope_bufferpool/build/src/CMakeFiles/bufferpool.dir/debug.cpp.o"
+  "/data-1/yichengzhang/data/flex_bp/graphscope_bufferpool/src/direct_cache.cpp" "/data-1/yichengzhang/data/flex_bp/graphscope_bufferpool/build/src/CMakeFiles/bufferpool.dir/direct_cache.cpp.o"
   "/data-1/yichengzhang/data/flex_bp/graphscope_bufferpool/src/extendible_hash.cpp" "/data-1/yichengzhang/data/flex_bp/graphscope_bufferpool/build/src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.o"
   "/data-1/yichengzhang/data/flex_bp/graphscope_bufferpool/src/logger.cc" "/data-1/yichengzhang/data/flex_bp/graphscope_bufferpool/build/src/CMakeFiles/bufferpool.dir/logger.cc.o"
   "/data-1/yichengzhang/data/flex_bp/graphscope_bufferpool/src/utils.cpp" "/data-1/yichengzhang/data/flex_bp/graphscope_bufferpool/build/src/CMakeFiles/bufferpool.dir/utils.cpp.o"

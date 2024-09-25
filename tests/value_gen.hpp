@@ -2,6 +2,7 @@
 #include <vector>
 #include <cmath>
 #include <iostream>
+namespace test {
 
 class ValueGenerator {
 public:
@@ -34,7 +35,7 @@ private:
 
 public:
     void init(size_t io_num) override {
-        const double alpha = 1.1; // 控制幂律分布的参数
+        const double alpha = 0.9; // 控制幂律分布的参数
         std::vector<double> intervals(io_num + 1);
         std::vector<double> weights(io_num + 1);
         for (size_t i = 0; i <= io_num; ++i) {
@@ -50,3 +51,4 @@ public:
         return static_cast<uint64_t>(power_law_dist(gen));
     }
 };
+}

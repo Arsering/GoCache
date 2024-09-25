@@ -9,6 +9,10 @@ src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/bufferblock/buffer_bl
 src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/bufferblock/buffer_obj.h
 src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/config.h
 src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/debug.h
+src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/directcache/direct_cache.h
+src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/directcache/direct_cache_impl1.h
+src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/directcache/direct_cache_impl2.h
+src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/directcache/direct_cache_impl3.h
 src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/eviction_server.h
 src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/extendible_hash.h
 src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/hash_table.h
@@ -21,6 +25,7 @@ src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/page_table.h
 src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/partitioner.h
 src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/replacer/TwoQLRU_replacer.h
 src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/replacer/clock_replacer.h
+src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/replacer/clock_replacer_v2.h
 src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/replacer/fifo_replacer.h
 src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/replacer/fifo_replacer_v2.h
 src/CMakeFiles/bufferpool.dir/buffer_obj.cpp.o: ../include/replacer/list_array.h
@@ -42,6 +47,10 @@ src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/bufferblock/buffer_b
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/bufferblock/buffer_obj.h
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/config.h
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/debug.h
+src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/directcache/direct_cache.h
+src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/directcache/direct_cache_impl1.h
+src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/directcache/direct_cache_impl2.h
+src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/directcache/direct_cache_impl3.h
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/eviction_server.h
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/extendible_hash.h
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/hash_table.h
@@ -54,6 +63,7 @@ src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/page_table.h
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/partitioner.h
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/replacer/TwoQLRU_replacer.h
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/replacer/clock_replacer.h
+src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/replacer/clock_replacer_v2.h
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/replacer/fifo_replacer.h
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/replacer/fifo_replacer_v2.h
 src/CMakeFiles/bufferpool.dir/buffer_pool.cpp.o: ../include/replacer/list_array.h
@@ -76,6 +86,10 @@ src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/bufferblock/
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/bufferblock/buffer_obj.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/config.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/debug.h
+src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/directcache/direct_cache.h
+src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/directcache/direct_cache_impl1.h
+src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/directcache/direct_cache_impl2.h
+src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/directcache/direct_cache_impl3.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/eviction_server.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/extendible_hash.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/hash_table.h
@@ -88,6 +102,7 @@ src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/page_table.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/partitioner.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/replacer/TwoQLRU_replacer.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/replacer/clock_replacer.h
+src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/replacer/clock_replacer_v2.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/replacer/fifo_replacer.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/replacer/fifo_replacer_v2.h
 src/CMakeFiles/bufferpool.dir/buffer_pool_manager.cpp.o: ../include/replacer/list_array.h
@@ -109,6 +124,18 @@ src/CMakeFiles/bufferpool.dir/debug.cpp.o: ../include/config.h
 src/CMakeFiles/bufferpool.dir/debug.cpp.o: ../include/debug.h
 src/CMakeFiles/bufferpool.dir/debug.cpp.o: ../include/utils.h
 src/CMakeFiles/bufferpool.dir/debug.cpp.o: ../src/debug.cpp
+
+src/CMakeFiles/bufferpool.dir/direct_cache.cpp.o: ../include/config.h
+src/CMakeFiles/bufferpool.dir/direct_cache.cpp.o: ../include/debug.h
+src/CMakeFiles/bufferpool.dir/direct_cache.cpp.o: ../include/directcache/direct_cache.h
+src/CMakeFiles/bufferpool.dir/direct_cache.cpp.o: ../include/directcache/direct_cache_impl1.h
+src/CMakeFiles/bufferpool.dir/direct_cache.cpp.o: ../include/directcache/direct_cache_impl2.h
+src/CMakeFiles/bufferpool.dir/direct_cache.cpp.o: ../include/directcache/direct_cache_impl3.h
+src/CMakeFiles/bufferpool.dir/direct_cache.cpp.o: ../include/logger.h
+src/CMakeFiles/bufferpool.dir/direct_cache.cpp.o: ../include/page_table.h
+src/CMakeFiles/bufferpool.dir/direct_cache.cpp.o: ../include/partitioner.h
+src/CMakeFiles/bufferpool.dir/direct_cache.cpp.o: ../include/utils.h
+src/CMakeFiles/bufferpool.dir/direct_cache.cpp.o: ../src/direct_cache.cpp
 
 src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.o: ../include/config.h
 src/CMakeFiles/bufferpool.dir/extendible_hash.cpp.o: ../include/debug.h

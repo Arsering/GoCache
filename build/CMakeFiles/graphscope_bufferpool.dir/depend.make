@@ -9,6 +9,10 @@ CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/bufferblock/buffer_b
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/bufferblock/buffer_obj.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/config.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/debug.h
+CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/directcache/direct_cache.h
+CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/directcache/direct_cache_impl1.h
+CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/directcache/direct_cache_impl2.h
+CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/directcache/direct_cache_impl3.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/eviction_server.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/extendible_hash.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/hash_table.h
@@ -22,6 +26,7 @@ CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/page_table.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/partitioner.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/replacer/TwoQLRU_replacer.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/replacer/clock_replacer.h
+CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/replacer/clock_replacer_v2.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/replacer/fifo_replacer.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/replacer/fifo_replacer_v2.h
 CMakeFiles/graphscope_bufferpool.dir/main.cpp.o: ../include/replacer/list_array.h

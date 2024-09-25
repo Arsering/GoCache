@@ -23,6 +23,7 @@
 #include "extendible_hash.h"
 #include "replacer/TwoQLRU_replacer.h"
 #include "replacer/clock_replacer.h"
+#include "replacer/clock_replacer_v2.h"
 #include "replacer/fifo_replacer.h"
 #include "replacer/fifo_replacer_v2.h"
 
