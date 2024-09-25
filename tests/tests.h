@@ -34,4 +34,6 @@ void fiber_pread(gbp::DiskManager* disk_manager, size_t file_size_inByte,
 struct Page_mine {
   size_t data[512];
 };
+
+int test_graph(int argc, char** argv);
 }  // namespace test

@@ -6,7 +6,7 @@
 
 #pragma once
 
-#define GRAPHSCOPE
+// #define GRAPHSCOPE
 
 #define ASSERT_ENABLE false
 #define EVICTION_SYNC_ENABLE true
@@ -58,7 +58,7 @@ using GBPfile_handle_type = uint32_t;
 using OSfile_handle_type = uint32_t;
 using partition_id_type = uint32_t;
 
-constexpr bool PERSISTENT = false;
+constexpr bool PERSISTENT = true;
 constexpr bool DEBUG = false;
 
 constexpr bool EVICTION_BATCH_ENABLE = false;
@@ -76,9 +76,9 @@ constexpr static size_t PAGE_SIZE_FILE = PAGE_SIZE_MEMORY;
 constexpr static size_t LOG_PAGE_SIZE_FILE = LOG_PAGE_SIZE_MEMORY;
 constexpr static size_t CACHELINE_SIZE = 64;
 
-constexpr bool BP_ASYNC_ENABLE = false;
+constexpr bool BP_ASYNC_ENABLE = true;
 constexpr static size_t ASYNC_SSDIO_SLEEP_TIME_MICROSECOND = 500;
-constexpr int IO_BACKEND_TYPE = 1;  // 1: pread; 2: IO_Uring
+constexpr int IO_BACKEND_TYPE = 2;  // 1: pread; 2: IO_Uring
 constexpr bool IO_SERVER_ENABLE = IO_BACKEND_TYPE == 2 && !BP_ASYNC_ENABLE;
 constexpr static size_t IOURing_MAX_DEPTH = 32;
 constexpr static size_t BATCH_SIZE_IO_SERVER =

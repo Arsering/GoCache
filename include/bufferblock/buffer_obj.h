@@ -28,6 +28,7 @@
 #include <vector>
 
 #include "../config.h"
+#include "../directcache/direct_cache.h"
 #include "../logger.h"
 #include "../page_table.h"
 #include "../utils.h"
@@ -1418,8 +1419,8 @@ class BufferObjectImp4 {
 #endif
 };
 
-// using BufferBlock = BufferBlockImp7;
-using BufferBlock = BufferBlockImp9;
+using BufferBlock = BufferBlockImp7;
+// using BufferBlock = BufferBlockImp9;
 
 #endif
 

@@ -11,6 +11,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/bufferpool.dir/config.cpp.o.d"
   "CMakeFiles/bufferpool.dir/debug.cpp.o"
   "CMakeFiles/bufferpool.dir/debug.cpp.o.d"
+  "CMakeFiles/bufferpool.dir/direct_cache.cpp.o"
+  "CMakeFiles/bufferpool.dir/direct_cache.cpp.o.d"
   "CMakeFiles/bufferpool.dir/extendible_hash.cpp.o"
   "CMakeFiles/bufferpool.dir/extendible_hash.cpp.o.d"
   "CMakeFiles/bufferpool.dir/logger.cc.o"
