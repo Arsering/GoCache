@@ -397,4 +397,9 @@ std::mutex& get_lock_global() {
 
 // 初始化静态成员
 std::mutex LogStream::latch_;
+
+MemoryLifeTimeLogger& MemoryLifeTimeLogger::GetMemoryLifeTimeLogger() {
+  static MemoryLifeTimeLogger logger;
+  return logger;
+}
 }  // namespace gbp

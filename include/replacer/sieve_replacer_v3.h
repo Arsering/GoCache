@@ -217,8 +217,8 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
 
         if (locked && pte->ref_count == 0 && !pte->dirty &&
             mpage_id != PageMapping::Mapping::EMPTY_VALUE) {
-          assert(page_table_->DeleteMapping(pte_unpacked.fd_cur,
-                                            pte_unpacked.fpage_id_cur));
+          assert(page_table_->DeleteMapping(
+              pte_unpacked.fd_cur, pte_unpacked.fpage_id_cur, to_evict));
           break;
         }
 
@@ -239,7 +239,10 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
 
     return true;
   }
-
+  bool Clean() override {
+    list_.Clean();
+    return true;
+  }
   bool Erase(mpage_id_type value) override {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);

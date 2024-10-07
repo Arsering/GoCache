@@ -20,8 +20,8 @@ using mpage_id_type = uint32_t;
 
 class LFUReplacer : public Replacer<mpage_id_type> {
   struct ListNode {
-    ListNode(){};
-    ListNode(mpage_id_type val) : val(val){};
+    ListNode() {};
+    ListNode(mpage_id_type val) : val(val) {};
 
     mpage_id_type val;
     ListNode* prev;
@@ -167,7 +167,7 @@ class LFUReplacer : public Replacer<mpage_id_type> {
   bool Victim(std::vector<mpage_id_type>& mpage_ids,
               mpage_id_type page_num) override {
     std::lock_guard<std::mutex> lck(latch_);
-
+    assert(false);  // 重新实现
     while (page_num > 0) {
       auto min_freq_node = get_min_freq_node();
       if (min_freq_node == nullptr || min_freq_node->n_obj == 0) {

@@ -22,8 +22,8 @@ namespace gbp {
 
 class LRUReplacer : public Replacer<mpage_id_type> {
   struct ListNode {
-    ListNode(){};
-    ListNode(mpage_id_type val) : val(val){};
+    ListNode() {};
+    ListNode(mpage_id_type val) : val(val) {};
 
     mpage_id_type val;
     ListNode* prev;
@@ -162,7 +162,7 @@ class LRUReplacer : public Replacer<mpage_id_type> {
 
         victim = victim->prev;
       }
-      page_table_->DeleteMapping(pte->fd_cur, pte->fpage_id_cur);
+      page_table_->DeleteMapping(pte->fd_cur, pte->fpage_id_cur, victim->val);
       // pte->Clean();
       tail_.prev = victim->prev;
       victim->prev->next = &tail_;

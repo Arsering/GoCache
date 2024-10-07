@@ -301,4 +301,27 @@ class LogStream {
 // 宏定义，简化使用
 #define GBPLOG LogStream(__FILE__, __LINE__)
 
+class MemoryLifeTimeLogger {
+ public:
+  MemoryLifeTimeLogger() = default;
+  ~MemoryLifeTimeLogger() = default;
+  void Init(size_t page_num, char* pool) {
+    pool_ = pool;
+    loading_time_.resize(page_num, 0);
+    visited_counts_.resize(page_num, 0);
+  }
+  FORCE_INLINE mpage_id_type GetLoadingTime(char* memory_addr) {
+    return as_atomic(loading_time_[(memory_addr - pool_) % PAGE_SIZE_MEMORY]);
+  }
+  FORCE_INLINE mpage_id_type GetVisitedCount(char* memory_addr) {
+    return as_atomic(visited_counts_[(memory_addr - pool_) % PAGE_SIZE_MEMORY]);
+  }
+  static MemoryLifeTimeLogger& GetMemoryLifeTimeLogger();
+
+  std::vector<size_t> loading_time_;
+  std::vector<size_t> visited_counts_;
+
+ private:
+  char* pool_;
+};
 }  // namespace gbp

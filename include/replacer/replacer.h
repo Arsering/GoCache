@@ -26,6 +26,10 @@ class Replacer {
     assert(false);
     return false;
   }
+  virtual bool Clean() {
+    assert(false);
+    return false;
+  }
   virtual bool Erase(T value) = 0;
   virtual size_t Size() const = 0;
   std::atomic<bool>& GetFinishMark() { return finish_mark_async_; }

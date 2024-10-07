@@ -100,7 +100,8 @@ class FIFOReplacer_v2 : public Replacer<mpage_id_type> {
             pte_unpacked.fd_cur, pte_unpacked.fpage_id_cur);
         if (locked && !pte->dirty && pte->ref_count == 0 &&
             mpage_id != PageMapping::Mapping::EMPTY_VALUE) {
-          assert(page_table_->DeleteMapping(pte->fd_cur, pte->fpage_id_cur));
+          assert(page_table_->DeleteMapping(pte->fd_cur, pte->fpage_id_cur,
+                                            to_evict));
           break;
         }
 

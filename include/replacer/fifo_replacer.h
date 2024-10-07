@@ -22,8 +22,8 @@ namespace gbp {
 
 class FIFOReplacer : public Replacer<mpage_id_type> {
   struct ListNode {
-    ListNode() : val(std::numeric_limits<mpage_id_type>::max()){};
-    ListNode(mpage_id_type _val) : val(_val){};
+    ListNode() : val(std::numeric_limits<mpage_id_type>::max()) {};
+    ListNode(mpage_id_type _val) : val(_val) {};
 
     mpage_id_type val;
     ListNode* prev;
@@ -140,7 +140,8 @@ class FIFOReplacer : public Replacer<mpage_id_type> {
             pte_unpacked.fd_cur, pte_unpacked.fpage_id_cur);
         if (locked && !pte->dirty && pte->ref_count == 0 &&
             mpage_id != PageMapping::Mapping::EMPTY_VALUE) {
-          assert(page_table_->DeleteMapping(pte->fd_cur, pte->fpage_id_cur));
+          assert(page_table_->DeleteMapping(pte->fd_cur, pte->fpage_id_cur,
+                                            to_evict->val));
           break;
         }
 

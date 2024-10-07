@@ -140,10 +140,11 @@ class BufferPoolManager {
     }
   }
 
-  bool FlushPage(mpage_id_type page_id, GBPfile_handle_type fd = 0);
-  bool FlushFile(GBPfile_handle_type fd = 0);
+  bool FlushPage(fpage_id_type fpage_id, GBPfile_handle_type fd = 0,
+                 bool delete_from_memory = false);
+  bool FlushFile(GBPfile_handle_type fd = 0, bool delete_from_memory = false);
   bool LoadFile(GBPfile_handle_type fd = 0);
-  bool Flush();
+  bool Flush(bool delete_from_memory = false);
 
   bool ReadWrite(size_t offset, size_t file_size, char* buf, size_t buf_size,
                  GBPfile_handle_type fd, bool is_read = true) const;

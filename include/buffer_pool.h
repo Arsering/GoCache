@@ -154,7 +154,8 @@ class BufferPool {
 
   bool ReleasePage(PageTableInner::PTE* tar);
 
-  bool FlushPage(fpage_id_type page_id, GBPfile_handle_type fd = 0);
+  bool FlushPage(fpage_id_type fpage_id, GBPfile_handle_type fd = 0,
+                 bool delete_from_memory = false);
   // bool FlushPage(PTE* pte);
 
   PageTableInner::PTE* NewPage(mpage_id_type& page_id,

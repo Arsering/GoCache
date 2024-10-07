@@ -14,7 +14,7 @@ using mpage_id_type = uint32_t;
 class ClockReplacer : public Replacer<mpage_id_type> {
   struct ListNode {
     ListNode() = default;
-    ListNode(mpage_id_type val) : val(val){};
+    ListNode(mpage_id_type val) : val(val) {};
 
     mpage_id_type val;
     ListNode* prev;
@@ -128,7 +128,7 @@ class ClockReplacer : public Replacer<mpage_id_type> {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
-
+    assert(false);  // 此函数需要重新实现
     while (page_num > 0) {
       ListNode* to_evict = tail_.prev;
       if (tail_.prev == &head_) {
