@@ -136,8 +136,8 @@ class SieveReplacer_v2 : public Replacer<mpage_id_type> {
 
         if (locked && pte->ref_count == 0 && !pte->dirty &&
             mpage_id != PageMapping::Mapping::EMPTY_VALUE) {
-          assert(page_table_->DeleteMapping(pte_unpacked.fd_cur,
-                                            pte_unpacked.fpage_id_cur));
+          assert(page_table_->DeleteMapping(
+              pte_unpacked.fd_cur, pte_unpacked.fpage_id_cur, to_evict));
           break;
         }
 

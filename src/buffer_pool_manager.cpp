@@ -79,12 +79,14 @@ void BufferPoolManager::init(uint16_t pool_num,
 }
 
 bool BufferPoolManager::FlushPage(fpage_id_type fpage_id,
-                                  GBPfile_handle_type fd) {
-  return pools_[partitioner_->GetPartitionId(fpage_id)]->FlushPage(fpage_id,
-                                                                   fd);
+                                  GBPfile_handle_type fd,
+                                  bool delete_from_memory) {
+  return pools_[partitioner_->GetPartitionId(fpage_id)]->FlushPage(
+      fpage_id, fd, delete_from_memory);
 }
 
-bool BufferPoolManager::FlushFile(GBPfile_handle_type fd) {
+bool BufferPoolManager::FlushFile(GBPfile_handle_type fd,
+                                  bool delete_from_memory) {
   if (!disk_manager_->ValidFD(fd))
     return true;
 #if ASSERT_ENABLE
@@ -95,7 +97,7 @@ bool BufferPoolManager::FlushFile(GBPfile_handle_type fd) {
   size_t fpage_num =
       ceil(disk_manager_->file_size_inBytes_[fd], PAGE_SIZE_FILE);
   for (size_t fpage_id = 0; fpage_id < fpage_num; fpage_id++) {
-    ret = FlushPage(fpage_id, fd);
+    ret = FlushPage(fpage_id, fd, delete_from_memory);
   }
   return ret;
 }
@@ -116,7 +118,7 @@ bool BufferPoolManager::LoadFile(GBPfile_handle_type fd) {
   return ret;
 }
 
-bool BufferPoolManager::Flush() {
+bool BufferPoolManager::Flush(bool delete_from_memory) {
 #ifdef GRAPHSCOPE
   LOG(INFO) << "Flush the whole bufferpool: Start";
 #endif
@@ -124,7 +126,8 @@ bool BufferPoolManager::Flush() {
 
   for (int fd = 0; fd < disk_manager_->fd_oss_.size(); fd++) {
     if (disk_manager_->ValidFD(fd)) {
-      thread_pool.emplace_back([&, fd]() { assert(FlushFile(fd)); });
+      thread_pool.emplace_back(
+          [&, fd]() { assert(FlushFile(fd, delete_from_memory)); });
     }
   }
   for (auto& thread : thread_pool) {
@@ -133,6 +136,10 @@ bool BufferPoolManager::Flush() {
 #ifdef GRAPHSCOPE
   LOG(INFO) << "Flush the whole bufferpool: Finish";
 #endif
+  if (delete_from_memory) {
+    for (auto pool : pools_)
+      pool->replacer_->Clean();
+  }
   return true;
 }
 
@@ -195,32 +202,7 @@ bool BufferPoolManager::LoadPage(pair_min<PTE*, char*> mpage) {
   return true;
 }
 
-bool BufferPoolManager::Clean() {
-  Flush();
-  size_t pool_id = 0;
-  size_t fd, fpage_id;
-  for (auto pool : pools_) {
-    for (size_t idx = 0; idx < pool->pool_size_; idx++) {
-      fd = pool->page_table_->FromPageId(idx)->fd_cur;
-      fpage_id = pool->partitioner_->GetFPageIdGlobal(
-          pool_id, pool->page_table_->FromPageId(idx)->fpage_id_cur);
-
-#ifdef DEBUG_BITMAP
-      if (pool->page_table_->FromPageId(idx)->initialized) {
-        assert(disk_manager_->GetUsedMark(fd, fpage_id) == true);
-        disk_manager_->SetUsedMark(fd, fpage_id, false);
-        assert(disk_manager_->GetUsedMark(fd, fpage_id) == false);
-      }
-#endif
-
-      pool->page_table_->FromPageId(idx)->initialized = false;
-      *reinterpret_cast<fpage_id_type*>(pool->memory_pool_.FromPageId(idx)) =
-          fpage_id;
-    }
-    pool_id++;
-  }
-  return true;
-}
+bool BufferPoolManager::Clean() { return Flush(true); }
 
 int BufferPoolManager::GetBlock(char* buf, size_t file_offset,
                                 size_t block_size,

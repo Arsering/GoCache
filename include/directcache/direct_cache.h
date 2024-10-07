@@ -5,5 +5,5 @@
 #include "direct_cache_impl3.h"  // atomic + no_eviction
 
 namespace gbp {
-using DirectCache = DirectCacheImpl2;
+using DirectCache = DirectCacheImpl1;
 }  // namespace gbp

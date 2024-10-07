@@ -610,13 +610,18 @@ class PageTable {
    * @return FORCE_INLINE
    */
   FORCE_INLINE bool DeleteMapping(GBPfile_handle_type fd,
-                                  fpage_id_type fpage_id) {
+                                  fpage_id_type fpage_id,
+                                  mpage_id_type mpage_id) {
 #if ASSERT_ENABLE
     assert(fd < mappings_.size());
     assert(mappings_[fd] != nullptr);
 #endif
-    return mappings_[fd]->DeleteMapping(
+    auto ret = mappings_[fd]->DeleteMapping(
         partitioner_->GetFPageIdInPartition(fpage_id));
+    if (ret) {
+      FromPageId(mpage_id)->Clean();
+    }
+    return ret;
   }
 
   /**
@@ -668,7 +673,7 @@ class PageTable {
     assert(fd < mappings_.size());
     assert(mappings_[fd] != nullptr);
 #endif
-
+    // 快速检测是否合法(其实没必要检测)
     if (mpage_id != PageMapping::Mapping::EMPTY_VALUE) {
       auto pte = FromPageId(mpage_id);
       if (pte->fpage_id_cur != fpage_id && pte->fd_cur == fd) {

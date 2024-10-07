@@ -17,9 +17,9 @@ class ListArray {
 
   // 定义ListNode结构体
   struct ListNode {
-    ListNode() : prev(INVALID_INDEX), next(INVALID_INDEX){};
+    ListNode() : prev(INVALID_INDEX), next(INVALID_INDEX) {};
     ListNode(value_type val)
-        : val(val), prev(INVALID_INDEX), next(INVALID_INDEX){};
+        : val(val), prev(INVALID_INDEX), next(INVALID_INDEX) {};
 
     value_type val;
     index_type prev;
@@ -122,6 +122,15 @@ class ListArray {
 
   index_type GetHead() const { return nodes_[head_].next; }
   index_type GetTail() const { return nodes_[tail_].prev; }
+  bool Clean() {
+    delete[] nodes_;
+
+    nodes_ = new ListNode[capacity_ + 2];
+    nodes_[head_].prev = nodes_[tail_].next = INVALID_INDEX;
+    nodes_[head_].next = tail_;
+    nodes_[tail_].prev = head_;
+    return true;
+  }
 
   const index_type head_;
   const index_type tail_;
