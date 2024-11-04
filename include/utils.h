@@ -207,8 +207,9 @@ std::tuple<bool, T> atomic_add(std::atomic<T>& data, T add_data,
   do {
     new_value = old_value;
     new_value += add_data;
-    if (new_value > upper_bound)
+    if (new_value > upper_bound) {
       return {false, 0};
+    }
   } while (!data.compare_exchange_weak(old_value, new_value,
                                        std::memory_order_release,
                                        std::memory_order_relaxed));

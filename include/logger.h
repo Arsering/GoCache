@@ -28,10 +28,22 @@
 #include "utils.h"
 
 namespace gbp {
+std::vector<size_t>& get_buf_tmp();
+
 size_t get_thread_id();
 std::string& get_log_dir();
 std::string& get_db_dir();
 std::ofstream& get_thread_logfile();
+
+size_t GetMemoryUsage();
+uint64_t readTLBShootdownCount();
+uint64_t readIObytesOne();
+std::tuple<size_t, size_t> SSD_io_bytes(
+    const std::string& device_name = "nvme0n1");
+size_t GetMemoryUsageMMAP(std::string& mmap_monitored_dir);
+std::tuple<size_t, size_t> GetCPUTime();
+std::vector<std::tuple<void**, int, size_t>>& GetMAS();
+void CleanMAS();
 
 enum MmapArrayType {
   lf_index,
@@ -215,10 +227,15 @@ class PerformanceLogServer {
     log_file_.close();
   }
   void Start(const std::string& file_path, const std::string& device_name) {
+    device_name_ = device_name;
     if (!log_file_.is_open())
       log_file_.open(file_path, std::ios::out);
     if (!server_.joinable())
       server_ = std::thread([this]() { Logging(); });
+  }
+  void SetStartPoint() {
+    std::tie(SSD_read_bytes_sp_, SSD_write_bytes_sp_) =
+        SSD_io_bytes(device_name_);
   }
   void Logging();
 
@@ -243,17 +260,11 @@ class PerformanceLogServer {
 
   bool stop_ = false;
   std::thread server_;
+
+  std::atomic<size_t> SSD_read_bytes_sp_ = 0;
+  std::atomic<size_t> SSD_write_bytes_sp_ = 0;
 };
 
-size_t GetMemoryUsage();
-uint64_t readTLBShootdownCount();
-uint64_t readIObytesOne();
-std::tuple<size_t, size_t> SSD_io_bytes(
-    const std::string& device_name = "nvme0n1");
-size_t GetMemoryUsageMMAP(std::string& mmap_monitored_dir);
-std::tuple<size_t, size_t> GetCPUTime();
-std::vector<std::tuple<void**, int, size_t>>& GetMAS();
-void CleanMAS();
 std::mutex& get_lock_global();
 
 class LogStream {

@@ -8,7 +8,7 @@
 
 #define GRAPHSCOPE
 
-#define ASSERT_ENABLE true
+#define ASSERT_ENABLE false
 #define EVICTION_SYNC_ENABLE true
 #define LAZY_SSD_IO_NEW false
 // #define USING_EDGE_ITER
@@ -58,6 +58,7 @@ using GBPfile_handle_type = uint32_t;
 using OSfile_handle_type = uint32_t;
 using partition_id_type = uint32_t;
 
+constexpr bool WAL_ENABLE = false;
 constexpr bool PERSISTENT = true;
 constexpr bool DEBUG = false;
 

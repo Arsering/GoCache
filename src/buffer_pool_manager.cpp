@@ -306,7 +306,8 @@ const BufferBlock BufferPoolManager::GetBlockSync(
   //   get_thread_logfile() << GetSystemTime() << " " << get_query_id() << " "
   //                        << fd << " " << file_offset << " " << block_size
   //                        << std::endl;
-
+  // if (warmup_mark() == 1)
+  //   disk_manager_->counts_[fd].first++;
   size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
   size_t num_page =
       fpage_offset == 0 || (block_size <= (PAGE_SIZE_FILE - fpage_offset))
@@ -347,6 +348,8 @@ const BufferBlock BufferPoolManager::GetBlockSync(
       //   block_size -= PAGE_SIZE_MEMORY - fpage_offset;
       // }
       ret.InsertPage(page_id, mpage.second + fpage_offset, mpage.first);
+      // __builtin_prefetch(mpage.second + fpage_offset, 0, 2);
+
       page_id++;
       fpage_offset = 0;
       fpage_id++;
@@ -370,14 +373,6 @@ const BufferBlock BufferPoolManager::GetBlockSync1(
 
   fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
   if (likely(num_page == 1)) {
-    // BP_sync_request_type req = BP_sync_request_type(fd, fpage_id);
-
-    // if (!pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync1(req))
-    // {
-    //   assert(ReadWrite(req.fpage_id * PAGE_SIZE_MEMORY, PAGE_SIZE_MEMORY,
-    //                    req.response.second, PAGE_SIZE_MEMORY, req.fd, true));
-    //   pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync1(req);
-    // }
     auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
         fpage_id, fd);
     ret.InsertPage(0, mpage.second + fpage_offset, mpage.first);
@@ -422,8 +417,8 @@ const BufferBlock BufferPoolManager::GetBlockSync1(
           fd));
 
       for (page_id = 0; page_id < num_page; page_id++) {
-        pools_[partitioner_->GetPartitionId(buf[page_id].fpage_id)]
-            ->FetchPageSync1(buf[page_id]);
+        assert(pools_[partitioner_->GetPartitionId(buf[page_id].fpage_id)]
+                   ->FetchPageSync1(buf[page_id]));
       }
 
     } else {
@@ -434,8 +429,8 @@ const BufferBlock BufferPoolManager::GetBlockSync1(
                          PAGE_SIZE_MEMORY, buf[page_id].response.second,
                          PAGE_SIZE_MEMORY, buf[page_id].fd, true));
 
-        pools_[partitioner_->GetPartitionId(buf[page_id].fpage_id)]
-            ->FetchPageSync1(buf[page_id]);
+        assert(pools_[partitioner_->GetPartitionId(buf[page_id].fpage_id)]
+                   ->FetchPageSync1(buf[page_id]));
       }
     }
   }
@@ -564,6 +559,7 @@ const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(
           0, mpage.second + fpage_offset, mpage.first,
           DirectCache::GetDirectCache().Insert(fd, fpage_id, mpage.first));
     }
+    fpage_id++;
   } else {
     size_t page_id = 0;
     while (page_id < num_page) {
@@ -591,6 +587,13 @@ const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(
       fpage_id++;
     }
   }
+  // if (mark) {
+  //   auto mpage =
+  //   pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
+  //       fpage_id, fd);
+  //   mpage.first->DecRefCount();
+  // }
+
   // gbp::get_counter_global(11).fetch_add(ret.PageNum());
 
   return ret;
