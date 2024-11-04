@@ -276,12 +276,18 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
 #if ASSERT_ENABLE
   assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
 #endif
+  static volatile size_t counta = 0;
   auto ret = Pin(fpage_id, fd);
+  // counta += get_buf_tmp()[(fpage_id * 1024) % get_buf_tmp().size()];
+
   if (ret.first) {  // 1.1
     // if (gbp::warmup_mark() == 1)
+    //   get_counter_global(10)++;
     //   as_atomic(disk_manager_->counts_[fd].first)++;
     return ret;
   }
+  // if (gbp::warmup_mark() == 1)
+  //   get_counter_global(11)++;
   // if (gbp::warmup_mark() == 1)
   //   as_atomic(disk_manager_->counts_[fd].second)++;
 

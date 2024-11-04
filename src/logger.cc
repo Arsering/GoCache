@@ -5,6 +5,10 @@
 #include <sys/time.h>
 
 namespace gbp {
+std::vector<size_t>& get_buf_tmp() {
+  static std::vector<size_t> buf(1024 * 1024 * 1024 / 8);
+  return buf;
+}
 
 size_t get_thread_id() {
   static std::atomic<size_t> thread_id_global = 0;
@@ -40,14 +44,17 @@ void write_to_query_file(std::string_view query, bool flush) {
 
     marker = true;
   }
-  if (flush) {
-    ::fclose(query_file_string);
-    ::fclose(query_file_string_view);
-    return;
-  }
+
   size_t size = query.size();
   ::fwrite(query.data(), query.size(), 1, query_file_string);
   ::fwrite(&size, sizeof(size_t), 1, query_file_string_view);
+
+  if (flush) {
+    // ::fclose(query_file_string);
+    // ::fclose(query_file_string_view);
+    ::fflush(query_file_string);
+    ::fflush(query_file_string_view);
+  }
 }
 // 为了replay
 void write_to_result_file(std::string_view result, bool flush) {
@@ -65,14 +72,17 @@ void write_to_result_file(std::string_view result, bool flush) {
     assert(result_file_string_view != nullptr);
     marker = true;
   }
-  if (flush) {
-    ::fclose(result_file_string);
-    ::fclose(result_file_string_view);
-    return;
-  }
+
   size_t size = result.size();
   ::fwrite(result.data(), result.size(), 1, result_file_string);
   ::fwrite(&size, sizeof(size_t), 1, result_file_string_view);
+
+  if (flush) {
+    // ::fclose(result_file_string);
+    // ::fclose(result_file_string_view);
+    ::fflush(result_file_string);
+    ::fflush(result_file_string_view);
+  }
 }
 
 // marker of warmup
@@ -143,12 +153,13 @@ void PerformanceLogServer::Logging() {
   // auto last_fetch_count = gbp::debug::get_counter_fetch().load();
   // auto last_contention_count = gbp::debug::get_counter_contention().load();
 
-  size =
-      ::snprintf(buf, 4096, "%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s\n",
-                 "Client_Read_Throughput", "Client_Write_Throughput",
-                 "SSD_Read_Throughput", "SSD_write_Throughput", "TLB_shootdown",
-                 "Memory_usage", "Memory_usage_MMAP", "User CPU Time (us)",
-                 "Sys CPU Time (us)");
+  size = ::snprintf(buf, 4096,
+                    "%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s\n",
+                    "Client_Read_Throughput", "Client_Write_Throughput",
+                    "SSD_Read_Throughput", "SSD_write_Throughput",
+                    "TLB_shootdown", "Memory_usage", "Memory_usage_MMAP",
+                    "User CPU Time (us)", "Sys CPU Time (us)",
+                    "SSD_Read_Throughput_Total", "SSD_write_Throughput_Total");
   log_file_.write(buf, size);
 
   while (true) {
@@ -163,7 +174,8 @@ void PerformanceLogServer::Logging() {
     // auto cur_contention_count = debug::get_counter_contention().load();
 
     size = ::snprintf(
-        buf, 4096, "%-25lf%-25lf%-25lf%-25lf%-25lu%-25lf%-25lf%-25lu%-25lu\n",
+        buf, 4096,
+        "%-25lf%-25lf%-25lf%-25lf%-25lu%-25lf%-25lf%-25lu%-25lu%-25lf%-25lf\n",
         (cur_Client_Read_throughput - last_Client_Read_throughput) /
             (double) B2GB,
         (cur_Client_Write_throughput - last_Client_Write_throughput) /
@@ -173,7 +185,9 @@ void PerformanceLogServer::Logging() {
         (shootdowns - last_shootdowns), GetMemoryUsage() / (1024.0 * 1024),
         GetMemoryUsageMMAP(mmap_monitored_dir) / (1024.0 * 1024),
         cur_user_cpu_time - last_user_cpu_time,
-        cur_sys_cpu_time - last_sys_cpu_time);
+        cur_sys_cpu_time - last_sys_cpu_time,
+        (SSD_read_bytes - SSD_read_bytes_sp_) / (double) B2GB,
+        (SSD_write_bytes - SSD_write_bytes_sp_) / (double) B2GB);
     log_file_.write(buf, size);
     log_file_.flush();
     // printf("%lu%-20lf%-20lu%-20lf%-20lu\n", cur_IO_throughput,
