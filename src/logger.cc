@@ -22,10 +22,14 @@ std::string& get_log_dir() {
 }
 std::ofstream& get_thread_logfile() {
   static thread_local std::ofstream log_file;
+  static thread_local size_t count = 0;
   if (unlikely(!log_file.is_open())) {
     log_file.open(get_log_dir() + "/thread_log_" +
                   std::to_string(get_thread_id()) + ".log");
   }
+  count++;
+  if (count % 1000)
+    log_file.flush();
   return log_file;
 }
 // 为了replay
@@ -45,16 +49,16 @@ void write_to_query_file(std::string_view query, bool flush) {
     marker = true;
   }
 
-  size_t size = query.size();
-  ::fwrite(query.data(), query.size(), 1, query_file_string);
-  ::fwrite(&size, sizeof(size_t), 1, query_file_string_view);
-
   if (flush) {
-    // ::fclose(query_file_string);
-    // ::fclose(query_file_string_view);
     ::fflush(query_file_string);
     ::fflush(query_file_string_view);
+    return;
   }
+  size_t ts = GetSystemTime();
+  size_t size = query.size() + sizeof(ts);
+  ::fwrite(&ts, sizeof(size_t), 1, query_file_string);
+  ::fwrite(query.data(), query.size(), 1, query_file_string);
+  ::fwrite(&size, sizeof(size_t), 1, query_file_string_view);
 }
 // 为了replay
 void write_to_result_file(std::string_view result, bool flush) {
@@ -72,17 +76,15 @@ void write_to_result_file(std::string_view result, bool flush) {
     assert(result_file_string_view != nullptr);
     marker = true;
   }
+  if (flush) {
+    ::fflush(result_file_string);
+    ::fflush(result_file_string_view);
+    return;
+  }
 
   size_t size = result.size();
   ::fwrite(result.data(), result.size(), 1, result_file_string);
   ::fwrite(&size, sizeof(size_t), 1, result_file_string_view);
-
-  if (flush) {
-    // ::fclose(result_file_string);
-    // ::fclose(result_file_string_view);
-    ::fflush(result_file_string);
-    ::fflush(result_file_string_view);
-  }
 }
 
 // marker of warmup
@@ -415,5 +417,20 @@ std::mutex LogStream::latch_;
 MemoryLifeTimeLogger& MemoryLifeTimeLogger::GetMemoryLifeTimeLogger() {
   static MemoryLifeTimeLogger logger;
   return logger;
+}
+
+std::atomic<size_t>& counter_per_memorypage(uintptr_t target_addr,
+                                            uintptr_t start_addr,
+                                            size_t page_count) {
+  static std::vector<size_t> counters;
+  static uintptr_t start_addr_cur;
+  if (start_addr != 0) {
+    counters.resize(page_count);
+    start_addr_cur = start_addr;
+    target_addr = start_addr;
+  }
+  auto page_id = (target_addr - start_addr_cur) / PAGE_SIZE_MEMORY;
+  assert(page_id < counters.size());
+  return as_atomic(counters[page_id]);
 }
 }  // namespace gbp

@@ -37,12 +37,10 @@ class MemoryPool {
     need_free_ = true;
 
     debug::get_memory_pool() = (uintptr_t) pool_;
-#ifdef DEBUG_BITMAP
-    used_.resize(num_pages);
-    used_.reset();
-#endif
 
     MemoryLifeTimeLogger::GetMemoryLifeTimeLogger().Init(num_pages, pool_);
+
+    counter_per_memorypage(0, (uintptr_t) pool_, num_pages);
   }
 
   MemoryPool(const MemoryPool& src) { src.Move(*this); }

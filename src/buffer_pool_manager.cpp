@@ -411,6 +411,7 @@ const BufferBlock BufferPoolManager::GetBlockSync1(
         iov[page_id].iov_base = buf[page_id].response.second;
         iov[page_id].iov_len = PAGE_SIZE_MEMORY;
       }
+      get_counter_global(11) += num_page;
 
       assert(io_servers_[0]->io_backend_->Read(
           (file_offset >> LOG_PAGE_SIZE_FILE) * PAGE_SIZE_FILE, iov, num_page,

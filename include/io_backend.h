@@ -31,10 +31,11 @@ class DiskManager {
       if (fd.second)
         close(fd.first);
     }
-    for (size_t file_id = 0; file_id < fd_oss_.size(); file_id++)
-      LOG(INFO) << file_id << " | " << file_names_[file_id] << " | "
-                << file_size_inBytes_[file_id] << " | "
-                << counts_[file_id].first << " | " << counts_[file_id].second;
+    // for (size_t file_id = 0; file_id < fd_oss_.size(); file_id++)
+    //   LOG(INFO) << file_id << " | " << file_names_[file_id] << " | "
+    //             << file_size_inBytes_[file_id] << " | "
+    //             << counts_[file_id].first << " | " <<
+    //             counts_[file_id].second;
   }
 
   FORCE_INLINE OSfile_handle_type
