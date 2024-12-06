@@ -197,7 +197,7 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
       //     get_trace_global()[thread_id][query_count] - 139874067804160;
       io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
 
-      st = gbp::GetSystemTime();
+      // st = gbp::GetSystemTime();
       size_t count_page_tmp = 0;
       while (count_page != count_page_tmp) {
         io_id = rnd(gen);
@@ -206,53 +206,42 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
         curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
         io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
 
-        block_container[count_page_tmp].first =
-            bpm.GetBlockAsync(curr_io_fileoffset, io_size);
-        block_container[count_page_tmp].second = curr_io_fileoffset;
+        // block_container[count_page_tmp].first =
+        //     bpm.GetBlockAsync(curr_io_fileoffset, io_size);
+        // block_container[count_page_tmp].second = curr_io_fileoffset;
 
-        // {
-        //   auto block = bpm.GetBlockSync(curr_io_fileoffset, io_size);
+        {
+          auto block = bpm.GetBlockSync(curr_io_fileoffset, io_size);
 
-        //   // auto block =
-        //   //     bpm.GetBlockWithDirectCacheSync(curr_io_fileoffset,
-        //   // io_size);
-        //   if constexpr (true) {
-        //     // auto ret_new = bpm.GetObject(curr_io_fileoffset, io_size);
-        //     // auto iter = gbp::BufferBlockIter<size_t>(ret_new);
-        //     for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
-        //       // if (gbp::BufferBlock::Ref<size_t>(block, i) !=
-        //       //     (curr_io_fileoffset / sizeof(size_t) + i)) {
-        //       //   GBPLOG << gbp::BufferBlock::Ref<size_t>(block, i) << " "
-        //       //          << (curr_io_fileoffset / sizeof(size_t) + i) << " "
-        //       //          << curr_io_fileoffset << " " << i << " "
-        //       //          << (uintptr_t)
-        //       // (&gbp::BufferBlock::Ref<size_t>(block,
-        //       //          0))
-        //       //          << std::endl;
-        //       // }
-
-        //       assert(gbp::BufferBlock::Ref<size_t>(block, i) ==
-        //              (curr_io_fileoffset / sizeof(size_t) + i));
-        //       // assert(*(iter.current()) ==
-        //       //        (curr_io_fileoffset / sizeof(size_t) + i));
-        //       // iter.next();
-        //     }
-        //     // assert(iter.current() == nullptr);
-        //   }
-        // }
+          // auto block =
+          //     bpm.GetBlockWithDirectCacheSync(curr_io_fileoffset,
+          // io_size);
+          if constexpr (true) {
+            // auto ret_new = bpm.GetObject(curr_io_fileoffset, io_size);
+            // auto iter = gbp::BufferBlockIter<size_t>(ret_new);
+            for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
+              assert(gbp::BufferBlock::Ref<size_t>(block, i) ==
+                     (curr_io_fileoffset / sizeof(size_t) + i));
+              // assert(*(iter.current()) ==
+              //        (curr_io_fileoffset / sizeof(size_t) + i));
+              // iter.next();
+            }
+            // assert(iter.current() == nullptr);
+          }
+        }
         count_page_tmp++;
       }
 
-      for (auto& block : block_container) {
-        auto item = block.first.get();
-        for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
-          assert(gbp::BufferBlock::Ref<size_t>(item, i) ==
-                 (block.second / sizeof(size_t) + i));
-        }
-      }
+      // for (auto& block : block_container) {
+      //   auto item = block.first.get();
+      //   for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
+      //     assert(gbp::BufferBlock::Ref<size_t>(item, i) ==
+      //            (block.second / sizeof(size_t) + i));
+      //   }
+      // }
 
-      st = gbp::GetSystemTime() - st;
-      latency_log << st << std::endl;
+      // st = gbp::GetSystemTime() - st;
+      // latency_log << st << std::endl;
       // latency_log << st << " | " << gbp::get_counter(1) << " | "
       //             << gbp::get_counter(2) << " | " << gbp::get_counter(11)
       //             << " | " << gbp::get_counter(12) << std::endl;

@@ -276,9 +276,7 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
 #if ASSERT_ENABLE
   assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
 #endif
-  static volatile size_t counta = 0;
   auto ret = Pin(fpage_id, fd);
-  // counta += get_buf_tmp()[(fpage_id * 1024) % get_buf_tmp().size()];
 
   if (ret.first) {  // 1.1
     // if (gbp::warmup_mark() == 1)
@@ -382,6 +380,10 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
                                         ret.first->fpage_id_cur,
                                         page_table_->ToPageId(ret.first)));
 
+      // gbp::get_thread_logfile()
+      //     << (GetSystemTime() -
+      //         counter_per_memorypage((uintptr_t) (ret.second)))
+      //     << std::endl;
       stat = BP_async_request_type::Phase::Loading;
       break;
     }
@@ -406,6 +408,8 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
                            ret.second, PAGE_SIZE_MEMORY, fd, true));
       tmp.initialized = true;
 #endif
+      // counter_per_memorypage((uintptr_t) (ret.second)) = GetSystemTime();
+
       tmp.ref_count = 1;
       tmp.fpage_id_cur = fpage_id;
       tmp.fd_cur = fd;

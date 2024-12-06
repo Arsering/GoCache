@@ -335,4 +335,9 @@ class MemoryLifeTimeLogger {
  private:
   char* pool_;
 };
+
+std::atomic<size_t>& counter_per_memorypage(uintptr_t target_addr,
+                                            uintptr_t start_addr = 0,
+                                            size_t page_count = 0);
+
 }  // namespace gbp
