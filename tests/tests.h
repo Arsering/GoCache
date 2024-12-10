@@ -1,4 +1,6 @@
 #include "../include/buffer_pool_manager.h"
+#include "cgraph/csv_reader.h"
+#include "cgraph/vertex.h"
 
 namespace test {
 
@@ -36,4 +38,9 @@ struct Page_mine {
 };
 
 int test_graph(int argc, char** argv);
+
+void test_csv(const std::string& file_path);
+void test_vertex(const std::string& config_file_path,
+                 const std::string& data_file_path,
+                 const std::string& db_dir_path);
 }  // namespace test

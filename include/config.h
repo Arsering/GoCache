@@ -6,9 +6,9 @@
 
 #pragma once
 
-#define GRAPHSCOPE
+// #define GRAPHSCOPE
 
-#define ASSERT_ENABLE false
+#define ASSERT_ENABLE true
 #define EVICTION_SYNC_ENABLE true
 #define LAZY_SSD_IO_NEW false
 // #define USING_EDGE_ITER

@@ -20,7 +20,7 @@
 #include "include/buffer_pool_manager.h"
 #include "include/config.h"
 
-#include "include/orgin_mmap.h"
+#include "tests/mmap_array.h"
 #include "tests/tests.h"
 #include "tests/utils.h"
 
@@ -227,22 +227,24 @@ class Student {
 };
 
 void test_mmap_array() {
-  gs::mmap_array<int> degree_list;
+  test::mmap_array<int> degree_list;
   degree_list.open("degree", true);
   assert(degree_list.size() == 10);
 
   for (int i = 0; i < degree_list.size(); i++) {
-    assert(i + 1 == degree_list.get(i)->Obj<int>());
+    // assert(i + 1 == degree_list.get(i).Obj<int>());
+    assert(false);
   }
-  gs::mmap_array<Student> student_list;
+  test::mmap_array<Student> student_list;
   student_list.open("student", true);
   auto a = student_list.size();
   assert(a == 10);
   for (size_t i = 0; i < student_list.size(); i++) {
     auto s = student_list.get(i);
-    Student& item = s->Obj<Student>();
-    assert(item.GetAge() == i + 20);
-    assert(item.GetCredit() == 3.2 + 0.1 * i);
+    // Student& item = s->Obj<Student>();
+    // assert(item.GetAge() == i + 20);
+    // assert(item.GetCredit() == 3.2 + 0.1 * i);
+    assert(false);
   }
 }
 
@@ -273,19 +275,19 @@ void generate_files() {
 }
 
 void test_string() {
-  gs::mmap_array<std::string_view> student_list;
+  test::mmap_array<std::string_view> student_list;
   student_list.open("test_string", true);
   auto a = student_list.size();
   printf("begin a is %lu\n", a);
   for (int i = 0; i < student_list.size(); i++) {
     auto s = student_list.get(i);
-    std::string ss(s->Data(), s->Size());
+    std::string ss(s.Data(), s.Size());
     std::cout << ss << std::endl;
   }
 }
 
 void generate_string() {
-  gs::string_item item_list[10];
+  test::string_item item_list[10];
   uint64_t offset_list[10];
   uint32_t length_list[10];
   offset_list[0] = 0;
@@ -308,7 +310,7 @@ void generate_string() {
   std::ofstream outFile3("test_string.items", std::ios::binary);
   if (outFile3.is_open()) {
     outFile3.write(reinterpret_cast<char*>(item_list),
-                   sizeof(gs::string_item) * 10);
+                   sizeof(test::string_item) * 10);
     outFile3.close();
   } else {
     std::cerr << "failed to open the file for writing." << std::endl;
@@ -519,8 +521,14 @@ int main(int argc, char** argv) {
   // test3();
   // mi_malloc(10);
 
-  test::test_concurrency(argc, argv);
-
+  // test::test_concurrency(argc, argv);
+  // test::test_csv(
+  //     "/nvme0n1/lgraph_db/sf0.1/social_network/dynamic/person_0_0.csv");
+  test::test_vertex(
+      "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/"
+      "configurations/graph_0.1_bench.yaml",
+      "/nvme0n1/lgraph_db/sf0.1/social_network/dynamic/person_0_0.csv",
+      "/nvme0n1/cgraph/sf0.1");
   // test_aa(file_path);
   return 0;
 

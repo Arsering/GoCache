@@ -67,10 +67,15 @@ class DiskManager {
                                             int o_flag = O_RDWR | O_CREAT |
                                                          O_DIRECT) {
     auto fd_os = ::open(file_path.c_str(), o_flag, 0777);
+
     assert(fd_os != -1);
+
     fd_oss_.push_back(std::make_pair(fd_os, true));
+
     file_names_.push_back(file_path);
+
     file_size_inBytes_.push_back(GetFileSize(fd_oss_.size() - 1));
+
 #ifdef DEBUG
     debug::get_bitmaps().emplace_back(
         ceil(file_sizes_[file_sizes_.size() - 1], PAGE_SIZE_MEMORY));
