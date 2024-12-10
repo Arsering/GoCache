@@ -9,7 +9,6 @@ set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 set(CMAKE_LIBRARY_PATH "/usr/local/lib;/usr/lib/x86_64-linux-gnu;/usr/lib64")
 
-
 # file(GLOB SRC_FILE *.c) # 建立变量SRC_FILE为目录下.c文件列表
 
 # set(CMAKE_BUILD_TYPE "Debug")
@@ -64,6 +63,9 @@ link_libraries(tests)
 
 add_executable(${PROJECT_NAME} ${ALL_SRCS})	# 指定生成目标，注意这里要用${ALL_SRCS}!!!
 find_package(Boost 1.84 REQUIRED COMPONENTS system filesystem fiber program_options regex thread)
+
+find_package(yaml-cpp REQUIRED)
+target_link_libraries(${PROJECT_NAME} yaml-cpp)
 
 # find_library(MIMALLOC_LIBRARY NAMES mimalloc HINTS /usr/local/lib /usr/lib)
 # target_link_libraries(${PROJECT_NAME} mimalloc)
