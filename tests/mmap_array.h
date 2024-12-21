@@ -31,40 +31,13 @@
 #include <string_view>
 
 #include "../include/buffer_pool_manager.h"
+#include "../include/mmap_array.h"
 
 namespace test {
-#define OV false
-#define FILE_FLAG O_DIRECT
-#define MMAP_ADVICE_l MADV_RANDOM
-
 struct string_item {
   uint64_t offset : 48;
   uint32_t length : 16;
 };
-
-inline void copy_file(const std::string& src, const std::string& dst) {
-  if (!std::filesystem::exists(src)) {
-    std::cerr << "file not exists: " << src;
-    return;
-  }
-
-  size_t len = std::filesystem::file_size(src);
-
-  int src_fd = ::open(src.c_str(), O_RDONLY, 0777);
-  int dst_fd = ::open(dst.c_str(), O_WRONLY | O_CREAT, 0777);
-
-  ssize_t ret;
-  do {
-    ret = copy_file_range(src_fd, NULL, dst_fd, NULL, len, 0);
-    if (ret == -1) {
-      perror("copy_file_range");
-      return;
-    }
-    len -= ret;
-  } while (len > 0 && ret > 0);
-  ::close(src_fd);
-  ::close(dst_fd);
-}
 
 class mmap_array_base {
  public:
@@ -77,8 +50,9 @@ class mmap_array_base {
   virtual bool read_only() const = 0;
   virtual const std::string& filename() const = 0;
   virtual size_t size() const = 0;
-  // virtual void set(size_t idx, const T& val) = 0;
-  // virtual const T& get(size_t idx) const = 0;
+  virtual void set(size_t idx, std::string_view val, size_t len = 1) = 0;
+  virtual void set_single_obj(size_t idx, std::string_view val) = 0;
+  virtual const gbp::BufferBlock get(size_t idx, size_t len = 1) const = 0;
 };
 
 template <typename T>
@@ -117,11 +91,7 @@ class mmap_array : public mmap_array_base {
 #else
   // mmap_array(const mmap_array&) = delete;             // 阻止拷贝
   // mmap_array& operator=(const mmap_array&) = delete;  // 阻止赋值
-  ~mmap_array() {
-    gbp::GBPLOG << "cp";
-    close();
-    gbp::GBPLOG << "cp";
-  }
+  ~mmap_array() { close(); }
 
   void close() {
     if (fd_gbp_ != gbp::INVALID_FILE_HANDLE) {
@@ -335,7 +305,7 @@ class mmap_array : public mmap_array_base {
 #else
   void touch(const std::string& filename) {
     close();
-    copy_file(filename_, filename);
+    gbp::copy_file(filename_, filename);
     open(filename, false);
   }
 #endif
@@ -360,6 +330,18 @@ class mmap_array : public mmap_array_base {
     buffer_pool_manager_->SetBlock(reinterpret_cast<const char*>(val.data()),
                                    idx * sizeof(T), len * sizeof(T), fd_gbp_,
                                    false);
+  }
+
+  // FIXME: 无法保证atomic
+  void set_single_obj(size_t idx, std::string_view val) {
+#if ASSERT_ENABLE
+    assert(idx < size_);
+    assert(sizeof(T) == val.size());
+#endif
+    const size_t file_offset = idx / OBJ_NUM_PERPAGE * gbp::PAGE_SIZE_FILE +
+                               (idx % OBJ_NUM_PERPAGE) * sizeof(T);
+    buffer_pool_manager_->SetBlock(reinterpret_cast<const char*>(val.data()),
+                                   file_offset, sizeof(T), fd_gbp_, false);
   }
 
   // // FIXME: 无法保证atomic

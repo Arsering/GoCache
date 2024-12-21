@@ -153,7 +153,8 @@ class BufferBlockImp7 {
     }
     return ret;
   }
-
+  // 将bufferblock中的数据复制到buf中
+  // bufferblock中的数据可能不连续，因此需要从多个page中复制
   size_t Copy(char* buf, size_t buf_size, size_t offset = 0) const {
 #if ASSERT_ENABLE
     assert(datas_.data != nullptr);
@@ -283,9 +284,16 @@ class BufferBlockImp7 {
   FORCE_INLINE int Compare(const std::string_view right,
                            size_t offset = 0) const {
 #if ASSERT_ENABLE
-    assert(datas_.data != nullptr);
+    // assert(datas_.data != nullptr);
     assert(offset <= size_);
 #endif
+    // 当本block为空时
+    if (size_ == 0 || offset == size_) {
+      if (right.size() == 0) {
+        return 0;
+      }
+      return -10;
+    }
     size_t size_left = std::min((size_ - offset), right.size()),
            offset_t = offset;
     int ret = -10;
@@ -430,6 +438,10 @@ class BufferBlockImp7 {
     constexpr size_t OBJ_NUM_PERPAGE = PAGE_SIZE_MEMORY / sizeof(OBJ_Type);
 #if ASSERT_ENABLE
     // FIXME: 不够准确
+    if (sizeof(OBJ_Type) * (idx + 1) > size_) {
+      GBPLOG << "idx: " << idx << ", size_: " << size_
+             << "obj size: " << sizeof(OBJ_Type);
+    }
     assert(sizeof(OBJ_Type) * (idx + 1) <= size_);
 #endif
     char* ret = nullptr;

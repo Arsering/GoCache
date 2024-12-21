@@ -2,10 +2,13 @@
 
 #include <execinfo.h>
 #include <atomic>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/date_time/posix_time/posix_time_io.hpp>
 #include <boost/fiber/context.hpp>
 #include <boost/fiber/operations.hpp>
 #include <boost/interprocess/sync/interprocess_semaphore.hpp>
 #include <boost/lockfree/queue.hpp>
+#include <boost/regex.hpp>
 #include <cstring>
 
 #include "config.h"
@@ -390,4 +393,129 @@ class AsyncMesg4 : public AsyncMesg {
 };
 
 void set_cpu_affinity();
+
+inline size_t parseDateTimeToMilliseconds(const std::string& datetime) {
+  try {
+    // 定义时间格式
+    std::string format1 = "%Y-%m-%d";
+    std::string format2 = "%Y-%m-%dT%H:%M:%S.%f%q";
+
+    // 创建时间输入流
+    std::istringstream ss(datetime);
+    boost::posix_time::ptime pt;
+
+    // 尝试解析完整的日期时间格式
+    ss.imbue(std::locale(std::locale::classic(),
+                         new boost::posix_time::time_input_facet(format2)));
+    ss >> pt;
+    if (pt.is_not_a_date_time()) {
+      // 重置流状态并尝试解析仅日期格式
+      ss.clear();
+      ss.str(datetime);
+      ss.imbue(std::locale(std::locale::classic(),
+                           new boost::posix_time::time_input_facet(format1)));
+      ss >> pt;
+    }
+
+    if (pt.is_not_a_date_time()) {
+      throw std::runtime_error("Failed to parse date time");
+    }
+
+    // 计算自 Unix 时间以来的毫秒数
+    boost::posix_time::ptime epoch(boost::gregorian::date(1970, 1, 1));
+    boost::posix_time::time_duration diff = pt - epoch;
+    return diff.total_milliseconds();
+  } catch (const std::exception& e) {
+    std::cerr << "Error: " << e.what() << std::endl;
+    return -1;
+  }
+}
+
+inline std::string parseDateTimeToString(size_t milliseconds) {
+  return boost::posix_time::to_simple_string(
+      boost::posix_time::from_time_t(milliseconds));
+}
+
+class TimeConverter {
+ public:
+  // 获取 Unix epoch 起始时间
+  static boost::posix_time::ptime getEpoch() {
+    return boost::posix_time::ptime(boost::gregorian::date(1970, 1, 1));
+  }
+
+  // 将日期字符串转换为毫秒数
+  static int64_t dateStringToMillis(const std::string& dateString) {
+    try {
+      boost::posix_time::ptime pt;
+      boost::regex dateRegex(R"(^\d{4}-\d{2}-\d{2}$)");
+      boost::regex dateTimeRegex(
+          R"(^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}\+\d{4}$)");
+
+      if (boost::regex_match(dateString, dateRegex)) {
+        // 处理日期格式 "1988-08-02"
+        pt = boost::posix_time::ptime(
+            boost::gregorian::from_simple_string(dateString));
+      } else if (boost::regex_match(dateString, dateTimeRegex)) {
+        // 处理日期时间格式 "2012-03-02T10:33:15.012+0000"
+        std::string dateTimePart = dateString.substr(0, 23);
+        pt = boost::posix_time::from_iso_extended_string(
+            dateTimePart);  // 2012-03-02T10:33:15.012
+
+        // 解析时区偏移
+        std::string tzPart =
+            dateString.substr(23, 5);  // 从23开始截取5个字符，即+0000
+        int hours = std::stoi(tzPart.substr(0, 3));    // 解析小时部分
+        int minutes = std::stoi(tzPart.substr(3, 2));  // 解析分钟部分
+        int tzOffset = (hours * 3600 + minutes * 60) * 1000;  // 转换为毫秒
+
+        boost::posix_time::time_duration duration = pt - getEpoch();
+        return duration.total_milliseconds() - tzOffset;
+      } else {
+        throw std::runtime_error("Unsupported date format");
+      }
+
+      boost::posix_time::time_duration duration = pt - getEpoch();
+      return duration.total_milliseconds();
+    } catch (const std::exception& e) {
+      throw std::runtime_error("Failed to parse date string: " +
+                               std::string(e.what()));
+    }
+  }
+
+  // 将毫秒数转换为日期字符串
+  static std::string millisToDateString(int64_t millis,
+                                        bool includeTime = false) {
+    try {
+      boost::posix_time::ptime time =
+          getEpoch() + boost::posix_time::milliseconds(millis);
+      std::string result;
+      if (includeTime) {
+        auto tmp = boost::posix_time::to_iso_extended_string(time);
+        size_t dotPos = tmp.find('.');
+        if (dotPos != std::string::npos && dotPos + 4 < tmp.size()) {
+          result = tmp.substr(0, dotPos + 4);
+        }
+        result += "+0000";
+      } else {
+        result = boost::gregorian::to_iso_extended_string(time.date());
+      }
+      return result;
+    } catch (const std::exception& e) {
+      throw std::runtime_error("Failed to convert millis to date string: " +
+                               std::string(e.what()));
+    }
+  }
+
+  static std::string formatTimeToMilliseconds(
+      const boost::posix_time::ptime& time) {
+    std::string timeStr = boost::posix_time::to_iso_extended_string(time);
+    size_t dotPos = timeStr.find('.');
+    if (dotPos != std::string::npos && dotPos + 4 < timeStr.size()) {
+      // Keep only the first 3 digits after the dot for milliseconds
+      timeStr = timeStr.substr(0, dotPos + 4);
+    }
+    return timeStr;
+  }
+};
+
 }  // namespace gbp

@@ -19,6 +19,8 @@
 #include "buffer_pool.h"
 #include "bufferblock/buffer_obj.h"
 #include "config.h"
+#include "csv_reader.h"
+#include "data_parse.h"
 #include "debug.h"
 #include "directcache/direct_cache.h"
 #include "extendible_hash.h"

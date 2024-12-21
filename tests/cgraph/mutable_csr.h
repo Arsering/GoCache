@@ -322,7 +322,6 @@ class MutableAdjlist {
 //   size_t start_idx_;
 // };
 
-template <typename EDATA_T>
 struct MutableAdjlist {
  public:
   // using nbr_t = MutableNbr<EDATA_T>;
@@ -336,10 +335,12 @@ struct MutableAdjlist {
     size_ = size;
     capacity_ = cap;
     start_idx_ = start_idx;
-  }
 
-  std::atomic<u_int32_t> size_;
-  u_int32_t capacity_;
+    lock_.store(0);
+  }
+  std::atomic<u_int32_t> size_;  // 有效数据的大小
+  u_int32_t capacity_;           // 空闲空间的大小
+  std::atomic<u_int16_t> lock_;  // 锁 1表示锁住，0表示未锁住
   size_t start_idx_;
 };
 #endif
@@ -682,7 +683,7 @@ template <typename EDATA_T>
 class MutableCsr : public TypedMutableCsrBase<EDATA_T> {
  public:
   using nbr_t = MutableNbr<EDATA_T>;
-  using adjlist_t = MutableAdjlist<EDATA_T>;
+  using adjlist_t = MutableAdjlist;
   using slice_t = MutableNbrSlice<EDATA_T>;
   using mut_slice_t = MutableNbrSliceMut<EDATA_T>;
 
