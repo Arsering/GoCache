@@ -71,9 +71,7 @@ class DiskManager {
     assert(fd_os != -1);
 
     fd_oss_.push_back(std::make_pair(fd_os, true));
-
     file_names_.push_back(file_path);
-
     file_size_inBytes_.push_back(GetFileSize(fd_oss_.size() - 1));
 
 #ifdef DEBUG

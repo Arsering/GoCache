@@ -1,0 +1,164 @@
+/** Copyright 2020 Alibaba Group Holding Limited.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * 	http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "vertex.h"
+namespace test {
+using label_t = uint8_t;
+
+class Schema {
+ public:
+  using label_type = label_t;
+  Schema();
+  ~Schema();
+
+  void add_vertex_label(
+      const std::string& label,
+      const std::vector<Vertex::ColumnType>& property_types,
+      const std::vector<std::string>& property_names,
+      const std::vector<std::tuple<Vertex::ColumnType, std::string, size_t>>&
+          primary_key,
+      size_t max_vnum = static_cast<size_t>(1) << 32);
+
+  void add_edge_label(
+      const std::string& src_label, const std::string& dst_label,
+      const std::string& edge_label,
+      const std::vector<Vertex::ColumnType>& properties,
+      const std::vector<std::string>& prop_names,
+      Vertex::EdgeStrategy oe = Vertex::EdgeStrategy::kMultiple,
+      Vertex::EdgeStrategy ie = Vertex::EdgeStrategy::kMultiple);
+
+  label_t vertex_label_num() const;
+
+  label_t edge_label_num() const;
+
+  bool contains_vertex_label(const std::string& label) const;
+
+  label_t get_vertex_label_id(const std::string& label) const;
+
+  void set_vertex_properties(label_t label_id,
+                             const std::vector<Vertex::ColumnType>& types);
+
+  const std::vector<Vertex::ColumnType>& get_vertex_properties(
+      const std::string& label) const;
+
+  const std::vector<std::string>& get_vertex_property_names(
+      const std::string& label) const;
+
+  const std::vector<Vertex::ColumnType>& get_vertex_properties(
+      label_t label) const;
+
+  const std::vector<std::string>& get_vertex_property_names(
+      label_t label) const;
+
+  size_t get_max_vnum(const std::string& label) const;
+
+  bool exist(const std::string& src_label, const std::string& dst_label,
+             const std::string& edge_label) const;
+
+  const std::vector<Vertex::ColumnType>& get_edge_properties(
+      const std::string& src_label, const std::string& dst_label,
+      const std::string& label) const;
+
+  const std::vector<Vertex::ColumnType>& get_edge_properties(
+      label_t src_label, label_t dst_label, label_t label) const;
+
+  Vertex::ColumnType get_edge_property(label_t src, label_t dst,
+                                       label_t edge) const;
+
+  const std::vector<std::string>& get_edge_property_names(
+      const std::string& src_label, const std::string& dst_label,
+      const std::string& label) const;
+
+  const std::vector<std::string>& get_edge_property_names(
+      const label_t& src_label, const label_t& dst_label,
+      const label_t& label) const;
+
+  bool vertex_has_property(const std::string& label,
+                           const std::string& prop) const;
+
+  bool vertex_has_primary_key(const std::string& label,
+                              const std::string& prop) const;
+
+  bool edge_has_property(const std::string& src_label,
+                         const std::string& dst_label,
+                         const std::string& edge_label,
+                         const std::string& prop) const;
+
+  bool has_vertex_label(const std::string& label) const;
+
+  bool has_edge_label(const std::string& src_label,
+                      const std::string& dst_label,
+                      const std::string& edge_label) const;
+
+  bool valid_edge_property(const std::string& src_label,
+                           const std::string& dst_label,
+                           const std::string& label) const;
+
+  Vertex::EdgeStrategy get_outgoing_edge_strategy(
+      const std::string& src_label, const std::string& dst_label,
+      const std::string& label) const;
+
+  Vertex::EdgeStrategy get_incoming_edge_strategy(
+      const std::string& src_label, const std::string& dst_label,
+      const std::string& label) const;
+
+  bool contains_edge_label(const std::string& label) const;
+
+  label_t get_edge_label_id(const std::string& label) const;
+
+  std::string get_vertex_label_name(label_t index) const;
+
+  std::string get_edge_label_name(label_t index) const;
+
+  const std::vector<std::tuple<Vertex::ColumnType, std::string, size_t>>&
+  get_vertex_primary_key(label_t index) const;
+
+  const std::string& get_vertex_primary_key_name(label_t index) const;
+
+  //   void Serialize(std::unique_ptr<grape::LocalIOAdaptor>& writer) const;
+
+  //   void Deserialize(std::unique_ptr<grape::LocalIOAdaptor>& reader);
+
+  static Schema LoadFromYaml(const std::string& schema_config);
+
+  bool Equals(const Schema& other) const;
+
+  const std::vector<std::string>& GetPluginsList() const;
+
+  void EmplacePlugin(const std::string& plugin_name);
+
+ private:
+  label_t vertex_label_to_index(const std::string& label);
+
+  label_t edge_label_to_index(const std::string& label);
+
+  uint32_t generate_edge_label(label_t src, label_t dst, label_t edge) const;
+
+  IdIndexer<std::string, label_t> vlabel_indexer_;
+  IdIndexer<std::string, label_t> elabel_indexer_;
+  std::vector<std::vector<Vertex::ColumnType>> vproperties_;
+  std::vector<std::vector<std::string>> vprop_names_;
+  std::vector<std::vector<std::tuple<Vertex::ColumnType, std::string, size_t>>>
+      v_primary_keys_;  // the third element is the index of the property in the
+                        // vertex property list
+  std::map<uint32_t, std::vector<Vertex::ColumnType>> eproperties_;
+  std::map<uint32_t, std::vector<std::string>> eprop_names_;
+  std::map<uint32_t, Vertex::EdgeStrategy> oe_strategy_;
+  std::map<uint32_t, Vertex::EdgeStrategy> ie_strategy_;
+  std::vector<size_t> max_vnum_;
+  std::vector<std::string> plugin_list_;
+};
+
+}  // namespace test

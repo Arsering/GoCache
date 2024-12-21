@@ -62,6 +62,7 @@ schema:
       type_name: PERSON
       x_csr_params:
         max_vertex_num: 1254000
+      column_family_num: 2
       properties:
         - property_id: 0 
           property_name: id
@@ -119,150 +120,183 @@ schema:
       type_name: COMMENT
       x_csr_params:
         max_vertex_num: 762949871
+      column_family_num: 2
       properties:
         - property_id: 0
           property_name: id
           property_type:
             primitive_type: DT_SIGNED_INT64
+          column_family: 0
         - property_id: 1
           property_name: creationDate
           property_type:
             date: "date"
+          column_family: 0
         - property_id: 2
           property_name: locationIP
           property_type:
             primitive_type: DT_STRING
+          column_family: 1
         - property_id: 3
           property_name: browserUsed
           property_type:
             primitive_type: DT_STRING
+          column_family: 1
         - property_id: 4
           property_name: content
           property_type:
             primitive_type: DT_STRING
+          column_family: 1
         - property_id: 5
           property_name: length
           property_type:
             primitive_type: DT_SIGNED_INT32
+          column_family: 1
       primary_keys:
         - id
     - type_id: 3
       type_name: POST
       x_csr_params:
         max_vertex_num: 187893047
+      column_family_num: 2
       properties:
         - property_id: 0
           property_name: id
           property_type:
             primitive_type: DT_SIGNED_INT64
+          column_family: 0
         - property_id: 1
           property_name: imageFile
           property_type:
             primitive_type: DT_STRING
+          column_family: 0
         - property_id: 2
           property_name: creationDate
           property_type:
             date: "date"
+          column_family: 0
         - property_id: 3
           property_name: locationIP
           property_type:
             primitive_type: DT_STRING
+          column_family: 1
         - property_id: 4
           property_name: browserUsed
           property_type:
             primitive_type: DT_STRING
+          column_family: 1
         - property_id: 5
           property_name: language
           property_type:
             primitive_type: DT_STRING
+          column_family: 1
         - property_id: 6
           property_name: content
           property_type:
             primitive_type: DT_STRING
+          column_family: 1
         - property_id: 7
           property_name: length
           property_type:
             primitive_type: DT_SIGNED_INT32
+          column_family: 1
       primary_keys:
         - id
     - type_id: 4
       type_name: FORUM
       x_csr_params:
         max_vertex_num: 12549398
+      column_family_num: 2
       properties:
         - property_id: 0
           property_name: id
           property_type:
             primitive_type: DT_SIGNED_INT64
+          column_family: 0
         - property_id: 1
           property_name: title
           property_type:
             primitive_type: DT_STRING
+          column_family: 0
         - property_id: 2
           property_name: creationDate
           property_type:
             date: "date"
+          column_family: 1
       primary_keys:
         - id
     - type_id: 5
       type_name: ORGANISATION
       x_csr_params:
         max_vertex_num: 7955
+      column_family_num: 2
       properties:
         - property_id: 0
           property_name: id
           property_type:
             primitive_type: DT_SIGNED_INT64
+          column_family: 0
         - property_id: 1
           property_name: type
           property_type:
             primitive_type: DT_STRING
+          column_family: 0
         - property_id: 2
           property_name: name
           property_type:
             primitive_type: DT_STRING
+          column_family: 0
         - property_id: 3
           property_name: url
           property_type:
             primitive_type: DT_STRING
+          column_family: 1 
       primary_keys:
         - id
     - type_id: 6
       type_name: TAGCLASS
       x_csr_params:
         max_vertex_num: 71
+      column_family_num: 2
       properties:
         - property_id: 0
           property_name: id
           property_type:
             primitive_type: DT_SIGNED_INT64
+          column_family: 0
         - property_id: 1
           property_name: name
           property_type:
             primitive_type: DT_STRING
+          column_family: 0
         - property_id: 2
           property_name: url
           property_type:
             primitive_type: DT_STRING
+          column_family: 1
       primary_keys:
         - id
     - type_id: 7
       type_name: TAG
       x_csr_params:
         max_vertex_num: 16080
+      column_family_num: 2
       properties:
         - property_id: 0
           property_name: id
           property_type:
             primitive_type: DT_SIGNED_INT64
+          column_family: 0
         - property_id: 1
           property_name: name
           property_type:
             primitive_type: DT_STRING
+          column_family: 0
         - property_id: 2
           property_name: url
           property_type:
             primitive_type: DT_STRING
+          column_family: 1
       primary_keys:
         - id
   edge_types:

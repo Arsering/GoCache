@@ -18,8 +18,9 @@ BufferPoolManager::~BufferPoolManager() {
   // #endif
   // #endif
 
-  if constexpr (PERSISTENT)
+  if constexpr (PERSISTENT) {
     Flush();
+  }
 
   stop_ = true;
   CheckValid();
@@ -92,7 +93,6 @@ bool BufferPoolManager::FlushFile(GBPfile_handle_type fd,
 #if ASSERT_ENABLE
   assert(disk_manager_->ValidFD(fd));
 #endif
-
   bool ret = true;
   size_t fpage_num =
       ceil(disk_manager_->file_size_inBytes_[fd], PAGE_SIZE_FILE);
