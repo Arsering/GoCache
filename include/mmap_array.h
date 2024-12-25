@@ -44,6 +44,42 @@ inline void copy_file(const std::string& src, const std::string& dst) {
   ::close(src_fd);
   ::close(dst_fd);
 }
+namespace cgraph {
+inline void copy_file_new(const std::filesystem::path& source,
+                          const std::filesystem::path& destination) {
+  try {
+    std::filesystem::copy(source, destination,
+                          std::filesystem::copy_options::overwrite_existing);
+    // GBPLOG << "Copied: " << source << " to " << destination << std::endl;
+  } catch (const std::filesystem::filesystem_error& e) {
+    GBPLOG << "Error copying " << source << ": " << e.what() << std::endl;
+    assert(false);
+  }
+}
+
+inline void copy_directory_concurrently(
+    const std::filesystem::path& source_dir,
+    const std::filesystem::path& destination_dir) {
+  std::vector<std::thread> threads;
+
+  for (const auto& entry :
+       std::filesystem::recursive_directory_iterator(source_dir)) {
+    if (entry.is_regular_file()) {
+      std::filesystem::path destination =
+          destination_dir / std::filesystem::relative(entry.path(), source_dir);
+      std::filesystem::create_directories(destination.parent_path());
+
+      threads.emplace_back([=]() { copy_file_new(entry.path(), destination); });
+    }
+  }
+
+  for (auto& thread : threads) {
+    if (thread.joinable()) {
+      thread.join();
+    }
+  }
+}
+}  // namespace cgraph
 
 class mmap_array {
  public:

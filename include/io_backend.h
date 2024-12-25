@@ -66,6 +66,8 @@ class DiskManager {
   FORCE_INLINE GBPfile_handle_type OpenFile(const std::string& file_path,
                                             int o_flag = O_RDWR | O_CREAT |
                                                          O_DIRECT) {
+    static std::mutex mtx;
+    std::lock_guard<std::mutex> lock(mtx);  // 保证本函数在多线程下执行的一致性
     auto fd_os = ::open(file_path.c_str(), o_flag, 0777);
 
     assert(fd_os != -1);
