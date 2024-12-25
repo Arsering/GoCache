@@ -572,7 +572,7 @@ class BufferBlockImp7 {
 
   AnyValue datas_;
   AnyValue ptes_;
-  size_t size_ = 0;
+  size_t size_ = 0;  // 单位为Byte
   size_t page_num_ = 0;
 };
 

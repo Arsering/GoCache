@@ -130,10 +130,13 @@ class BufferPoolManager {
   }
 
   GBPfile_handle_type OpenFile(const std::string& file_name, int o_flag) {
+    static std::mutex mtx;
+    std::lock_guard<std::mutex> lock(mtx);
     auto fd = disk_manager_->OpenFile(file_name, o_flag);
     RegisterFile(fd);
     return fd;
   }
+
   void CloseFile(GBPfile_handle_type fd) {
     assert(FlushFile(fd));
     disk_manager_->CloseFile(fd);

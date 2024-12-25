@@ -45,7 +45,7 @@ class CSVLoader {
   const std::vector<std::string>& get_headers() const { return headers_; }
 
   // 获取第i行所有元素
-  std::vector<std::string> get_row(size_t i) const {
+  const std::vector<std::string> get_row(size_t i) const {
     if (i >= data_.size()) {
       return std::vector<std::string>();
     }
@@ -53,7 +53,7 @@ class CSVLoader {
   }
 
   // 获取第i列所有元素
-  std::vector<std::string> get_column(size_t i) const {
+  const std::vector<std::string> get_column(size_t i) const {
     if (i >= headers_.size()) {
       return std::vector<std::string>();
     }
@@ -67,7 +67,7 @@ class CSVLoader {
   }
 
   // 获取第i行j列的元素
-  std::string get_element(size_t i, size_t j) const {
+  const std::string get_element(size_t i, size_t j) const {
     if (i >= data_.size() || j >= headers_.size()) {
       return "";
     }
