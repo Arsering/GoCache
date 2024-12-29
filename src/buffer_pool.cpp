@@ -279,15 +279,15 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
   auto ret = Pin(fpage_id, fd);
 
   if (ret.first) {  // 1.1
-    // if (gbp::warmup_mark() == 1)
-    //   get_counter_global(10)++;
-    //   as_atomic(disk_manager_->counts_[fd].first)++;
+    if (gbp::warmup_mark() == 1)
+      // get_counter_global(10)++;
+      as_atomic(disk_manager_->counts_[fd].first)++;
     return ret;
   }
   // if (gbp::warmup_mark() == 1)
   //   get_counter_global(11)++;
-  // if (gbp::warmup_mark() == 1)
-  //   as_atomic(disk_manager_->counts_[fd].second)++;
+  if (gbp::warmup_mark() == 1)
+    as_atomic(disk_manager_->counts_[fd].second)++;
 
   auto stat = BP_async_request_type::Phase::Begin;
   size_t count = 0;
@@ -404,6 +404,8 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
       *reinterpret_cast<fpage_id_type*>(ret.second) = fpage_id;
       tmp.initialized = false;
 #else
+      if (gbp::warmup_mark() == 1)
+        as_atomic(disk_manager_->counts_[fd].second)++;
       assert(ReadWriteSync(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
                            ret.second, PAGE_SIZE_MEMORY, fd, true));
       tmp.initialized = true;
