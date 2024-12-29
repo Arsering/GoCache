@@ -277,11 +277,10 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
   assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
 #endif
   auto ret = Pin(fpage_id, fd);
-
+  if (gbp::warmup_mark() == 1)
+    // get_counter_global(10)++;
+    as_atomic(disk_manager_->counts_[fd].first)++;
   if (ret.first) {  // 1.1
-    if (gbp::warmup_mark() == 1)
-      // get_counter_global(10)++;
-      as_atomic(disk_manager_->counts_[fd].first)++;
     return ret;
   }
   // if (gbp::warmup_mark() == 1)
