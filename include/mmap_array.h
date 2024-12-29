@@ -311,6 +311,9 @@ class mmap_array {
     } else {
       size_t file_size_new = (size % OBJ_NUM_PERPAGE) * item_size_ +
                              (size / OBJ_NUM_PERPAGE) * gbp::PAGE_SIZE_MEMORY;
+      // GBPLOG << filename_ << " resize " << size << " " << file_size_new << "
+      // "
+      //        << OBJ_NUM_PERPAGE << " " << item_size_;
       buffer_pool_manager_->Resize(fd_gbp_, file_size_new);
       size_ = size;
     }
@@ -382,7 +385,7 @@ class mmap_array {
 
     size_t rest_filelen_firstpage =
         gbp::PAGE_SIZE_MEMORY - file_offset % gbp::PAGE_SIZE_MEMORY;
-    if (rest_filelen_firstpage / item_size_ > len) {
+    if (rest_filelen_firstpage > len * item_size_) {
       buf_size += item_size_ * len;
       // num_page = 1;
     } else {
@@ -432,7 +435,7 @@ class mmap_array {
 
     size_t rest_filelen_firstpage =
         gbp::PAGE_SIZE_MEMORY - file_offset % gbp::PAGE_SIZE_MEMORY;
-    if (rest_filelen_firstpage / item_size_ > len) {
+    if (rest_filelen_firstpage > len * item_size_) {
       buf_size += item_size_ * len;
       // num_page = 1;
     } else {
