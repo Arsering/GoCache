@@ -518,4 +518,55 @@ class TimeConverter {
   }
 };
 
+struct FlaggedUINT64 {
+  std::atomic<uint64_t> value;
+
+  // 构造函数，初始化数据和标志位
+  FlaggedUINT64(uint64_t data, bool flag) {
+    setData(data);
+    setFlag(flag);
+  }
+
+  // 设置数据，确保只占用低 63 位
+  FORCE_INLINE void setData(uint64_t data) {
+    // 保留当前标志位状态
+    bool currentFlag = isFlagSet();
+    // 更新数据
+    uint64_t newValue = data & 0x7FFFFFFFFFFFFFFF;  // 确保最高位为 0
+    // 恢复标志位状态
+    if (currentFlag) {
+      newValue |= 0x8000000000000000;  // 设置最高位为 1
+    }
+    value.store(newValue);
+  }
+
+  // 设置标志位
+  FORCE_INLINE void setFlag(bool flag) {
+    uint64_t currentValue = value.load();
+    if (flag) {
+      currentValue |= 0x8000000000000000;  // 设置最高位为 1
+    } else {
+      currentValue &= 0x7FFFFFFFFFFFFFFF;  // 清除最高位
+    }
+    value.store(currentValue);
+  }
+  // 如果标志位未设置，则设置并返回 true，否则返回 false
+  FORCE_INLINE bool setFlagIfNotSet() {
+    const uint64_t mask = 0x8000000000000000;  // 最高位掩码
+    uint64_t oldValue = value.fetch_or(mask);
+    // 如果旧值的最高位是 0，说明标志位未设置
+    return (oldValue & mask) == 0;
+  }
+
+  // 检查标志位是否设置
+  FORCE_INLINE bool isFlagSet() const {
+    return (value.load() & 0x8000000000000000) != 0;
+  }
+
+  // 获取原始数据
+  FORCE_INLINE uint64_t getData() const {
+    return value.load() & 0x7FFFFFFFFFFFFFFF;
+  }
+};
+
 }  // namespace gbp
