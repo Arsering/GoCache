@@ -28,6 +28,51 @@
 #include "utils.h"
 
 namespace gbp {
+class LogStream {
+ public:
+  LogStream(const char* file, size_t line)
+      : file_(file), line_(line), newline_(true) {
+    lock();  // 加锁
+    std::cout << file_ << ":" << line_ << " ";
+  }
+
+  template <typename T>
+  LogStream& operator<<(const T& msg) {
+    std::cout << msg;
+    newline_ = false;  // 标记未换行
+    return *this;
+  }
+
+  // 特化处理 std::endl
+  LogStream& operator<<(std::ostream& (*pf)(std::ostream&) ) {
+    std::cout << pf;
+    if (pf == static_cast<std::ostream& (*) (std::ostream&)>(std::endl)) {
+      newline_ = true;  // 标记已经换行
+    }
+    return *this;
+  }
+
+  ~LogStream() {
+    if (!newline_) {
+      std::cout << std::endl;  // 如果未换行则添加换行符
+    }
+    unlock();  // 解锁
+  }
+
+ private:
+  const char* file_;
+  size_t line_;
+  bool newline_;
+  static std::mutex latch_;  // 用于保护 std::cout 的静态互斥量
+
+  void lock() { latch_.lock(); }
+  void unlock() { latch_.unlock(); }
+};
+// // 初始化静态成员
+// std::mutex LogStream::latch_;
+// 宏定义，简化使用
+#define GBPLOG LogStream(__FILE__, __LINE__)
+
 std::vector<size_t>& get_buf_tmp();
 
 size_t get_thread_id();
@@ -232,6 +277,7 @@ class PerformanceLogServer {
       log_file_.open(file_path, std::ios::out);
     if (!server_.joinable())
       server_ = std::thread([this]() { Logging(); });
+    GBPLOG << "PerformanceLogServer started";
   }
   void SetStartPoint() {
     std::tie(SSD_read_bytes_sp_, SSD_write_bytes_sp_) =
@@ -266,51 +312,6 @@ class PerformanceLogServer {
 };
 
 std::mutex& get_lock_global();
-
-class LogStream {
- public:
-  LogStream(const char* file, size_t line)
-      : file_(file), line_(line), newline_(true) {
-    lock();  // 加锁
-    std::cout << file_ << ":" << line_ << " ";
-  }
-
-  template <typename T>
-  LogStream& operator<<(const T& msg) {
-    std::cout << msg;
-    newline_ = false;  // 标记未换行
-    return *this;
-  }
-
-  // 特化处理 std::endl
-  LogStream& operator<<(std::ostream& (*pf)(std::ostream&) ) {
-    std::cout << pf;
-    if (pf == static_cast<std::ostream& (*) (std::ostream&)>(std::endl)) {
-      newline_ = true;  // 标记已经换行
-    }
-    return *this;
-  }
-
-  ~LogStream() {
-    if (!newline_) {
-      std::cout << std::endl;  // 如果未换行则添加换行符
-    }
-    unlock();  // 解锁
-  }
-
- private:
-  const char* file_;
-  size_t line_;
-  bool newline_;
-  static std::mutex latch_;  // 用于保护 std::cout 的静态互斥量
-
-  void lock() { latch_.lock(); }
-  void unlock() { latch_.unlock(); }
-};
-// // 初始化静态成员
-// std::mutex LogStream::latch_;
-// 宏定义，简化使用
-#define GBPLOG LogStream(__FILE__, __LINE__)
 
 class MemoryLifeTimeLogger {
  public:
