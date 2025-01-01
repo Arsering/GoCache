@@ -621,7 +621,7 @@ class PageTable {
     auto ret = mappings_[fd]->DeleteMapping(
         partitioner_->GetFPageIdInPartition(fpage_id));
     if (ret) {
-      FromPageId(mpage_id)->Clean();
+      FromPageId(mpage_id)->Clean(); // 好像这里不需要清空pte吧！！！
     }
     return ret;
   }

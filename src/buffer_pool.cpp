@@ -277,9 +277,9 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
   assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
 #endif
   auto ret = Pin(fpage_id, fd);
-  // if (gbp::warmup_mark() == 1)
-  //   // get_counter_global(10)++;
-  //   as_atomic(disk_manager_->counts_[fd].first)++;
+  if (gbp::warmup_mark() == 1)
+    // get_counter_global(10)++;
+    as_atomic(disk_manager_->counts_[fd].first)++;
   if (ret.first) {  // 1.1
     return ret;
   }
@@ -382,37 +382,24 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
       assert(page_table_->DeleteMapping(ret.first->fd_cur,
                                         ret.first->fpage_id_cur,
                                         page_table_->ToPageId(ret.first)));
-
-      // gbp::get_thread_logfile()
-      //     << (GetSystemTime() -
-      //         counter_per_memorypage((uintptr_t) (ret.second)))
-      //     << std::endl;
       stat = BP_async_request_type::Phase::Loading;
       break;
     }
     case BP_async_request_type::Phase::Loading: {  // 4
       thread_local static PTE tmp;
       tmp.Clean();
-      // get_thread_logfile()
-      //     << GetSystemTime() << " " << fd << " " << fpage_id << " "
-      //     << ret.first->fd_cur << " " << ret.first->fpage_id_cur << " "
-      //     <<
-      //     MemoryLifeTimeLogger::GetMemoryLifeTimeLogger().GetVisitedCount(
-      //            ret.second)
-      //     << " "
-      //     <<
-      //     MemoryLifeTimeLogger::GetMemoryLifeTimeLogger().GetLoadingTime(
-      //            ret.second);
 #if LAZY_SSD_IO_NEW
       *reinterpret_cast<fpage_id_type*>(ret.second) = fpage_id;
       tmp.initialized = false;
 #else
       assert(ReadWriteSync(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
                            ret.second, PAGE_SIZE_MEMORY, fd, true));
+      if (gbp::warmup_mark() == 1) {
+        get_counter_global(20)++;
+        as_atomic(disk_manager_->counts_[fd].second)++;
+      }
       tmp.initialized = true;
 #endif
-      // counter_per_memorypage((uintptr_t) (ret.second)) = GetSystemTime();
-
       tmp.ref_count = 1;
       tmp.fpage_id_cur = fpage_id;
       tmp.fd_cur = fd;
