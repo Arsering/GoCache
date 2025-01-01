@@ -421,7 +421,6 @@ class RWSysCall : public IOBackend {
     gbp::PerformanceLogServer::GetPerformanceLogger()
         .GetClientWriteThroughputByte()
         .fetch_add(size);
-
     return true;
   }
 
