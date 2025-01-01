@@ -277,9 +277,10 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
   assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
 #endif
   auto ret = Pin(fpage_id, fd);
-  if (gbp::warmup_mark() == 1)
-    // get_counter_global(10)++;
-    as_atomic(disk_manager_->counts_[fd].first)++;
+  // if (gbp::warmup_mark() == 1) {
+  //   get_counter_global(19)++;
+  //   as_atomic(disk_manager_->counts_[fd].first)++;
+  // }
   if (ret.first) {  // 1.1
     return ret;
   }
@@ -394,10 +395,10 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
 #else
       assert(ReadWriteSync(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
                            ret.second, PAGE_SIZE_MEMORY, fd, true));
-      if (gbp::warmup_mark() == 1) {
-        get_counter_global(20)++;
-        as_atomic(disk_manager_->counts_[fd].second)++;
-      }
+      // if (gbp::warmup_mark() == 1) {
+      //   get_counter_global(20)++;
+      //   as_atomic(disk_manager_->counts_[fd].second)++;
+      // }
       tmp.initialized = true;
 #endif
       tmp.ref_count = 1;
