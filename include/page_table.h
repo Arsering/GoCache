@@ -261,7 +261,9 @@ class PageTableInner {
       } while (!atomic_packed.compare_exchange_weak(old_packed, new_packed,
                                                     std::memory_order_release,
                                                     std::memory_order_relaxed));
-
+      // GBPLOG << "after lock " << PTE::FromPacked(old_packed).fd_cur << " "
+      //        << PTE::FromPacked(new_packed).fpage_id_cur << " "
+      //        << get_thread_id();
       return true;
     }
 

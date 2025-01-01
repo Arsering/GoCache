@@ -295,11 +295,11 @@ class IOURing : public IOBackend {
       Progress();
       return false;
     }
-    if constexpr (DEBUG) {
-      gbp::PerformanceLogServer::GetPerformanceLogger()
-          .GetClientReadThroughputByte()
-          .fetch_add(PAGE_SIZE_FILE);
-    }
+
+    gbp::PerformanceLogServer::GetPerformanceLogger()
+        .GetClientReadThroughputByte()
+        .fetch_add(PAGE_SIZE_FILE);
+
     io_uring_prep_read(sqe, disk_manager_->fd_oss_[fd].first, data,
                        PAGE_SIZE_FILE, offset);
     io_uring_sqe_set_data(sqe, finish);
@@ -418,6 +418,10 @@ class RWSysCall : public IOBackend {
     if (finish != nullptr)
       ((AsyncMesg*) finish)->Post();
 
+    gbp::PerformanceLogServer::GetPerformanceLogger()
+        .GetClientWriteThroughputByte()
+        .fetch_add(size);
+
     return true;
   }
 
@@ -496,6 +500,10 @@ class RWSysCall : public IOBackend {
     }
     if (finish != nullptr)
       ((AsyncMesg*) finish)->Post();
+
+    gbp::PerformanceLogServer::GetPerformanceLogger()
+        .GetClientReadThroughputByte()
+        .fetch_add(ret);
 
     return true;
   }
