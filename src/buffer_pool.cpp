@@ -293,7 +293,11 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
   while (true) {
     switch (stat) {
     case BP_async_request_type::Phase::Begin: {
+      // GBPLOG << "begin " << fd << " " << fpage_id << " " << get_thread_id();
       auto [locked, mpage_id] = page_table_->LockMapping(fd, fpage_id);
+      // GBPLOG << "after lock " << locked << " " << mpage_id << " " << fd << "
+      // "
+      //        << fpage_id << " " << get_thread_id();
 
       if (locked) {
         if (mpage_id == PageMapping::Mapping::EMPTY_VALUE) {

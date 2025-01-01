@@ -150,11 +150,6 @@ void PerformanceLogServer::Logging() {
   last_Client_Write_throughput = client_write_throughput_Byte_.load();
   std::tie(last_user_cpu_time, last_sys_cpu_time) = GetCPUTime();
 
-  // auto last_eviction_operation_count =
-  //   gbp::debug::get_counter_eviction().load();
-  // auto last_fetch_count = gbp::debug::get_counter_fetch().load();
-  // auto last_contention_count = gbp::debug::get_counter_contention().load();
-
   size = ::snprintf(buf, 4096,
                     "%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s\n",
                     "Client_Read_Throughput", "Client_Write_Throughput",
