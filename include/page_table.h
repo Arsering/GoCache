@@ -59,9 +59,10 @@ class PageTableInner {
       return ToUnpacked().fpage_id_cur;
     }
 
-    bool Clean() {
-      *this = PackedPTECacheLine::EMPTY_PTE;
-      return true;
+    void Clean() {
+      as_atomic(AsPacked())
+          .store(PackedPTECacheLine::EMPTY_PTE.AsPacked(),
+                 std::memory_order_relaxed);
     }
 
     // non-atomic
@@ -620,9 +621,9 @@ class PageTable {
 #endif
     auto ret = mappings_[fd]->DeleteMapping(
         partitioner_->GetFPageIdInPartition(fpage_id));
-    if (ret) {
-      FromPageId(mpage_id)->Clean();  // 好像这里不需要清空pte吧！！！
-    }
+    // if (ret) {
+    //   FromPageId(mpage_id)->Clean();  // 好像这里不需要清空pte吧！！！
+    // }
     return ret;
   }
 
