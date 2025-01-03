@@ -569,4 +569,61 @@ struct FlaggedUINT64 {
   }
 };
 
+template <typename T>
+struct FlaggedNumber {
+  static_assert(std::is_integral<T>::value, "T must be an integral type.");
+  static_assert(sizeof(T) * 8 > 1, "T must have more than 1 bit.");
+
+  std::atomic<T> value;
+
+  // Constructor to initialize data and flag
+  FlaggedNumber(T data, bool flag) {
+    setData(data);
+    setFlag(flag);
+  }
+
+  // Set data, ensuring it occupies the lower bits
+  FORCE_INLINE void setData(T data) {
+    // Preserve current flag state
+    bool currentFlag = isFlagSet();
+    // Update data
+    T newValue =
+        data & ((T(1) << (sizeof(T) * 8 - 1)) - 1);  // Ensure highest bit is 0
+    // Restore flag state
+    if (currentFlag) {
+      newValue |= (T(1) << (sizeof(T) * 8 - 1));  // Set highest bit to 1
+    }
+    value.store(newValue);
+  }
+
+  // Set the flag
+  FORCE_INLINE void setFlag(bool flag) {
+    T currentValue = value.load();
+    if (flag) {
+      currentValue |= (T(1) << (sizeof(T) * 8 - 1));  // Set highest bit to 1
+    } else {
+      currentValue &= ~((T(1) << (sizeof(T) * 8 - 1)));  // Clear highest bit
+    }
+    value.store(currentValue);
+  }
+
+  // Set the flag if not set, and return true if it was not set
+  FORCE_INLINE bool setFlagIfNotSet() {
+    const T mask = (T(1) << (sizeof(T) * 8 - 1));  // Highest bit mask
+    T oldValue = value.fetch_or(mask);
+    // If the highest bit of the old value is 0, the flag was not set
+    return (oldValue & mask) == 0;
+  }
+
+  // Check if the flag is set
+  FORCE_INLINE bool isFlagSet() const {
+    return (value.load() & (T(1) << (sizeof(T) * 8 - 1))) != 0;
+  }
+
+  // Get the original data
+  FORCE_INLINE T getData() const {
+    return value.load() & ((T(1) << (sizeof(T) * 8 - 1)) - 1);
+  }
+};
+
 }  // namespace gbp

@@ -296,7 +296,6 @@ std::tuple<size_t, size_t> SSD_io_bytes(const std::string& device_name) {
       std::vector<std::string> strs;
       boost::split(strs, line, boost::is_any_of("\t "),
                    boost::token_compress_on);
-      // std::cout << std::stoull(strs[6]) << std::endl;
       read += std::stoull(strs[6]) * 512;
       write += std::stoull(strs[10]) * 512;
     }
