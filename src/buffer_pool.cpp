@@ -278,7 +278,6 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
 #endif
   auto ret = Pin(fpage_id, fd);
   // if (gbp::warmup_mark() == 1) {
-  //   get_counter_global(19)++;
   //   as_atomic(disk_manager_->counts_[fd].first)++;
   // }
   if (ret.first) {  // 1.1
@@ -371,6 +370,9 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
         assert(ReadWriteSync(ret.first->fpage_id_cur * PAGE_SIZE_FILE,
                              PAGE_SIZE_FILE, ret.second, PAGE_SIZE_MEMORY,
                              ret.first->fd_cur, false));
+        // if (gbp::warmup_mark() == 1) {
+        //   as_atomic(disk_manager_->counts_[fd].first)++;
+        // }
       }
       // {
       //   get_thread_logfile()
@@ -396,7 +398,6 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
       assert(ReadWriteSync(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
                            ret.second, PAGE_SIZE_MEMORY, fd, true));
       // if (gbp::warmup_mark() == 1) {
-      //   get_counter_global(20)++;
       //   as_atomic(disk_manager_->counts_[fd].second)++;
       // }
       tmp.initialized = true;

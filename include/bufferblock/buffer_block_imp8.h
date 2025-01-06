@@ -267,6 +267,14 @@ class BufferBlockImp7 {
     data.second->SetDirty(true);
   }
 
+  template <typename OBJ_Type>
+  FORCE_INLINE static void OperateContentAtomic(
+      std::function<void(OBJ_Type&)> cb, const BufferBlockImp7& obj,
+      size_t idx = 0) {
+    auto data = obj.Decode<OBJ_Type>(idx);
+    cb(*data);
+  }
+
   template <class OBJ_Type>
   FORCE_INLINE const OBJ_Type* Ptr(size_t idx = 0) const {
     return Decode<OBJ_Type>(idx);
@@ -487,13 +495,13 @@ class BufferBlockImp7 {
  private:
   template <class OBJ_Type>
   FORCE_INLINE pair_min<OBJ_Type*, PTE*> DecodeWithPTE(size_t idx = 0) const {
-#ifdef DEBUG_
-    size_t st = gbp::GetSystemTime();
-#endif
-
     constexpr size_t OBJ_NUM_PERPAGE = PAGE_SIZE_MEMORY / sizeof(OBJ_Type);
 #if ASSERT_ENABLE
     // FIXME: 不够准确
+    if (sizeof(OBJ_Type) * (idx + 1) > size_) {
+      GBPLOG << "idx: " << idx << ", size_: " << size_
+             << "obj size: " << sizeof(OBJ_Type);
+    }
     assert(sizeof(OBJ_Type) * (idx + 1) <= size_);
 #endif
     char* ret = nullptr;
