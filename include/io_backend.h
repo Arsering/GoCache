@@ -24,7 +24,22 @@ namespace gbp {
 class DiskManager {
  public:
   DiskManager() = default;
-  DiskManager(const std::string& file_path) { OpenFile(file_path); }
+  DiskManager(const std::string& file_path) {
+    OpenFile(file_path);
+    // thread_ = std::thread([this]() {
+    //   while (true) {
+    //     if (get_counter_global(50) > 20000000) {
+    //       for (size_t file_id = 0; file_id < fd_oss_.size(); file_id++)
+    //         GBPLOG << file_id << " | " << file_names_[file_id] << " | "
+    //                << file_size_inBytes_[file_id] << " | "
+    //                << counts_[file_id].first << " | "
+    //                << counts_[file_id].second;
+    //       break;
+    //     } else
+    //       std::this_thread::sleep_for(std::chrono::seconds(600));
+    //   }
+    // });
+  }
 
   ~DiskManager() {
     for (auto& fd : fd_oss_) {
@@ -132,6 +147,7 @@ class DiskManager {
   std::vector<size_t> file_size_inBytes_;
 
   std::vector<std::pair<size_t, size_t>> counts_;
+  std::thread thread_;
 #ifdef DEBUG_BITMAP
   std::vector<bitset_dynamic> used_;
 #endif
