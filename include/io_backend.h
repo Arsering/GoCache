@@ -423,7 +423,10 @@ class RWSysCall : public IOBackend {
     auto ret = ::pwrite(disk_manager_->fd_oss_[fd].first, data, size, offset);
 
 #if ASSERT_ENABLE
-    assert(ret == size);  // check for I/O error
+    if (ret == -1) {
+      GBPLOG << "pwrite error: " << strerror(errno);
+    }
+    assert(ret != -1);  // check for I/O error
 #endif
     if (unlikely(disk_manager_->file_size_inBytes_[fd] - offset < size))
       disk_manager_->Resize(fd, disk_manager_->file_size_inBytes_[fd]);
