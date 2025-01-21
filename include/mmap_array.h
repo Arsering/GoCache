@@ -398,6 +398,29 @@ class mmap_array {
 
     return buffer_pool_manager_->GetBlockSync(file_offset, buf_size, fd_gbp_);
   }
+
+  const BufferBlockIndex get_partial_buffer_block_index(size_t idx, size_t offset_in_item,
+                                     size_t len_in_byte) const {
+#if ASSERT_ENABLE
+    assert(idx < size_);
+#endif
+    size_t buf_size = 0;
+    // size_t num_page = 0;
+    const size_t file_offset = idx / OBJ_NUM_PERPAGE * gbp::PAGE_SIZE_FILE +
+                               (idx % OBJ_NUM_PERPAGE) * item_size_;
+
+    size_t rest_filelen_firstpage =
+        gbp::PAGE_SIZE_MEMORY - file_offset % gbp::PAGE_SIZE_MEMORY;
+    if (rest_filelen_firstpage - offset_in_item >= len_in_byte) {
+      buf_size += len_in_byte;
+      // num_page = 1;
+    } else {
+      assert(false);
+    }
+    return BufferBlockIndex{file_offset, buf_size, fd_gbp_};
+  }
+
+
   // 获得单个obj的某一部分
   const gbp::BufferBlock get_partial(size_t idx, size_t offset_in_item,
                                      size_t len_in_byte) const {

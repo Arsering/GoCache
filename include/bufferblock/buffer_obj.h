@@ -1420,6 +1420,12 @@ class BufferObjectImp4 {
 };
 
 using BufferBlock = BufferBlockImp7;
+
+struct BufferBlockIndex{
+  size_t file_offset;
+  size_t buf_size;
+  gbp::GBPfile_handle_type fd_gbp;
+};
 // using BufferBlock = BufferBlockImp9;
 
 #endif
