@@ -138,6 +138,10 @@ class BP_sync_request_type {
   pair_min<PTE*, char*> response;
 };
 
+struct flush_request_type {
+  std::vector<std::pair<size_t, size_t>> fpages;  // pair<fd, fpage_id>
+};
+
 class BufferPool {
   friend class BufferPoolManager;
 
@@ -337,6 +341,47 @@ class BufferPool {
     }
   }
 
+  bool FlushServerProcessFunc(flush_request_type& req) {
+    for (auto& fpage : req.fpages) {
+      FlushPage(fpage.second, fpage.first, false);
+    }
+    return true;
+  }
+
+  void FlushServerRun() {
+    {
+      boost::circular_buffer<std::optional<flush_request_type*>> async_requests(
+          32);
+      while (!async_requests.full())
+        async_requests.push_back(std::nullopt);
+
+      flush_request_type* async_request;
+      while (true) {
+        for (auto& req : async_requests) {
+          if (!req.has_value()) {
+            if (request_channel_.pop(async_request)) {
+              req.emplace(async_request);
+            } else {
+              continue;
+            }
+          }
+          if (FlushServerProcessFunc(*req.value())) {
+            delete req.value();
+            if (request_channel_.pop(async_request)) {
+              req.emplace(async_request);
+            } else
+              req.reset();
+          } else {
+            assert(false);
+          }
+        }
+        if (stop_)
+          break;
+        // hybrid_spin(loops);
+      }
+    }
+  }
+
   uint32_t pool_ID_ = std::numeric_limits<uint32_t>::max();
   mpage_id_type pool_size_;  // number of pages in buffer pool
   MemoryPool memory_pool_;
@@ -365,8 +410,11 @@ class BufferPool {
   //     FIBER_CHANNEL_BUFFER_POOL};
   std::atomic<bool> stop_;
 
- public:
-  // std::vector<size_t> memory_usages_;
+  std::thread flush_server_;
+  boost::lockfree::queue<flush_request_type*, boost::lockfree::capacity<20>>
+      flush_request_channel_;
+
+  bool flush_stop_;
 };
 
 }  // namespace gbp
