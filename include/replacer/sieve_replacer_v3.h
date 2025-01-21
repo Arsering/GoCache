@@ -239,6 +239,7 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
 
     return true;
   }
+
   bool Clean() override {
     list_.Clean();
     return true;
