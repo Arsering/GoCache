@@ -83,7 +83,6 @@ class DiskManager {
     static std::mutex mtx;
     std::lock_guard<std::mutex> lock(mtx);  // 保证本函数在多线程下执行的一致性
     auto fd_os = ::open(file_path.c_str(), o_flag, 0777);
-
     assert(fd_os != -1);
 
     fd_oss_.push_back(std::make_pair(fd_os, true));
