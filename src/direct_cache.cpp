@@ -1,11 +1,12 @@
 #include "../include/directcache/direct_cache.h"
 
 namespace gbp {
-static std::vector<DirectCache> direct_caches(32);
+constexpr size_t direct_cache_num = 64;
+static std::vector<DirectCache> direct_caches(direct_cache_num);
 
 DirectCache& DirectCache::GetDirectCache() {
 #if ASSERT_ENABLE
-  assert(get_thread_id() < 40);
+  assert(get_thread_id() < direct_cache_num);
 #endif
 
   return direct_caches[get_thread_id() & 0x1f];
@@ -16,7 +17,7 @@ DirectCache& DirectCache::GetDirectCache() {
 
 bool DirectCache::CleanAllCache() {
 #if ASSERT_ENABLE
-  assert(get_thread_id() < 40);
+  assert(get_thread_id() < direct_cache_num);
 #endif
 
   for (auto& cache : direct_caches) {

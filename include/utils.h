@@ -14,6 +14,16 @@
 #include "config.h"
 
 namespace gbp {
+
+#define DirectCache_HASH_FUNC(fd, fpage_id, capacity_) \
+  (((fd << sizeof(fpage_id_type)) + fpage_id) % capacity_)
+
+// #define DirectCache_HASH_FUNC(fd, fpage_id, capacity)                         \
+//   ((((uint64_t) (fd) ^ ((uint64_t) (fpage_id) * 0x9e3779b9)) * 0x85ebca6b ^   \
+//     (((uint64_t) (fd) ^ ((uint64_t) (fpage_id) * 0x9e3779b9)) * 0x85ebca6b >> \
+//      16)) %                                                                   \
+//    capacity)
+
 #define CEIL(val, mod_val) \
   ((val) / (mod_val) + ((val) % (mod_val) == 0 ? 0 : 1))
 
@@ -464,8 +474,8 @@ class TimeConverter {
         // 解析时区偏移
         std::string tzPart =
             dateString.substr(23, 5);  // 从23开始截取5个字符，即+0000
-        int hours = std::stoi(tzPart.substr(0, 3));    // 解析小时部分
-        int minutes = std::stoi(tzPart.substr(3, 2));  // 解析分钟部分
+        int hours = std::stoi(tzPart.substr(0, 3));           // 解析小时部分
+        int minutes = std::stoi(tzPart.substr(3, 2));         // 解析分钟部分
         int tzOffset = (hours * 3600 + minutes * 60) * 1000;  // 转换为毫秒
 
         boost::posix_time::time_duration duration = pt - getEpoch();

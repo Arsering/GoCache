@@ -115,9 +115,6 @@ class BufferBlockImp9 {
 #if ASSERT_ENABLE
     assert(idx < page_num_);
 #endif
-    // if (pte->fd_cur == 26 && pte->fpage_id_cur == 76)
-    //   GBPLOG << "gt" << mark << (uintptr_t) this << " " << size_ << " "
-    //          << page_num_;
     if (page_num_ == 1) {
       datas_.data = data;
       ptes_.pte = pte;
@@ -207,6 +204,7 @@ class BufferBlockImp9 {
     //   &dst
     //          << " " << dst.size_;
     const_cast<BufferBlockImp9&>(src).size_ = 0;
+    const_cast<BufferBlockImp9&>(src).page_num_ = 0;
   }
 
   template <typename INNER_T>
@@ -246,6 +244,7 @@ class BufferBlockImp9 {
       }
     }
     size_ = 0;
+    page_num_ = 0;
   }
 
 #ifdef GRAPHSCOPE
