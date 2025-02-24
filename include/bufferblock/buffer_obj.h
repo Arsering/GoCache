@@ -1419,8 +1419,11 @@ class BufferObjectImp4 {
 #endif
 };
 
+#if USING_DIRECT_CACHE
+using BufferBlock = BufferBlockImp9;
+#else
 using BufferBlock = BufferBlockImp7;
-// using BufferBlock = BufferBlockImp9;
+#endif
 
 #endif
 

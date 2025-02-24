@@ -18,8 +18,8 @@ class DirectCacheImpl2 {
     bool count_global;
     PTE* pte_cur;
   };
-#define DirectCache_HASH_FUNC(fd, fpage_id, capacity_) \
-  (((fd << sizeof(fpage_id_type)) + fpage_id) % capacity_)
+  // #define DirectCache_HASH_FUNC(fd, fpage_id, capacity_) \
+//   (((fd << sizeof(fpage_id_type)) + fpage_id) % capacity_)
 
   DirectCacheImpl2(size_t capacity = DIRECT_CACHE_SIZE) : capacity_(capacity) {
     cache_.resize(capacity_);

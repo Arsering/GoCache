@@ -97,7 +97,13 @@ class ClockReplacer_v2 : public Replacer<mpage_id_type> {
     assert(false);
     return 0;
   }
-
+  bool Clean() override {
+    for (auto& node : cache_) {
+      node.evictable = false;
+      node.visited = false;
+    }
+    return true;
+  }
   size_t GetMemoryUsage() const override {
     return sizeof(size_t) + sizeof(ListNode) * cache_.size() + sizeof(size_t) +
            sizeof(std::mutex) + sizeof(PageTable*);

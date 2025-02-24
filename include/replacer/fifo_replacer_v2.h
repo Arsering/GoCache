@@ -118,7 +118,10 @@ class FIFOReplacer_v2 : public Replacer<mpage_id_type> {
 
     return true;
   }
-
+  bool Clean() override {
+    list_.Clean();
+    return true;
+  }
   bool Erase(mpage_id_type value) override {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);

@@ -302,12 +302,6 @@ int BufferPoolManager::SetBlock(const BufferBlock& buf, size_t file_offset,
 
 const BufferBlock BufferPoolManager::GetBlockSync(
     size_t file_offset, size_t block_size, GBPfile_handle_type fd) const {
-  // if (gbp::warmup_mark() == 1 && get_query_id() < 100000)
-  //   get_thread_logfile() << GetSystemTime() << " " << get_query_id() << " "
-  //                        << fd << " " << file_offset << " " << block_size
-  //                        << std::endl;
-  // if (warmup_mark() == 1)
-  //   disk_manager_->counts_[fd].first++;
   size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
   size_t num_page =
       fpage_offset == 0 || (block_size <= (PAGE_SIZE_FILE - fpage_offset))
@@ -324,12 +318,6 @@ const BufferBlock BufferPoolManager::GetBlockSync(
 #if ASSERT_ENABLE
     assert(mpage.first != nullptr && mpage.second != nullptr);
 #endif
-    // {
-    //   pools_[partitioner_->GetPartitionId(fpage_id)]
-    //       ->memory_usages_[pools_[partitioner_->GetPartitionId(fpage_id)]
-    //                            ->memory_pool_.ToPageId(mpage.second)] +=
-    //       block_size;
-    // }
     ret.InsertPage(0, mpage.second + fpage_offset, mpage.first);
   } else {
     size_t page_id = 0;
@@ -340,23 +328,13 @@ const BufferBlock BufferPoolManager::GetBlockSync(
 #if ASSERT_ENABLE
       assert(mpage.first != nullptr && mpage.second != nullptr);
 #endif
-      // {
-      //   pools_[partitioner_->GetPartitionId(fpage_id)]
-      //       ->memory_usages_[pools_[partitioner_->GetPartitionId(fpage_id)]
-      //                            ->memory_pool_.ToPageId(mpage.second)] +=
-      //       std::min(block_size, PAGE_SIZE_MEMORY - fpage_offset);
-      //   block_size -= PAGE_SIZE_MEMORY - fpage_offset;
-      // }
       ret.InsertPage(page_id, mpage.second + fpage_offset, mpage.first);
-      // __builtin_prefetch(mpage.second + fpage_offset, 0, 2);
 
       page_id++;
       fpage_offset = 0;
       fpage_id++;
     }
   }
-  // gbp::get_counter_global(11).fetch_add(ret.PageNum());
-
   return ret;
 }
 
@@ -529,6 +507,10 @@ std::future<BufferBlock> BufferPoolManager::GetBlockAsync(
 
 const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(
     size_t file_offset, size_t block_size, GBPfile_handle_type fd) const {
+  if (block_size == 0) {
+    return BufferBlock();
+  }
+
   size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
   size_t num_page =
       fpage_offset == 0 || (block_size <= (PAGE_SIZE_FILE - fpage_offset))
@@ -537,7 +519,7 @@ const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(
                   PAGE_SIZE_FILE) +
              1);
   BufferBlock ret(block_size, num_page);
-
+  assert(block_size > 0);
   fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
   if (likely(num_page == 1)) {
     auto pte = DirectCache::GetDirectCache().Find(fd, fpage_id);
@@ -545,7 +527,6 @@ const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(
       auto pool = pools_[partitioner_->GetPartitionId(fpage_id)];
       auto data = (char*) pool->memory_pool_.FromPageId(
           pool->page_table_->ToPageId(pte));
-
       ret.InsertPage(0, data + fpage_offset, pte);
     } else {
       auto mpage =
@@ -596,7 +577,6 @@ const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(
   // }
 
   // gbp::get_counter_global(11).fetch_add(ret.PageNum());
-
   return ret;
 }
 

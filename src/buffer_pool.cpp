@@ -38,7 +38,6 @@ void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
   page_table_ = new PageTable(pool_size_, partitioner_);
 
   // replacer_ = new FIFOReplacer(page_table_);
-  // replacer_ = new FIFOReplacer_v2(page_table_, pool_size_);
   // replacer_ = new ClockReplacer(page_table_);
   // replacer_ = new LRUReplacer(page_table_);
   // replacer_ = new LRUReplacer_v2(page_table_, pool_sizze_);
@@ -46,6 +45,7 @@ void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
   // replacer_ = new TwoQLRUReplacer(page_table_);
   // replacer_ = new SieveReplacer(page_table_);
   // replacer_ = new SieveReplacer_v2(page_table_, pool_size_);
+  // replacer_ = new FIFOReplacer_v2(page_table_, pool_size_);
   replacer_ = new SieveReplacer_v3(page_table_, pool_size_);
   // replacer_ = new ClockReplacer_v2(page_table_, pool_size_);
 

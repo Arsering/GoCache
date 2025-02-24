@@ -15,8 +15,8 @@ class DirectCacheImpl3 {
     uint16_t count_cur = 0;
     PTE* pte_cur;
   };
-#define DirectCache_HASH_FUNC(fd, fpage_id, capacity_) \
-  (((fd << sizeof(fpage_id_type)) + fpage_id) % capacity_)
+  // #define DirectCache_HASH_FUNC(fd, fpage_id, capacity_) \
+//   (((fd << sizeof(fpage_id_type)) + fpage_id) % capacity_)
 
   DirectCacheImpl3(size_t capacity = DIRECT_CACHE_SIZE) : capacity_(capacity) {}
 
