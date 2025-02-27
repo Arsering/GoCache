@@ -100,6 +100,16 @@ class IOServer {
   }
   IOBackend* io_backend_;
 
+  /**
+   * 发送请求
+   * @param fd 文件描述符
+   * @param offset 偏移量
+   * @param size 大小
+   * @param buf 缓冲区
+   * @param finish 完成消息
+   * @param is_read 是否读取
+   * @param blocked 若为true，则阻塞式发送请求，否则非阻塞式发送请求
+   */
   bool SendRequest(GBPfile_handle_type fd, size_t offset, size_t size,
                    char* buf, AsyncMesg* finish, bool is_read = true,
                    bool blocked = true) {
@@ -152,6 +162,11 @@ class IOServer {
   }
 
  private:
+  /**
+   * 发送请求
+   * @param req 请求
+   * @param blocked 若为true，则阻塞式发送请求，否则非阻塞式发送请求
+   */
   bool SendRequest(async_SSD_IO_request_type* req, bool blocked = true) {
     if (unlikely(req == nullptr))
       return false;

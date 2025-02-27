@@ -211,7 +211,7 @@ std::atomic<bool>& log_enable() {
   return data;
 }
 
-size_t& get_counter(size_t idx) {
+size_t& get_counter_local(size_t idx) {
   static size_t capacity = 100;
   thread_local static std::vector<size_t> data(capacity, 0);
   assert(idx < capacity);
