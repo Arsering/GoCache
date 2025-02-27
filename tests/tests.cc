@@ -70,6 +70,7 @@ void write_mmap(char* data_file_mmaped, size_t file_size_inByte, size_t io_size,
         .fetch_add(sizeof(size_t));
   }
 }
+
 void read_mmap(char* data_file_mmaped, size_t file_size_inByte,
                size_t io_size_in, size_t start_offset, size_t thread_id) {
   std::ofstream latency_log(gbp::get_log_dir() + "/" +
@@ -629,10 +630,10 @@ int test_concurrency(int argc, char** argv) {
   // std::string file_path = "/home/spdk/p4510/zhengyang/test_read.db";
 
   std::string file_path = "/nvme0n1/test_read.db";
-  std::string trace_dir =
-      "/data/zhengyang/data/experiment_space/LDBC_SNB/logs/"
-      "2024-06-06-20:05:02/"
-      "server/graphscope_logs";
+  // std::string trace_dir =
+  //     "/data/zhengyang/data/experiment_space/LDBC_SNB/logs/"
+  //     "2024-06-06-20:05:02/"
+  //     "server/graphscope_logs";
   // get_trace_global() = read_trace(trace_dir, worker_num);
 
   // std::string file_path = "/nvme0n1/test_read.db";
@@ -641,7 +642,7 @@ int test_concurrency(int argc, char** argv) {
   int data_file = -1;
   data_file = ::open(file_path.c_str(), O_RDWR | O_CREAT | O_DIRECT, 0777);
   assert(data_file != -1);
-  // ::ftruncate(data_file, file_size_inByte);
+  ::ftruncate(data_file, file_size_inByte);
 
   char* data_file_mmaped = nullptr;
 
@@ -654,8 +655,8 @@ int test_concurrency(int argc, char** argv) {
   size_t pool_size_page =
       pool_size_MB * 1024LU * 1024LU / gbp::PAGE_SIZE_MEMORY / pool_num + 1;
 
-  gbp::DiskManager disk_manager(file_path);
-  gbp::IOBackend* io_backend = new gbp::RWSysCall(&disk_manager);
+  // gbp::DiskManager disk_manager(file_path);
+  // gbp::IOBackend* io_backend = new gbp::RWSysCall(&disk_manager);
 
   auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
   bpm.init(pool_num, pool_size_page, io_server_num, file_path);
@@ -666,14 +667,13 @@ int test_concurrency(int argc, char** argv) {
   // std::cout << "warm up finishing" << std::endl;
   gbp::log_enable().store(1);
 
-  // worker_num = file_size_inByte / (1024LU * 1024LU * 1024LU * 1);
+  worker_num = file_size_inByte / (1024LU * 1024LU * 1024LU * 1);
   // file_size_inByte = file_size_inByte / worker_num;
 
   printf(
       "file_size_MB = %lu\tworker_num = %lu\tpool_num = %lu\tpool_size_MB = "
       "%lu\tio_server_num = %lu\tio_size = %lu\n",
       file_size_MB, worker_num, pool_num, pool_size_MB, io_server_num, io_size);
-  GBPLOG << "cp";
   // warmup(data_file_mmaped, file_size_inByte, io_size);
 
   std::filesystem::create_directory(std::string{argv[7]} + "/latency");
@@ -683,7 +683,6 @@ int test_concurrency(int argc, char** argv) {
   // ZipfianGenerator::GetGen().Init(1.6, 256 * 1024);
   // fileoffsetgenerator::GetGen().Init(file_size_inByte, 5, 512 * 128 * 1024,
   //                                    0.9);
-  bool extra_thread_stop = false;
   // std::thread extra_thread(extra_fun, std::ref(extra_thread_stop));
   sleep(10);
   gbp::PerformanceLogServer::GetPerformanceLogger().Start(
@@ -692,9 +691,9 @@ int test_concurrency(int argc, char** argv) {
   std::vector<std::thread> thread_pool;
   size_t ssd_io_byte = std::get<0>(gbp::SSD_io_bytes());
   for (size_t i = 0; i < worker_num; i++) {
-    // thread_pool.emplace_back(write_mmap, data_file_mmaped,
-    //                          (1024LU * 1024LU * 1024LU * 1), io_size,
-    //                          (1024LU * 1024LU * 1024LU * 1) * i, i);
+    thread_pool.emplace_back(write_mmap, data_file_mmaped,
+                             (1024LU * 1024LU * 1024LU * 1), io_size,
+                             (1024LU * 1024LU * 1024LU * 1) * i, i);
     // thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
     //                          io_size, 0, i);
     // thread_pool.emplace_back(read_pread, io_backend, file_size_inByte,
@@ -714,7 +713,9 @@ int test_concurrency(int argc, char** argv) {
     //   thread_pool.emplace_back(write_bufferpool, 0, file_size_inByte,
     //   io_size, i);
     // else
-    thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size, i);
+
+    // thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size,
+    // i);
 
     // thread_pool.emplace_back(randwrite_bufferpool, 0, file_size_inByte,
     // io_size,
@@ -746,9 +747,6 @@ int test_concurrency(int argc, char** argv) {
   ssd_io_byte = std::get<0>(gbp::SSD_io_bytes()) - ssd_io_byte;
   std::cout << "SSD IO = " << ssd_io_byte << "B" << std::endl;
 
-  extra_thread_stop = true;
-  // if (extra_thread.joinable())
-  //   extra_thread.join();
   return 0;
 }
 }  // namespace test
