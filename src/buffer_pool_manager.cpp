@@ -340,6 +340,10 @@ const BufferBlock BufferPoolManager::GetBlockSync(
 
 const BufferBlock BufferPoolManager::GetBlockSync1(
     size_t file_offset, size_t block_size, GBPfile_handle_type fd) const {
+  if (block_size == 0) {
+    return BufferBlock();
+  }
+
   size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
   const size_t num_page =
       fpage_offset == 0 || (block_size <= (PAGE_SIZE_FILE - fpage_offset))
@@ -351,10 +355,16 @@ const BufferBlock BufferPoolManager::GetBlockSync1(
 
   fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
   if (likely(num_page == 1)) {
+    get_counter_local(13) = 0;
+
     auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
         fpage_id, fd);
     ret.InsertPage(0, mpage.second + fpage_offset, mpage.first);
+    if (get_counter_local(13) == 1) {
+      get_counter_global(9)++;
+    }
   } else {
+    get_counter_global(10)++;
     size_t count_t = 0;
     size_t page_id = 0;
     std::vector<BP_sync_request_type> buf(num_page);
@@ -384,12 +394,14 @@ const BufferBlock BufferPoolManager::GetBlockSync1(
       fpage_id++;
     }
     if (count_t == num_page) {
+      get_counter_global(11)++;
+      get_counter_global(12) += num_page;
+
       struct iovec iov[num_page];
       for (page_id = 0; page_id < num_page; page_id++) {
         iov[page_id].iov_base = buf[page_id].response.second;
         iov[page_id].iov_len = PAGE_SIZE_MEMORY;
       }
-      get_counter_global(11) += num_page;
 
       assert(io_servers_[0]->io_backend_->Read(
           (file_offset >> LOG_PAGE_SIZE_FILE) * PAGE_SIZE_FILE, iov, num_page,

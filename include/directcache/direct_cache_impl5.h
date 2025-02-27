@@ -5,22 +5,29 @@
 
 namespace gbp {
 
-class DirectCacheImpl1 {
+class DirectCacheImpl5 {
   using cache_index_type = uint16_t;
 
  public:
-  struct Node {
-    Node(PTE* pte = nullptr) : pte_cur(pte), count_cur(0) {}
-    uint16_t count_cur = 0;
+  struct alignas(sizeof(uint64_t) * 2) Node {
+    Node() : ref_count(0), pte_cur(nullptr) {}
+
+    uint16_t ref_count : 16;
+    GBPfile_handle_type fd_cur : 16;
+    fpage_id_type fpage_id_cur : 32;
     PTE* pte_cur;
   };
 
-  DirectCacheImpl1(size_t capacity = DIRECT_CACHE_SIZE) : capacity_(capacity) {
+  struct alignas(CACHELINE_SIZE) MutiNode {
+    Node nodes[CACHELINE_SIZE / 16];
+  };
+
+  DirectCacheImpl5(size_t capacity = DIRECT_CACHE_SIZE) : capacity_(capacity) {
     cache_.resize(capacity_);
-    // GBPLOG << "DirectCacheImpl1 capacity: " << capacity_;
+    // GBPLOG << "DirectCacheImpl5 capacity: " << capacity_;
   }
 
-  ~DirectCacheImpl1() {
+  ~DirectCacheImpl5() {
     Clean();
     // GBPLOG << hit << " " << miss << " " << (hit*1.0/(hit +miss) );
     // LOG(INFO) << "cp";
@@ -29,13 +36,10 @@ class DirectCacheImpl1 {
   bool Clean() {
     for (auto& page : cache_) {
       if (page.pte_cur != nullptr) {
-        // if (page.count != 0)
-        //   GBPLOG << page.count << " " << page.pte_cur->fd_cur << " "
-        //          << page.pte_cur->fpage_id_cur << " " << get_thread_id();
-        assert(page.count_cur == 0);
+        assert(page.ref_count == 0);
         page.pte_cur->DecRefCount();
       }
-      page.count_cur = 0;
+      page.ref_count = 0;
       page.pte_cur = nullptr;
     }
     return true;
@@ -49,16 +53,18 @@ class DirectCacheImpl1 {
     // boost::hash_combine(index, fpage_id);
     // index = index % capacity_;
 
-    if (cache_[index].pte_cur == nullptr || cache_[index].count_cur == 0) {
+    if (cache_[index].pte_cur == nullptr || cache_[index].ref_count == 0) {
       if (cache_[index].pte_cur != nullptr) {
         cache_[index].pte_cur->DecRefCount();
 #if ASSERT_ENABLE
-        assert(!(fd == cache_[index].pte_cur->fd_cur &&
-                 fpage_id == cache_[index].pte_cur->fpage_id_cur));
+        assert(!(fd == cache_[index].fd_cur &&
+                 fpage_id == cache_[index].fpage_id_cur));
 #endif
       }
+      cache_[index].fd_cur = pte->fd_cur;
+      cache_[index].fpage_id_cur = pte->fpage_id_cur;
+      cache_[index].ref_count = 1;
       cache_[index].pte_cur = pte;
-      cache_[index].count_cur = 1;
       return true;
     }
     return false;
@@ -71,10 +77,8 @@ class DirectCacheImpl1 {
     // boost::hash_combine(index, fpage_id);
     // index = index % capacity_;
 
-    if (cache_[index].pte_cur != nullptr &&
-        cache_[index].pte_cur->fd_cur == fd &&
-        cache_[index].pte_cur->fpage_id_cur == fpage_id) {
-      cache_[index].count_cur++;
+    if (cache_[index].fd_cur == fd && cache_[index].fpage_id_cur == fpage_id) {
+      cache_[index].ref_count++;
       // hit++;
       return cache_[index].pte_cur;
     }
@@ -93,7 +97,7 @@ class DirectCacheImpl1 {
     // boost::hash_combine(index, fpage_id);
     // index = index % capacity_;
     if (cache_[index].pte_cur != nullptr) {
-      cache_[index].count_cur--;
+      cache_[index].ref_count--;
       // {
       //   if (cache_[index].count == 0) {
       //     cache_[index].pte_cur->DecRefCount();
@@ -106,7 +110,7 @@ class DirectCacheImpl1 {
                                fpage_id_type fpage_id) const {
     return ((fd << sizeof(fpage_id_type)) + fpage_id) % capacity_;
   }
-  static DirectCacheImpl1& GetDirectCache();
+  static DirectCacheImpl5& GetDirectCache();
   static bool CleanAllCache();
 
  private:

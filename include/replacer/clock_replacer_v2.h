@@ -29,7 +29,9 @@ class ClockReplacer_v2 : public Replacer<mpage_id_type> {
   ClockReplacer_v2(const ClockReplacer_v2& other) = delete;
   ClockReplacer_v2& operator=(const ClockReplacer_v2&) = delete;
 
-  ~ClockReplacer_v2() override {}
+  ~ClockReplacer_v2() override {
+    GBPLOG << get_counter_global(30) << " " << get_counter_global(31);
+  }
 
   bool Insert(mpage_id_type value) override {
     cache_[value].evictable = true;
@@ -46,6 +48,7 @@ class ClockReplacer_v2 : public Replacer<mpage_id_type> {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
+    get_counter_global(31)++;
 
     auto to_evict = hand_ % capacity_;
     while (true) {
@@ -56,8 +59,10 @@ class ClockReplacer_v2 : public Replacer<mpage_id_type> {
 
       auto* pte = page_table_->FromPageId(to_evict);
       if (pte->ref_count != 0) {
+        // cache_[to_evict].visited = true;
         to_evict = (to_evict + 1) % capacity_;
-        cache_[to_evict].visited = true;
+        get_counter_global(30)++;
+
         continue;
       }
       auto pte_unpacked = pte->ToUnpacked();
@@ -71,8 +76,8 @@ class ClockReplacer_v2 : public Replacer<mpage_id_type> {
       if (locked)
         assert(page_table_->UnLockMapping(pte->fd_cur, pte->fpage_id_cur,
                                           mpage_id));
-      cache_[to_evict].visited = true;
-
+      // cache_[to_evict].visited = true;
+      get_counter_global(30)++;
       to_evict = (to_evict + 1) % capacity_;
     }
 

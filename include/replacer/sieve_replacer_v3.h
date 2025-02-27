@@ -21,7 +21,9 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
   SieveReplacer_v3(const SieveReplacer_v3& other) = delete;
   SieveReplacer_v3& operator=(const SieveReplacer_v3&) = delete;
 
-  ~SieveReplacer_v3() override = default;
+  ~SieveReplacer_v3() override {
+    GBPLOG << get_counter_global(30) << " " << get_counter_global(31);
+  }
 
   bool Insert(mpage_id_type value) override {
 #if EVICTION_SYNC_ENABLE
@@ -52,6 +54,7 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
+    get_counter_global(31)++;
 
     PTE* pte;
     ListArray<listarray_value_type>::index_type to_evict =
@@ -76,12 +79,14 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
       if (pte->ref_count != 0) {  // FIXME: 可能对cache hit ratio有一定的损伤
         count--;
 
-        // TODO:可能效果不好
-        list_.getValue(to_evict) = 1;
+        // // TODO:可能效果不好
+        // list_.getValue(to_evict) = 1;
 
         to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
                        ? list_.GetTail()
                        : list_.getPrevNodeIndex(to_evict);
+        get_counter_global(30)++;
+
         continue;
       }
       auto pte_unpacked = pte->ToUnpacked();
@@ -97,11 +102,13 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
         assert(page_table_->UnLockMapping(pte->fd_cur, pte->fpage_id_cur,
                                           mpage_id));
       count--;
-      // TODO:可能效果不好
-      list_.getValue(to_evict) = 1;
+      // // TODO:可能效果不好
+      // list_.getValue(to_evict) = 1;
+
       to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
                      ? list_.GetTail()
                      : list_.getPrevNodeIndex(to_evict);
+      get_counter_global(30)++;
     }
     pointer_ = list_.getPrevNodeIndex(to_evict);
 

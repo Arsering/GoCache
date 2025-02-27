@@ -247,7 +247,7 @@ std::mutex& get_log_lock();
 
 std::atomic<size_t>& get_type();
 std::atomic<size_t>& get_query_id();
-size_t& get_counter(size_t idx);
+size_t& get_counter_local(size_t idx);
 std::atomic<size_t>& get_counter_global(size_t idx);
 std::atomic<size_t>& get_pool_size();
 
