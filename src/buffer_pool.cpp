@@ -46,6 +46,7 @@ void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
   // replacer_ = new SieveReplacer(page_table_);
   // replacer_ = new SieveReplacer_v2(page_table_, pool_size_);
   // replacer_ = new FIFOReplacer_v2(page_table_, pool_size_);
+  GBPLOG << "SieveReplacer_v3";
   replacer_ = new SieveReplacer_v3(page_table_, pool_size_);
   // replacer_ = new ClockReplacer_v2(page_table_, pool_size_);
 

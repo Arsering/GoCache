@@ -21,9 +21,7 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
   SieveReplacer_v3(const SieveReplacer_v3& other) = delete;
   SieveReplacer_v3& operator=(const SieveReplacer_v3&) = delete;
 
-  ~SieveReplacer_v3() override {
-    GBPLOG << get_counter_global(30) << " " << get_counter_global(31);
-  }
+  ~SieveReplacer_v3() override {}
 
   bool Insert(mpage_id_type value) override {
 #if EVICTION_SYNC_ENABLE
@@ -54,7 +52,6 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
-    get_counter_global(31)++;
 
     PTE* pte;
     ListArray<listarray_value_type>::index_type to_evict =
@@ -85,7 +82,6 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
         to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
                        ? list_.GetTail()
                        : list_.getPrevNodeIndex(to_evict);
-        get_counter_global(30)++;
 
         continue;
       }
@@ -108,7 +104,6 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
       to_evict = list_.getPrevNodeIndex(to_evict) == list_.head_
                      ? list_.GetTail()
                      : list_.getPrevNodeIndex(to_evict);
-      get_counter_global(30)++;
     }
     pointer_ = list_.getPrevNodeIndex(to_evict);
 

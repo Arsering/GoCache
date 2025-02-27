@@ -424,7 +424,7 @@ int test_aa(const std::string& file_path) {
   auto ret =
       io_uring_queue_init(QD,     // 队列长度
                           &ring,  // io_uring 实例
-                          0);  // flags，0 表示默认配置，例如使用中断驱动模式
+                          0);     // flags，0 表示默认配置，例如使用中断驱动模式
 
   // 2. 打开输入文件，注意这里指定了 O_DIRECT flag，内核轮询模式需要这个
   // flag，见前面介绍
@@ -453,12 +453,12 @@ int test_aa(const std::string& file_path) {
   do {
     // std::cout << "aaaa" << i << std::endl;
 
-    sqe = io_uring_get_sqe(&ring);  // 获取可用 SQE
-    io_uring_prep_readv(sqe,  // 用这个 SQE 准备一个待提交的 read 操作
-                        fd,  // 从 fd 打开的文件中读取数据
+    sqe = io_uring_get_sqe(&ring);   // 获取可用 SQE
+    io_uring_prep_readv(sqe,         // 用这个 SQE 准备一个待提交的 read 操作
+                        fd,          // 从 fd 打开的文件中读取数据
                         &iovecs[i],  // iovec 地址，读到的数据写入 iovec 缓冲区
-                        1,        // iovec 数量
-                        offset);  // 读取操作的起始地址偏移量
+                        1,           // iovec 数量
+                        offset);     // 读取操作的起始地址偏移量
     // io_uring_prep_read(sqe, fd, &iovecs[i].iov_base, gbp::PAGE_SIZE_MEMORY,
     //   offset);
     offset += iovecs[i].iov_len;  // 更新偏移量，下次使用
@@ -521,14 +521,14 @@ int main(int argc, char** argv) {
   // test3();
   // mi_malloc(10);
 
-  // test::test_concurrency(argc, argv);
+  test::test_concurrency(argc, argv);
   // test::test_csv(
   //     "/nvme0n1/lgraph_db/sf0.1/social_network/dynamic/person_0_0.csv");
-  test::test_vertex(
-      "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/"
-      "configurations/graph_0.1_bench.yaml",
-      "/nvme0n1/lgraph_db/sf0.1/social_network/dynamic/person_0_0.csv",
-      "/nvme0n1/cgraph/sf0.1");
+  // test::test_vertex(
+  //     "/data/zhengyang/data/graphscope-flex/flex/graphscope_bufferpool/tests/"
+  //     "configurations/graph_0.1_bench.yaml",
+  //     "/nvme0n1/lgraph_db/sf0.1/social_network/dynamic/person_0_0.csv",
+  //     "/nvme0n1/cgraph/sf0.1");
   // test_aa(file_path);
   return 0;
 
