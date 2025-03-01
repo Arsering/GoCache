@@ -277,7 +277,7 @@ class PerformanceLogServer {
       log_file_.open(file_path, std::ios::out);
     if (!server_.joinable())
       server_ = std::thread([this]() { Logging(); });
-    GBPLOG << "PerformanceLogServer started";
+    // GBPLOG << "PerformanceLogServer started";
   }
   void SetStartPoint() {
     std::tie(SSD_read_bytes_sp_, SSD_write_bytes_sp_) =

@@ -6,5 +6,5 @@ add_library(tests SHARED ${LIB_SRCS})
 link_libraries(tests)
 
 
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../include/buffer_pool_manager.h
-        DESTINATION include/flex/graphscope_bufferpool/include)
+# install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../include/buffer_pool_manager.h
+#         DESTINATION include/flex/graphscope_bufferpool/include)

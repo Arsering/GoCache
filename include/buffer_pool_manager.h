@@ -30,6 +30,17 @@
 #include "utils.h"
 
 namespace gbp {
+struct batch_request_type {
+  batch_request_type() = default;
+  batch_request_type(size_t file_offset, size_t block_size,
+                     GBPfile_handle_type fd)
+      : file_offset_(file_offset), block_size_(block_size), fd_(fd) {}
+
+  size_t file_offset_;
+  size_t block_size_;
+  GBPfile_handle_type fd_;
+};
+
 // FIXME: 未实现读写的并发
 class BufferPoolManager {
   class async_request_type {
@@ -88,6 +99,10 @@ class BufferPoolManager {
 
   std::future<BufferBlock> GetBlockAsync(size_t file_offset, size_t block_size,
                                          GBPfile_handle_type fd = 0) const;
+  const BufferBlock GetBlockAsync1(size_t file_offset, size_t block_size,
+                                   GBPfile_handle_type fd = 0) const;
+  const std::vector<BufferBlock> GetBlockBatch(
+      std::vector<batch_request_type>& requests) const;
   const BufferBlock GetBlockWithDirectCacheSync(
       size_t file_offset, size_t block_size, GBPfile_handle_type fd = 0) const;
   int SetBlock(const BufferBlock& buf, size_t file_offset, size_t block_size,
@@ -183,7 +198,7 @@ class BufferPoolManager {
     while (true) {
       switch (req.run_time_phase) {
       case async_request_type::Phase::Begin: {
-        req.run_time_phase = async_request_type::Phase::End;
+        req.run_time_phase = async_request_type::Phase::End;  // 默认是End
 
         fpage_id_type fpage_id = req.file_offset >> LOG_PAGE_SIZE_FILE;
         size_t fpage_offset = req.file_offset % PAGE_SIZE_FILE;
@@ -293,7 +308,7 @@ class BufferPoolManager {
   std::thread server_;
   mutable boost::lockfree::queue<
       async_request_type*,
-      boost::lockfree::capacity<FIBER_CHANNEL_BUFFER_POOL_MANAGER>>
+      boost::lockfree::capacity<BUFFER_POOL_MANAGER_CHANNEL_SIZE>>
       request_channel_;
   // LockFreeQueue<async_BPM_request_type*> request_channel_{
   //     FIBER_CHANNEL_BUFFER_POOL};

@@ -1,5 +1,5 @@
 set -x
-export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
+# export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
 # export MIMALLOC_VERBOSE=2
 
 cd build
@@ -22,11 +22,11 @@ cd ..
 CUR_DIR=.
 
 export FILE_SIZE_MB=$((1024*10))
-export WORKER_NUM=30
-export POOL_NUM=8
+export WORKER_NUM=4
+export POOL_NUM=4
 export IO_SERVER_NUM=${POOL_NUM}
-export POOL_SIZE_MB=$((1024*1))
-export IO_SIZE_Byte=$((512*8))
+export POOL_SIZE_MB=$((1024*5))
+export IO_SIZE_Byte=$((512*8*5))
 # export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD
 # 2 3 4 5 7 9 11 13 15 20 25 30
 # for BLOCK_SIZE in 1 2 3 4 5 6 7 8

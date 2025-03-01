@@ -216,7 +216,7 @@ class IOServer {
 
   std::thread server_;
   boost::lockfree::queue<async_SSD_IO_request_type*,
-                         boost::lockfree::capacity<FIBER_CHANNEL_IO_SERVER>>
+                         boost::lockfree::capacity<IO_SERVER_CHANNEL_SIZE>>
       request_channel_;
   size_t num_async_fiber_processing_;
   bool stop_;

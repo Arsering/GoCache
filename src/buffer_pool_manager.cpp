@@ -302,6 +302,9 @@ int BufferPoolManager::SetBlock(const BufferBlock& buf, size_t file_offset,
 
 const BufferBlock BufferPoolManager::GetBlockSync(
     size_t file_offset, size_t block_size, GBPfile_handle_type fd) const {
+  if (block_size == 0) {
+    return BufferBlock();
+  }
   size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
   size_t num_page =
       fpage_offset == 0 || (block_size <= (PAGE_SIZE_FILE - fpage_offset))
@@ -355,16 +358,16 @@ const BufferBlock BufferPoolManager::GetBlockSync1(
 
   fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
   if (likely(num_page == 1)) {
-    get_counter_local(13) = 0;
+    // get_counter_local(13) = 0;
 
     auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
         fpage_id, fd);
     ret.InsertPage(0, mpage.second + fpage_offset, mpage.first);
-    if (get_counter_local(13) == 1) {
-      get_counter_global(9)++;
-    }
+    // if (get_counter_local(13) == 1) {
+    //   get_counter_global(9)++;
+    // }
   } else {
-    get_counter_global(10)++;
+    // get_counter_global(10)++;
     size_t count_t = 0;
     size_t page_id = 0;
     std::vector<BP_sync_request_type> buf(num_page);
@@ -394,8 +397,8 @@ const BufferBlock BufferPoolManager::GetBlockSync1(
       fpage_id++;
     }
     if (count_t == num_page) {
-      get_counter_global(11)++;
-      get_counter_global(12) += num_page;
+      // get_counter_global(11)++;
+      // get_counter_global(12) += num_page;
 
       struct iovec iov[num_page];
       for (page_id = 0; page_id < num_page; page_id++) {
@@ -477,6 +480,16 @@ const BufferBlock BufferPoolManager::GetBlockSync1(
 //   return ret;
 // }
 
+/**
+ * 获取一个block的异步请求
+ *
+ * @param file_offset 文件偏移量
+ * @param block_size 块大小
+ * @param fd 文件描述符
+ * @return 一个future对象，当block准备好时，future对象会被设置为block
+ *
+ * 本函数是为每一个bufferpool创建一个服务线程，用于处理异步请求
+ */
 std::future<BufferBlock> BufferPoolManager::GetBlockAsync(
     size_t file_offset, size_t block_size, GBPfile_handle_type fd) const {
   size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
@@ -487,7 +500,7 @@ std::future<BufferBlock> BufferPoolManager::GetBlockAsync(
                   PAGE_SIZE_FILE) +
              1);
 
-  if (num_page == 1) {
+  if (likely(num_page == 1)) {
     fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
     auto mpage =
         pools_[partitioner_->GetPartitionId(fpage_id)]->Pin(fpage_id, fd);
@@ -515,6 +528,116 @@ std::future<BufferBlock> BufferPoolManager::GetBlockAsync(
     return ret;
   }
   assert(false);
+}
+
+const BufferBlock BufferPoolManager::GetBlockAsync1(
+    size_t file_offset, size_t block_size, GBPfile_handle_type fd) const {
+  if (block_size == 0) {
+    return BufferBlock();
+  }
+
+  size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
+  const size_t num_page =
+      fpage_offset == 0 || (block_size <= (PAGE_SIZE_FILE - fpage_offset))
+          ? CEIL(block_size, PAGE_SIZE_FILE)
+          : (CEIL(block_size - (PAGE_SIZE_FILE - fpage_offset),
+                  PAGE_SIZE_FILE) +
+             1);
+  BufferBlock ret(block_size, num_page);
+  std::vector<BP_sync_request_type> buf;
+
+  fpage_id_type fpage_start_id = file_offset >> LOG_PAGE_SIZE_FILE;
+
+  size_t page_id = 0;
+  while (page_id < num_page) {
+    buf.emplace_back();
+    buf[page_id].fd = fd;
+    buf[page_id].fpage_id = fpage_start_id + page_id;
+    buf[page_id].response =
+        pools_[partitioner_->GetPartitionId(buf[page_id].fpage_id)]->Pin(
+            buf[page_id].fpage_id, fd);
+    if (buf[page_id].response.first) {  // 1.1
+      buf[page_id].runtime_phase = BP_sync_request_type::Phase::End;
+    } else {
+      pools_[partitioner_->GetPartitionId(buf[page_id].fpage_id)]
+          ->FetchPageSync2(buf[page_id]);
+    }
+    page_id++;
+  }
+
+  for (page_id = 0; page_id < num_page; page_id++) {
+    auto partition_id = partitioner_->GetPartitionId(buf[page_id].fpage_id);
+    while (!pools_[partition_id]->FetchPageSync2(buf[page_id]))
+      ;  // 阻塞式等待每一个request结束
+    ret.InsertPage(page_id, buf[page_id].response.second + fpage_offset,
+                   buf[page_id].response.first);
+    fpage_offset = 0;
+  }
+
+  return ret;
+}
+
+const std::vector<BufferBlock> BufferPoolManager::GetBlockBatch(
+    std::vector<batch_request_type>& requests) const {
+  if (requests.empty()) {
+    return std::vector<BufferBlock>();
+  }
+  std::vector<BufferBlock> rets;
+  std::vector<BP_sync_request_type> buf;
+  std::vector<uint32_t> req_ids;
+  uint32_t req_id_cur = 0;
+  for (auto& request : requests) {
+    if (request.block_size_ == 0) {
+      rets.emplace_back();
+      continue;
+    }
+
+    size_t fpage_offset = request.file_offset_ % PAGE_SIZE_FILE;
+    const size_t num_page =
+        fpage_offset == 0 ||
+                (request.block_size_ <= (PAGE_SIZE_FILE - fpage_offset))
+            ? CEIL(request.block_size_, PAGE_SIZE_FILE)
+            : (CEIL(request.block_size_ - (PAGE_SIZE_FILE - fpage_offset),
+                    PAGE_SIZE_FILE) +
+               1);
+    fpage_id_type fpage_start_id = request.file_offset_ >> LOG_PAGE_SIZE_FILE;
+
+    size_t page_id = 0;
+    while (page_id < num_page) {
+      buf.emplace_back(request.fd_, fpage_start_id + page_id, fpage_offset,
+                       page_id);
+      auto& page_req = buf.back();
+      req_ids.emplace_back(req_id_cur);
+
+      page_req.response =
+          pools_[partitioner_->GetPartitionId(page_req.fpage_id)]->Pin(
+              page_req.fpage_id, request.fd_);
+      if (page_req.response.first) {
+        page_req.runtime_phase = BP_sync_request_type::Phase::End;
+      } else {
+        pools_[partitioner_->GetPartitionId(page_req.fpage_id)]->FetchPageSync2(
+            page_req);
+      }
+      page_id++;
+      fpage_offset = 0;
+    }
+
+    rets.emplace_back(request.block_size_, num_page);
+    req_id_cur++;
+  }
+
+  for (auto page_id = 0; page_id < buf.size(); page_id++) {
+    auto page_req = buf[page_id];
+    auto partition_id = partitioner_->GetPartitionId(page_req.fpage_id);
+    while (!pools_[partition_id]->FetchPageSync2(page_req))
+      ;  // 阻塞式等待每一个request结束
+    rets[req_ids[page_id]].InsertPage(
+        page_req.page_id_in_block,
+        page_req.response.second + page_req.fpage_offset,
+        page_req.response.first);
+  }
+
+  return std::move(rets);
 }
 
 const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(

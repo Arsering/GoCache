@@ -8,7 +8,7 @@
 
 // #define GRAPHSCOPE
 #define USING_DIRECT_CACHE false
-#define ASSERT_ENABLE false
+#define ASSERT_ENABLE true
 #define EVICTION_SYNC_ENABLE true
 #define LAZY_SSD_IO_NEW false
 #define PROFILE_ENABLE false
@@ -78,24 +78,27 @@ constexpr static size_t PAGE_SIZE_FILE = PAGE_SIZE_MEMORY;
 constexpr static size_t LOG_PAGE_SIZE_FILE = LOG_PAGE_SIZE_MEMORY;
 constexpr static size_t CACHELINE_SIZE = 64;
 
+// 该模式类似于TriCache，每一个bufferpool维护一个server用于处理request
 constexpr bool BP_ASYNC_ENABLE = false;
+constexpr int IO_BACKEND_TYPE =
+    2;  // 1: pread; 2:
+        // IO_Uring（IO_uring模式下每一个IO_server会维护一个thread，用于处理IO请求）
 constexpr static size_t ASYNC_SSDIO_SLEEP_TIME_MICROSECOND = 500;
-constexpr int IO_BACKEND_TYPE = 1;  // 1: pread; 2: IO_Uring
 constexpr bool IO_SERVER_ENABLE = IO_BACKEND_TYPE == 2 && !BP_ASYNC_ENABLE;
 constexpr static size_t IOURing_MAX_DEPTH = 32;
 constexpr static size_t BATCH_SIZE_IO_SERVER =
     IOURing_MAX_DEPTH * 1.5;  // 这个值高点好？？？
-constexpr static size_t FIBER_CHANNEL_IO_SERVER = BATCH_SIZE_IO_SERVER * 1.5;
+constexpr static size_t IO_SERVER_CHANNEL_SIZE = BATCH_SIZE_IO_SERVER * 1.5;
 
 constexpr static size_t BATCH_SIZE_BUFFER_POOL_MANAGER = 20;
-constexpr static size_t FIBER_CHANNEL_BUFFER_POOL_MANAGER =
+constexpr static size_t BUFFER_POOL_MANAGER_CHANNEL_SIZE =
     BATCH_SIZE_BUFFER_POOL_MANAGER * 2;
 
 constexpr static size_t BATCH_SIZE_BUFFER_POOL = IOURing_MAX_DEPTH * 1.5;
-constexpr static size_t FIBER_CHANNEL_BUFFER_POOL = BATCH_SIZE_BUFFER_POOL * 2;
+constexpr static size_t BUFFER_POOL_CHANNEL_SIZE = BATCH_SIZE_BUFFER_POOL * 2;
 
 constexpr static size_t BATCH_SIZE_EVICTION_SERVER = 15;
-constexpr static size_t FIBER_CHANNEL_DEPTH_EVICTION_SERVER =
+constexpr static size_t EVICTION_SERVER_CHANNEL_SERVER =
     BATCH_SIZE_EVICTION_SERVER * 1.2;
 
 constexpr bool PURE_THREADING = true;

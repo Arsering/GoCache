@@ -46,7 +46,6 @@ void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
   // replacer_ = new SieveReplacer(page_table_);
   // replacer_ = new SieveReplacer_v2(page_table_, pool_size_);
   // replacer_ = new FIFOReplacer_v2(page_table_, pool_size_);
-  GBPLOG << "SieveReplacer_v3";
   replacer_ = new SieveReplacer_v3(page_table_, pool_size_);
   // replacer_ = new ClockReplacer_v2(page_table_, pool_size_);
 
@@ -165,6 +164,19 @@ bool BufferPool::ReadWriteSync(size_t offset, size_t file_size, char* buf,
       return io_server_->io_backend_->Read(offset, buf, buf_size, fd);
     else
       return io_server_->io_backend_->Write(offset, buf, buf_size, fd);
+  }
+}
+
+AsyncMesg* BufferPool::ReadWriteAsync(size_t offset, size_t file_size,
+                                      char* buf, size_t buf_size,
+                                      GBPfile_handle_type fd, bool is_read) {
+  if constexpr (IO_BACKEND_TYPE == 2) {
+    AsyncMesg* ssd_io_finished = new AsyncMesg4();
+    assert(io_server_->SendRequest(fd, offset, file_size, buf, ssd_io_finished,
+                                   is_read));
+    return ssd_io_finished;
+  } else {
+    assert(false);
   }
 }
 
@@ -294,11 +306,7 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
   while (true) {
     switch (stat) {
     case BP_async_request_type::Phase::Begin: {
-      // GBPLOG << "begin " << fd << " " << fpage_id << " " << get_thread_id();
       auto [locked, mpage_id] = page_table_->LockMapping(fd, fpage_id);
-      // GBPLOG << "after lock " << locked << " " << mpage_id << " " << fd << "
-      // "
-      //        << fpage_id << " " << get_thread_id();
 
       if (locked) {
         if (mpage_id == PageMapping::Mapping::EMPTY_VALUE) {
@@ -433,6 +441,7 @@ bool BufferPool::FetchPageSync1(BP_sync_request_type& req) {
 #if ASSERT_ENABLE
   assert(partitioner_->GetPartitionId(req.fpage_id) == pool_ID_);
 #endif
+
   while (true) {
     switch (req.runtime_phase) {
     case BP_sync_request_type::Phase::Begin: {
@@ -447,8 +456,9 @@ bool BufferPool::FetchPageSync1(BP_sync_request_type& req) {
           if (req.response.first) {  // pin成功了就返回
             req.runtime_phase = BP_sync_request_type::Phase::End;
           }  // pin失败了就重新执行一遍Begin
-        } else
+        } else {
           assert(false);
+        }
       } else if (mpage_id != PageMapping::Mapping::BUSY_VALUE) {
         req.response = Pin(req.fpage_id, req.fd);
         if (req.response.first) {  // pin成功了就返回
@@ -480,12 +490,6 @@ bool BufferPool::FetchPageSync1(BP_sync_request_type& req) {
           assert(eviction_server_->SendRequest(
               replacer_, free_list_, EVICTION_BATCH_SIZE,
               &replacer_->GetFinishMark(), true));
-          // while (!replacer_->GetFinishMark()) {
-          //   // FIXME: 此处会导致本次query
-          //   latency变大，导致整个workload的tail
-          //   // latency变大
-          //   std::this_thread::yield();
-          // }
           std::this_thread::yield();
           break;
         } else {
@@ -502,15 +506,6 @@ bool BufferPool::FetchPageSync1(BP_sync_request_type& req) {
       break;
     }
     case BP_sync_request_type::Phase::Evicting: {  // 2
-#ifdef DEBUG_BITMAP
-      size_t fd_old = ret.first->fd;
-      size_t fpage_id_old =
-          partitioner_->GetFPageIdGlobal(pool_ID_, ret.first->fpage_id);
-
-      assert(disk_manager_->GetUsedMark(fd_old, fpage_id_old) == true);
-      disk_manager_->SetUsedMark(fd_old, fpage_id_old, false);
-      assert(disk_manager_->GetUsedMark(fd_old, fpage_id_old) == false);
-#endif
       if (req.response.first->dirty) {
         assert(ReadWriteSync(req.response.first->fpage_id_cur * PAGE_SIZE_FILE,
                              PAGE_SIZE_FILE, req.response.second,
@@ -533,11 +528,118 @@ bool BufferPool::FetchPageSync1(BP_sync_request_type& req) {
       *reinterpret_cast<fpage_id_type*>(ret.second) = fpage_id;
       tmp.initialized = false;
 #else
-      // assert(ReadWriteSync(req.fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
-      //                      req.response.second, PAGE_SIZE_MEMORY, req.fd,
-      //                      true));
+      assert(ReadWriteSync(req.fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
+                           req.response.second, PAGE_SIZE_MEMORY, req.fd,
+                           true));
       tmp.initialized = true;
 #endif
+      tmp.ref_count = 1;
+      tmp.fpage_id_cur = req.fpage_id;
+      tmp.fd_cur = req.fd;
+      as_atomic(req.response.first->AsPacked()).store(tmp.AsPacked());
+      assert(replacer_->Insert(page_table_->ToPageId(req.response.first)));
+
+      std::atomic_thread_fence(std::memory_order_release);
+      assert(page_table_->CreateMapping(
+          req.fd, req.fpage_id, page_table_->ToPageId(req.response.first)));
+      req.runtime_phase = BP_sync_request_type::Phase::End;
+    }
+    case BP_sync_request_type::Phase::End: {
+      return true;
+    }
+    }
+  }
+  assert(false);
+}
+
+bool BufferPool::FetchPageSync2(BP_sync_request_type& req) {
+#if ASSERT_ENABLE
+  assert(req.fpage_id <
+         CEIL(disk_manager_->GetFileSizeFast(req.fd), PAGE_SIZE_FILE));
+#endif
+
+#if ASSERT_ENABLE
+  assert(partitioner_->GetPartitionId(req.fpage_id) == pool_ID_);
+#endif
+
+  while (true) {
+    switch (req.runtime_phase) {
+    case BP_sync_request_type::Phase::Begin: {
+      auto [locked, mpage_id] = page_table_->LockMapping(req.fd, req.fpage_id);
+      if (locked) {
+        if (mpage_id == PageMapping::Mapping::EMPTY_VALUE) {
+          req.runtime_phase = BP_sync_request_type::Phase::Initing;
+        } else if (mpage_id != PageMapping::Mapping::
+                                   BUSY_VALUE) {  // 说明本页早已被load到内存了
+          assert(page_table_->UnLockMapping(req.fd, req.fpage_id, mpage_id));
+          req.response = Pin(req.fpage_id, req.fd);
+          if (req.response.first) {  // pin成功了就返回
+            req.runtime_phase = BP_sync_request_type::Phase::End;
+          }  // pin失败了就重新执行一遍Begin
+        } else {
+          assert(false);
+        }
+      } else if (mpage_id != PageMapping::Mapping::BUSY_VALUE) {
+        req.response = Pin(req.fpage_id, req.fd);
+        if (req.response.first) {  // pin成功了就返回
+          req.runtime_phase = BP_sync_request_type::Phase::End;
+        }  // pin失败了就重新执行一遍Begin
+        return false;
+      }
+      break;
+    }
+    case BP_sync_request_type::Phase::ReBegin: {
+      assert(false);
+    }
+    case BP_sync_request_type::Phase::Initing: {  // 1.2
+      mpage_id_type mpage_id;
+      if (free_list_->Poll(mpage_id)) {
+        req.runtime_phase = BP_sync_request_type::Phase::Loading;
+      } else {
+        if (!replacer_->Victim(mpage_id)) {
+          assert(false);
+          return false;
+        }
+        req.runtime_phase = BP_sync_request_type::Phase::Evicting;
+      }
+
+      req.response.first = page_table_->FromPageId(mpage_id);
+      req.response.second = (char*) memory_pool_.FromPageId(mpage_id);
+      break;
+    }
+    case BP_sync_request_type::Phase::Evicting: {  // 2
+      if (req.response.first->dirty) {
+        assert(ReadWriteSync(req.response.first->fpage_id_cur * PAGE_SIZE_FILE,
+                             PAGE_SIZE_FILE, req.response.second,
+                             PAGE_SIZE_MEMORY, req.response.first->fd_cur,
+                             false));
+      }
+
+      assert(page_table_->DeleteMapping(
+          req.response.first->fd_cur, req.response.first->fpage_id_cur,
+          page_table_->ToPageId(req.response.first)));
+
+      req.runtime_phase = BP_sync_request_type::Phase::Loading;
+    }
+    case BP_sync_request_type::Phase::Loading: {  // 4
+
+      req.ssd_io_finished = ReadWriteAsync(
+          req.fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY, req.response.second,
+          PAGE_SIZE_MEMORY, req.fd, true);  // 创建异步请求
+      req.runtime_phase = BP_sync_request_type::Phase::LoadingFinish;
+
+      return false;
+    }
+    case BP_sync_request_type::Phase::LoadingFinish: {
+      // if (!req.ssd_io_finished->TryWait())
+      //   return false;
+      assert(req.ssd_io_finished->Wait());
+      delete req.ssd_io_finished;  // 删除异步请求
+
+      thread_local static PTE tmp;
+      tmp.Clean();
+
+      tmp.initialized = true;
       tmp.ref_count = 1;
       tmp.fpage_id_cur = req.fpage_id;
       tmp.fd_cur = req.fd;
@@ -571,28 +673,29 @@ bool BufferPool::FetchPageAsyncInner(BP_async_request_type& req) {
     switch (req.runtime_phase) {
     case BP_async_request_type::Phase::Begin: {
       auto [locked, mpage_id] = page_table_->LockMapping(req.fd, fpage_id);
-
       if (locked) {
-        if (mpage_id == PageMapping::Mapping::EMPTY_VALUE)
+        if (mpage_id == PageMapping::Mapping::EMPTY_VALUE) {
           req.runtime_phase = BP_async_request_type::Phase::Initing;
-        else {
-          page_table_->UnLockMapping(req.fd, fpage_id, mpage_id);
-          req.runtime_phase = BP_async_request_type::Phase::Rebegin;
-          return false;
+        } else if (mpage_id != PageMapping::Mapping::
+                                   BUSY_VALUE) {  // 说明本页早已被load到内存了
+          assert(page_table_->UnLockMapping(req.fd, fpage_id, mpage_id));
+          req.response = Pin(fpage_id, req.fd);
+          if (req.response.first) {  // pin成功了就返回
+            req.runtime_phase = BP_async_request_type::Phase::End;
+          }  // pin失败了就重新执行一遍Begin
+        } else {
+          assert(false);
         }
-      } else {
-        req.runtime_phase = BP_async_request_type::Phase::Rebegin;
+      } else if (mpage_id != PageMapping::Mapping::BUSY_VALUE) {
+        req.response = Pin(fpage_id, req.fd);
+        if (req.response.first) {  // pin成功了就返回
+          req.runtime_phase = BP_async_request_type::Phase::End;
+        }  // pin失败了就重新执行一遍Begin
         return false;
       }
       break;
     }
     case BP_async_request_type::Phase::Rebegin: {
-      req.response = Pin(fpage_id, req.fd);
-      if (req.response.first) {  // 1.1
-        req.ssd_IO_req.async_context.finish->Post();
-        req.runtime_phase = BP_async_request_type::Phase::End;
-        break;
-      }
       return false;
     }
     case BP_async_request_type::Phase::Initing: {  // 1.2
