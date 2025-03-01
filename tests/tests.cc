@@ -24,8 +24,6 @@ using namespace gbp;
 
 namespace test {
 std::atomic<bool> mark_stop = true;
-std::atomic<size_t> query_count = 0;
-const size_t query_count_max = 1000000000;
 
 void set_cpu_affinity() {
   static std::atomic<size_t> cpu_id = 0;
@@ -154,7 +152,6 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
   std::ofstream latency_log(gbp::get_log_dir() + "/" +
                             std::to_string(thread_id) + ".log");
   latency_log << "read_bufferpool" << std::endl;
-
   size_t io_num = (file_size_inByte - io_size_in) / sizeof(size_t) - 10;
 
   std::random_device rd;
@@ -166,95 +163,103 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
 
   size_t curr_io_fileoffset, ret, io_size;
   size_t st, io_id;
-  size_t count_page = 10;
-  std::vector<std::pair<std::future<BufferBlock>, size_t>> block_container(
-      count_page);
+  size_t batch_size = 10;
+  std::vector<std::future<BufferBlock>> block_container(batch_size);
+  std::vector<gbp::batch_request_type> requests(batch_size);
+  std::vector<size_t> io_file_offsets(batch_size);
   int count = 1;
 
   while (count != 0) {
-    count--;
+    // count--;
+
     // size_t query_count = get_trace_global()[thread_id].size();
 
     // for (io_id = 0; io_id < io_num; io_id += io_size_in / sizeof(size_t)) {
     // io_size = sizeof(size_t);
 
-    while (query_count.fetch_add(1) < (query_count_max - 1)) {
-      // query_count--;
-      io_id = rnd(gen);
+    io_id = rnd(gen);
 
-      // io_id = ZipfianGenerator::GetGen().generate() *
-      //             (io_num / ZipfianGenerator::GetGen().GetN()) +
-      //         rnd(gen) % (io_num / ZipfianGenerator::GetGen().GetN());
-      // io_id = fileoffsetgenerator::GetGen().generate_offset() /
-      // sizeof(size_t);
-      //   // io_size = rnd_io_size(gen) * sizeof(size_t);
-      //   io_size = 9 * 512;
+    // io_id = ZipfianGenerator::GetGen().generate() *
+    //             (io_num / ZipfianGenerator::GetGen().GetN()) +
+    //         rnd(gen) % (io_num / ZipfianGenerator::GetGen().GetN());
+    // io_id = fileoffsetgenerator::GetGen().generate_offset() /
+    // sizeof(size_t);
+    //   // io_size = rnd_io_size(gen) * sizeof(size_t);
+    //   io_size = 9 * 512;
+    io_id = io_id / 512 * 512;
+    curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
+    // curr_io_fileoffset =
+    //     get_trace_global()[thread_id][query_count] - 139874067804160;
+    io_size = io_size_in;
+    io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
+
+    // st = gbp::GetSystemTime();
+    size_t id_in_batch = 0;
+    while (batch_size != id_in_batch) {
+      io_id = rnd(gen);
       io_size = io_size_in;
       io_id = io_id / 512 * 512;
-
       curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
-
-      // curr_io_fileoffset =
-      //     get_trace_global()[thread_id][query_count] - 139874067804160;
       io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
 
-      // st = gbp::GetSystemTime();
-      size_t count_page_tmp = 0;
-      while (count_page != count_page_tmp) {
-        io_id = rnd(gen);
-        io_size = io_size_in;
-        io_id = io_id / 512 * 512;
-        curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
-        io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
+      // block_container[id_in_batch] =
+      //     bpm.GetBlockAsync(curr_io_fileoffset, io_size);
+      requests[id_in_batch] = {curr_io_fileoffset, io_size, 0};
+      io_file_offsets[id_in_batch] = curr_io_fileoffset;
 
-        // block_container[count_page_tmp].first =
-        //     bpm.GetBlockAsync(curr_io_fileoffset, io_size);
-        // block_container[count_page_tmp].second = curr_io_fileoffset;
+      // {
+      //   auto block = bpm.GetBlockAsync1(curr_io_fileoffset, io_size, 0);
+      //   // auto block = bpm.GetBlockSync(curr_io_fileoffset, io_size);
 
-        {
-          auto block = bpm.GetBlockSync(curr_io_fileoffset, io_size);
-
-          // auto block =
-          //     bpm.GetBlockWithDirectCacheSync(curr_io_fileoffset,
-          // io_size);
-          if constexpr (true) {
-            // auto ret_new = bpm.GetObject(curr_io_fileoffset, io_size);
-            // auto iter = gbp::BufferBlockIter<size_t>(ret_new);
-            for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
-              assert(gbp::BufferBlock::Ref<size_t>(block, i) ==
-                     (curr_io_fileoffset / sizeof(size_t) + i));
-              // assert(*(iter.current()) ==
-              //        (curr_io_fileoffset / sizeof(size_t) + i));
-              // iter.next();
-            }
-            // assert(iter.current() == nullptr);
-          }
-        }
-        count_page_tmp++;
-      }
-
-      // for (auto& block : block_container) {
-      //   auto item = block.first.get();
-      //   for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
-      //     assert(gbp::BufferBlock::Ref<size_t>(item, i) ==
-      //            (block.second / sizeof(size_t) + i));
+      //   // auto block =
+      //   //     bpm.GetBlockWithDirectCacheSync(curr_io_fileoffset,
+      //   // io_size);
+      //   if constexpr (true) {
+      //     // auto ret_new = bpm.GetObject(curr_io_fileoffset, io_size);
+      //     // auto iter = gbp::BufferBlockIter<size_t>(ret_new);
+      //     for (size_t i = 0; i < io_size / sizeof(size_t); i++) {
+      //       assert(gbp::BufferBlock::Ref<size_t>(block, i) ==
+      //              (curr_io_fileoffset / sizeof(size_t) + i));
+      //       // assert(*(iter.current()) ==
+      //       //        (curr_io_fileoffset / sizeof(size_t) + i));
+      //       // iter.next();
+      //     }
+      //     // assert(iter.current() == nullptr);
       //   }
       // }
-
-      // st = gbp::GetSystemTime() - st;
-      // latency_log << st << std::endl;
-      // latency_log << st << " | " << gbp::get_counter(1) << " | "
-      //             << gbp::get_counter(2) << " | " << gbp::get_counter(11)
-      //             << " | " << gbp::get_counter(12) << std::endl;
-
-      gbp::PerformanceLogServer::GetPerformanceLogger()
-          .GetClientReadThroughputByte()
-          .fetch_add(io_size_in * count_page);
+      id_in_batch++;
     }
+
+    // for (size_t i = 0; i < batch_size; i++) {
+    //   auto item = block_container[i].get();
+    //   for (size_t j = 0; j < item.GetSize() / sizeof(size_t); j++) {
+    //     assert(gbp::BufferBlock::Ref<size_t>(item, j) ==
+    //            (io_file_offsets[i] / sizeof(size_t) + j));
+    //   }
+    // }
+
+    auto data_blocks = bpm.GetBlockBatch(requests);
+    for (size_t i = 0; i < batch_size; i++) {
+      auto& item = data_blocks[i];
+      for (size_t j = 0; j < item.GetSize() / sizeof(size_t); j++) {
+        assert(gbp::BufferBlock::Ref<size_t>(item, j) ==
+               (io_file_offsets[i] / sizeof(size_t) + j));
+      }
+    }
+
+    // st = gbp::GetSystemTime() - st;
+    // latency_log << st << std::endl;
+    // latency_log << st << " | " << gbp::get_counter(1) << " | "
+    //             << gbp::get_counter(2) << " | " << gbp::get_counter(11)
+    //             << " | " << gbp::get_counter(12) << std::endl;
+
+    gbp::PerformanceLogServer::GetPerformanceLogger()
+        .GetClientReadThroughputByte()
+        .fetch_add(io_size * batch_size);
   }
   latency_log.flush();
   latency_log.close();
-  std::cout << "thread " << thread_id << " exits" << std::endl;
+  GBPLOG << "thread " << thread_id << " exits" << std::endl;
 }
 
 void write_bufferpool(size_t start_offset, size_t file_size_inByte,
@@ -642,7 +647,7 @@ int test_concurrency(int argc, char** argv) {
   int data_file = -1;
   data_file = ::open(file_path.c_str(), O_RDWR | O_CREAT | O_DIRECT, 0777);
   assert(data_file != -1);
-  ::ftruncate(data_file, file_size_inByte);
+  // ::ftruncate(data_file, file_size_inByte);
 
   char* data_file_mmaped = nullptr;
 
@@ -667,7 +672,7 @@ int test_concurrency(int argc, char** argv) {
   // std::cout << "warm up finishing" << std::endl;
   gbp::log_enable().store(1);
 
-  worker_num = file_size_inByte / (1024LU * 1024LU * 1024LU * 1);
+  // worker_num = file_size_inByte / (1024LU * 1024LU * 1024LU * 1);
   // file_size_inByte = file_size_inByte / worker_num;
 
   printf(
@@ -691,9 +696,9 @@ int test_concurrency(int argc, char** argv) {
   std::vector<std::thread> thread_pool;
   size_t ssd_io_byte = std::get<0>(gbp::SSD_io_bytes());
   for (size_t i = 0; i < worker_num; i++) {
-    thread_pool.emplace_back(write_mmap, data_file_mmaped,
-                             (1024LU * 1024LU * 1024LU * 1), io_size,
-                             (1024LU * 1024LU * 1024LU * 1) * i, i);
+    // thread_pool.emplace_back(write_mmap, data_file_mmaped,
+    //                          (1024LU * 1024LU * 1024LU * 1), io_size,
+    //                          (1024LU * 1024LU * 1024LU * 1) * i, i);
     // thread_pool.emplace_back(read_mmap, data_file_mmaped, file_size_inByte,
     //                          io_size, 0, i);
     // thread_pool.emplace_back(read_pread, io_backend, file_size_inByte,
@@ -714,8 +719,7 @@ int test_concurrency(int argc, char** argv) {
     //   io_size, i);
     // else
 
-    // thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size,
-    // i);
+    thread_pool.emplace_back(read_bufferpool, 0, file_size_inByte, io_size, i);
 
     // thread_pool.emplace_back(randwrite_bufferpool, 0, file_size_inByte,
     // io_size,

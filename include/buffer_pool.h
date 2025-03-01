@@ -113,8 +113,13 @@ class BP_sync_request_type {
 
  public:
   BP_sync_request_type() { runtime_phase = Phase::Begin; }
-  BP_sync_request_type(GBPfile_handle_type _fd, size_t _fpage_id)
-      : fd(_fd), fpage_id(_fpage_id) {
+  BP_sync_request_type(GBPfile_handle_type _fd, size_t _fpage_id,
+                       size_t _fpage_offset = 0,
+                       fpage_id_type _page_id_in_block = 0)
+      : fd(_fd),
+        fpage_id(_fpage_id),
+        fpage_offset(_fpage_offset),
+        page_id_in_block(_page_id_in_block) {
     runtime_phase = Phase::Begin;
   }
   ~BP_sync_request_type() = default;
@@ -133,9 +138,13 @@ class BP_sync_request_type {
   };
 
   GBPfile_handle_type fd;
-  size_t fpage_id;
+  fpage_id_type fpage_id;
+  size_t fpage_offset;
+  fpage_id_type page_id_in_block;
+
   Phase runtime_phase;
   pair_min<PTE*, char*> response;
+  AsyncMesg* ssd_io_finished;
 };
 
 struct flush_request_type {
@@ -229,6 +238,7 @@ class BufferPool {
   pair_min<PTE*, char*> FetchPageSync(fpage_id_type fpage_id,
                                       GBPfile_handle_type fd);
   bool FetchPageSync1(BP_sync_request_type& req);
+  bool FetchPageSync2(BP_sync_request_type& req);
   FORCE_INLINE pair_min<PTE*, char*> Pin(fpage_id_type fpage_id,
                                          GBPfile_handle_type fd) {
     // 1.1
@@ -289,7 +299,9 @@ class BufferPool {
  private:
   bool ReadWriteSync(size_t offset, size_t file_size, char* buf,
                      size_t buf_size, GBPfile_handle_type fd, bool is_read);
-
+  AsyncMesg* ReadWriteAsync(size_t offset, size_t file_size, char* buf,
+                            size_t buf_size, GBPfile_handle_type fd,
+                            bool is_read);
   bool FetchPageAsyncInner(BP_async_request_type& req);
 
   FORCE_INLINE bool ProcessFunc(BP_async_request_type& req) {
@@ -404,7 +416,7 @@ class BufferPool {
 
   std::thread server_;
   boost::lockfree::queue<BP_async_request_type*,
-                         boost::lockfree::capacity<FIBER_CHANNEL_BUFFER_POOL>>
+                         boost::lockfree::capacity<BUFFER_POOL_CHANNEL_SIZE>>
       request_channel_;
   // LockFreeQueue<async_BPM_request_type*> request_channel_{
   //     FIBER_CHANNEL_BUFFER_POOL};

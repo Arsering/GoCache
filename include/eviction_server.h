@@ -138,7 +138,7 @@ class EvictionServer {
   std::thread server_;
   boost::lockfree::queue<
       async_eviction_request_type*,
-      boost::lockfree::capacity<FIBER_CHANNEL_DEPTH_EVICTION_SERVER>>
+      boost::lockfree::capacity<EVICTION_SERVER_CHANNEL_SERVER>>
       request_channel_;
   size_t num_async_fiber_processing_;
   bool stop_;
