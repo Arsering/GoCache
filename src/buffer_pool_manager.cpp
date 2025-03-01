@@ -170,14 +170,14 @@ bool BufferPoolManager::ReadWrite(size_t offset, size_t file_size, char* buf,
     return true;
   } else {
     if (is_read) {
-      return io_server->io_backend_->Read(offset, buf, buf_size, fd);
+      return io_server->sync_io_backend_->Read(offset, buf, buf_size, fd);
 
       // struct iovec iov[1];
       // iov[0].iov_base = buf;  // 第一个缓冲区
       // iov[0].iov_len = buf_size;
       // return io_server->io_backend_->Read(offset, iov, 1, fd);
     } else
-      return io_server->io_backend_->Write(offset, buf, buf_size, fd);
+      return io_server->sync_io_backend_->Write(offset, buf, buf_size, fd);
   }
 }
 
@@ -406,7 +406,7 @@ const BufferBlock BufferPoolManager::GetBlockSync1(
         iov[page_id].iov_len = PAGE_SIZE_MEMORY;
       }
 
-      assert(io_servers_[0]->io_backend_->Read(
+      assert(io_servers_[0]->sync_io_backend_->Read(
           (file_offset >> LOG_PAGE_SIZE_FILE) * PAGE_SIZE_FILE, iov, num_page,
           fd));
 

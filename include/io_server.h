@@ -84,10 +84,9 @@ class IOServer {
 
   IOServer(DiskManager* disk_manager)
       : request_channel_(), num_async_fiber_processing_(0), stop_(false) {
-    if constexpr (IO_BACKEND_TYPE == 1)
-      io_backend_ = new RWSysCall(disk_manager);
-    else if constexpr (IO_BACKEND_TYPE == 2) {
-      io_backend_ = new IOURing(disk_manager);
+    sync_io_backend_ = new RWSysCall(disk_manager);
+    if constexpr (IO_BACKEND_TYPE == 2) {
+      async_io_backend_ = new IOURing(disk_manager);
       if constexpr (IO_SERVER_ENABLE)
         server_ = std::thread([this]() { Run(); });
     } else
@@ -98,8 +97,8 @@ class IOServer {
     if (server_.joinable())
       server_.join();
   }
-  IOBackend* io_backend_;
-
+  IOBackend* sync_io_backend_ = nullptr;
+  IOBackend* async_io_backend_ = nullptr;
   /**
    * 发送请求
    * @param fd 文件描述符
@@ -125,29 +124,29 @@ class IOServer {
     switch (req.async_context.state) {
     case context_type::State::Commit: {  // 将read request提交至io_uring
       if (req.read) {
-        auto ret = io_backend_->Read(req.file_offset, req.io_vec.data(), 1,
-                                     req.fd, req.async_context.finish);
+        auto ret = async_io_backend_->Read(req.file_offset, req.io_vec.data(),
+                                           1, req.fd, req.async_context.finish);
         while (!ret) {
-          ret = io_backend_->Read(
+          ret = async_io_backend_->Read(
               req.file_offset, req.io_vec.data(), 1, req.fd,
               req.async_context.finish);  // 不断尝试提交请求直至提交成功
         }
       } else {
-        auto ret = io_backend_->Write(req.file_offset, req.io_vec.data(),
-                                      req.fd, req.async_context.finish);
+        auto ret = async_io_backend_->Write(req.file_offset, req.io_vec.data(),
+                                            req.fd, req.async_context.finish);
         while (!ret) {
-          ret = io_backend_->Write(
+          ret = async_io_backend_->Write(
               req.file_offset, req.io_vec.data(), req.fd,
               req.async_context.finish);  // 不断尝试提交请求直至提交成功
         }
       }
 
-      io_backend_->Progress();
+      async_io_backend_->Progress();
       req.async_context.state = context_type::State::Poll;
       return false;
     }
     case context_type::State::Poll: {
-      io_backend_->Progress();
+      async_io_backend_->Progress();
       if (req.async_context.finish->TryWait()) {
         req.async_context.state = context_type::State::End;
         return true;
@@ -168,6 +167,10 @@ class IOServer {
    * @param blocked 若为true，则阻塞式发送请求，否则非阻塞式发送请求
    */
   bool SendRequest(async_SSD_IO_request_type* req, bool blocked = true) {
+#if ASSERT_ENABLE
+    assert(async_io_backend_ != nullptr);
+#endif
+
     if (unlikely(req == nullptr))
       return false;
 

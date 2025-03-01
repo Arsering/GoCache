@@ -29,7 +29,7 @@ void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
   pool_size_ = pool_size;
 
   io_server_ = io_server;
-  disk_manager_ = io_server->io_backend_->disk_manager_;
+  disk_manager_ = io_server->sync_io_backend_->disk_manager_;
   partitioner_ = partitioner;
   eviction_server_ = eviction_server;
 
@@ -149,21 +149,23 @@ bool BufferPool::FlushPage(fpage_id_type fpage_id, GBPfile_handle_type fd,
 bool BufferPool::ReadWriteSync(size_t offset, size_t file_size, char* buf,
                                size_t buf_size, GBPfile_handle_type fd,
                                bool is_read) {
-  if constexpr (IO_BACKEND_TYPE == 2) {
-    AsyncMesg* ssd_io_finished = new AsyncMesg4();
-    assert(io_server_->SendRequest(fd, offset, file_size, buf, ssd_io_finished,
-                                   is_read));
+  // if constexpr (IO_BACKEND_TYPE == 2) {
+  //   AsyncMesg* ssd_io_finished = new AsyncMesg4();
+  //   assert(io_server_->SendRequest(fd, offset, file_size, buf,
+  //   ssd_io_finished,
+  //                                  is_read));
 
-    size_t loops = 0;
-    while (!ssd_io_finished->Wait())
-      ;
-    delete ssd_io_finished;
-    return true;
-  } else {
+  //   size_t loops = 0;
+  //   while (!ssd_io_finished->Wait())
+  //     ;
+  //   delete ssd_io_finished;
+  //   return true;
+  // } else
+  {
     if (is_read)
-      return io_server_->io_backend_->Read(offset, buf, buf_size, fd);
+      return io_server_->sync_io_backend_->Read(offset, buf, buf_size, fd);
     else
-      return io_server_->io_backend_->Write(offset, buf, buf_size, fd);
+      return io_server_->sync_io_backend_->Write(offset, buf, buf_size, fd);
   }
 }
 
