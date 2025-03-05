@@ -406,9 +406,9 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
       *reinterpret_cast<fpage_id_type*>(ret.second) = fpage_id;
       tmp.initialized = false;
 #else
-      get_counter_local(13) = 1;
       assert(ReadWriteSync(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
                            ret.second, PAGE_SIZE_MEMORY, fd, true));
+
       // if (gbp::warmup_mark() == 1) {
       //   as_atomic(disk_manager_->counts_[fd].second)++;
       // }
@@ -568,6 +568,7 @@ bool BufferPool::FetchPageSync2(BP_sync_request_type& req) {
     switch (req.runtime_phase) {
     case BP_sync_request_type::Phase::Begin: {
       auto [locked, mpage_id] = page_table_->LockMapping(req.fd, req.fpage_id);
+
       if (locked) {
         if (mpage_id == PageMapping::Mapping::EMPTY_VALUE) {
           req.runtime_phase = BP_sync_request_type::Phase::Initing;
@@ -597,16 +598,18 @@ bool BufferPool::FetchPageSync2(BP_sync_request_type& req) {
       mpage_id_type mpage_id;
       if (free_list_->Poll(mpage_id)) {
         req.runtime_phase = BP_sync_request_type::Phase::Loading;
+        req.response.first = page_table_->FromPageId(mpage_id);
+        req.response.second = (char*) memory_pool_.FromPageId(mpage_id);
+        return false;
       } else {
         if (!replacer_->Victim(mpage_id)) {
           assert(false);
           return false;
         }
         req.runtime_phase = BP_sync_request_type::Phase::Evicting;
+        req.response.first = page_table_->FromPageId(mpage_id);
+        req.response.second = (char*) memory_pool_.FromPageId(mpage_id);
       }
-
-      req.response.first = page_table_->FromPageId(mpage_id);
-      req.response.second = (char*) memory_pool_.FromPageId(mpage_id);
       break;
     }
     case BP_sync_request_type::Phase::Evicting: {  // 2
@@ -622,12 +625,19 @@ bool BufferPool::FetchPageSync2(BP_sync_request_type& req) {
           page_table_->ToPageId(req.response.first)));
 
       req.runtime_phase = BP_sync_request_type::Phase::Loading;
+      return false;
     }
     case BP_sync_request_type::Phase::Loading: {  // 4
 
-      req.ssd_io_finished = ReadWriteAsync(
-          req.fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY, req.response.second,
-          PAGE_SIZE_MEMORY, req.fd, true);  // 创建异步请求
+      // 创建异步请求
+      req.ssd_io_finished =
+          ReadWriteAsync(req.fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
+                         req.response.second, PAGE_SIZE_MEMORY, req.fd, true);
+
+      // assert(ReadWriteSync(req.fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
+      //                      req.response.second, PAGE_SIZE_MEMORY, req.fd,
+      //                      true));
+      // gbp::get_counter_local(10)++;
       req.runtime_phase = BP_sync_request_type::Phase::LoadingFinish;
 
       return false;
@@ -635,6 +645,7 @@ bool BufferPool::FetchPageSync2(BP_sync_request_type& req) {
     case BP_sync_request_type::Phase::LoadingFinish: {
       // if (!req.ssd_io_finished->TryWait())
       //   return false;
+
       assert(req.ssd_io_finished->Wait());
       delete req.ssd_io_finished;  // 删除异步请求
 

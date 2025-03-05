@@ -577,8 +577,10 @@ const BufferBlock BufferPoolManager::GetBlockAsync1(
   return ret;
 }
 
-const std::vector<BufferBlock> BufferPoolManager::GetBlockBatch(
-    std::vector<batch_request_type>& requests) const {
+const std::vector<BufferBlock> BufferPoolManager::GetBlockBatch_new(
+    const std::vector<batch_request_type>& requests) const {
+  // gbp::get_counter_local(10) = 0;
+
   if (requests.empty()) {
     return std::vector<BufferBlock>();
   }
@@ -589,6 +591,7 @@ const std::vector<BufferBlock> BufferPoolManager::GetBlockBatch(
   for (auto& request : requests) {
     if (request.block_size_ == 0) {
       rets.emplace_back();
+      req_id_cur++;
       continue;
     }
 
@@ -636,8 +639,148 @@ const std::vector<BufferBlock> BufferPoolManager::GetBlockBatch(
         page_req.response.second + page_req.fpage_offset,
         page_req.response.first);
   }
+  // gbp::get_thread_logfile() << gbp::get_counter_local(10) << std::endl;
 
   return std::move(rets);
+}
+
+const void BufferPoolManager::GetBlockBatch(
+    const std::vector<batch_request_type>& batch_requests,
+    std::vector<BufferBlock>& results) const {
+  if (batch_requests.empty()) {
+    return;
+  }
+  thread_local std::vector<BP_sync_request_type> BP_sync_requests;
+  BP_sync_requests.clear();
+  thread_local std::vector<uint32_t> req_ids;
+  req_ids.clear();
+
+  for (auto req_id_cur = 0; req_id_cur < batch_requests.size(); req_id_cur++) {
+    auto& batch_request = batch_requests[req_id_cur];
+    if (batch_request.block_size_ == 0) {
+      results.emplace_back();
+      continue;
+    }
+
+    size_t fpage_offset = batch_request.file_offset_ % PAGE_SIZE_FILE;
+    const size_t num_page =
+        fpage_offset == 0 ||
+                (batch_request.block_size_ <= (PAGE_SIZE_FILE - fpage_offset))
+            ? CEIL(batch_request.block_size_, PAGE_SIZE_FILE)
+            : (CEIL(batch_request.block_size_ - (PAGE_SIZE_FILE - fpage_offset),
+                    PAGE_SIZE_FILE) +
+               1);
+    fpage_id_type fpage_start_id =
+        batch_request.file_offset_ >> LOG_PAGE_SIZE_FILE;
+    results.emplace_back(batch_request.block_size_, num_page);
+
+    if (likely(num_page == 1)) {
+      auto partition_id = partitioner_->GetPartitionId(fpage_start_id);
+      auto result =
+          pools_[partition_id]->Pin(fpage_start_id, batch_request.fd_);
+      if (result.first) {
+        results.back().InsertPage(0, result.second + fpage_offset,
+                                  result.first);
+      } else {
+        BP_sync_requests.emplace_back(batch_request.fd_, fpage_start_id,
+                                      fpage_offset, 0);
+        req_ids.emplace_back(req_id_cur);
+        pools_[partition_id]->FetchPageSync2(BP_sync_requests.back());
+      }
+    } else {
+      size_t page_id = 0;
+      while (page_id < num_page) {
+        auto partition_id = partitioner_->GetPartitionId(fpage_start_id);
+        auto result =
+            pools_[partition_id]->Pin(fpage_start_id, batch_request.fd_);
+        if (result.first) {
+          results.back().InsertPage(page_id, result.second + fpage_offset,
+                                    result.first);
+        } else {
+          BP_sync_requests.emplace_back(batch_request.fd_, fpage_start_id,
+                                        fpage_offset, page_id);
+          req_ids.emplace_back(req_id_cur);
+          pools_[partition_id]->FetchPageSync2(BP_sync_requests.back());
+        }
+        page_id++;
+        fpage_start_id++;
+        fpage_offset = 0;
+      }
+    }
+  }
+  for (auto req_id = 0; req_id < BP_sync_requests.size(); req_id++) {
+    pools_[partitioner_->GetPartitionId(BP_sync_requests[req_id].fpage_id)]
+        ->FetchPageSync2(BP_sync_requests[req_id]);
+  }
+
+  for (auto req_id = 0; req_id < BP_sync_requests.size(); req_id++) {
+    auto& page_req = BP_sync_requests[req_id];
+    auto partition_id = partitioner_->GetPartitionId(page_req.fpage_id);
+    while (!pools_[partition_id]->FetchPageSync2(page_req))
+      ;  // 阻塞式等待每一个request结束
+    results[req_ids[req_id]].InsertPage(
+        page_req.page_id_in_block,
+        page_req.response.second + page_req.fpage_offset,
+        page_req.response.first);
+  }
+}
+
+const BufferBlock BufferPoolManager::GetBlockBatch1(
+    size_t file_offset, size_t block_size, GBPfile_handle_type fd) const {
+  thread_local std::vector<BP_sync_request_type> requests;
+  requests.clear();
+  if (block_size == 0) {
+    return BufferBlock();
+  }
+
+  size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
+  const size_t num_page =
+      fpage_offset == 0 || (block_size <= (PAGE_SIZE_FILE - fpage_offset))
+          ? CEIL(block_size, PAGE_SIZE_FILE)
+          : (CEIL(block_size - (PAGE_SIZE_FILE - fpage_offset),
+                  PAGE_SIZE_FILE) +
+             1);
+  fpage_id_type fpage_start_id = file_offset >> LOG_PAGE_SIZE_FILE;
+  auto ret = BufferBlock(block_size, num_page);
+  if (likely(num_page == 1)) {
+    auto partition_id = partitioner_->GetPartitionId(fpage_start_id);
+    auto result = pools_[partition_id]->Pin(fpage_start_id, fd);
+    if (result.first) {
+      ret.InsertPage(0, result.second + fpage_offset, result.first);
+    } else {
+      requests.emplace_back(fd, fpage_start_id, fpage_offset, 0);
+      auto& page_req = requests.back();
+      while (!pools_[partition_id]->FetchPageSync2(page_req))
+        ;
+      ret.InsertPage(page_req.page_id_in_block,
+                     page_req.response.second + page_req.fpage_offset,
+                     page_req.response.first);
+    }
+  } else {
+    size_t page_id = 0;
+    while (page_id < num_page) {
+      auto partition_id = partitioner_->GetPartitionId(fpage_start_id);
+      auto result = pools_[partition_id]->Pin(fpage_start_id, fd);
+      if (result.first) {
+        ret.InsertPage(page_id, result.second + fpage_offset, result.first);
+      } else {
+        requests.emplace_back(fd, fpage_start_id, fpage_offset, page_id);
+        pools_[partition_id]->FetchPageSync2(requests.back());
+      }
+      page_id++;
+      fpage_start_id++;
+      fpage_offset = 0;
+    }
+    for (auto& req : requests) {
+      auto partition_id = partitioner_->GetPartitionId(req.fpage_id);
+      while (!pools_[partition_id]->FetchPageSync2(req))
+        ;  // 阻塞式等待每一个request结束
+      ret.InsertPage(req.page_id_in_block,
+                     req.response.second + req.fpage_offset,
+                     req.response.first);
+    }
+  }
+  return ret;
 }
 
 const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(

@@ -22,11 +22,11 @@ cd ..
 CUR_DIR=.
 
 export FILE_SIZE_MB=$((1024*10))
-export WORKER_NUM=4
-export POOL_NUM=4
-export IO_SERVER_NUM=${POOL_NUM}
-export POOL_SIZE_MB=$((1024*5))
-export IO_SIZE_Byte=$((512*8*5))
+export WORKER_NUM=30
+export POOL_NUM=8
+export IO_SERVER_NUM=4
+export POOL_SIZE_MB=$(python3 -c "print(int(1024*9.9))")
+export IO_SIZE_Byte=$((512*8))
 # export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD
 # 2 3 4 5 7 9 11 13 15 20 25 30
 # for BLOCK_SIZE in 1 2 3 4 5 6 7 8
@@ -41,7 +41,7 @@ echo 1 > /proc/sys/vm/drop_caches
 
 ./bin/graphscope_bufferpool ${FILE_SIZE_MB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_MB} ${IO_SERVER_NUM} ${IO_SIZE_Byte} ${LOG_DIR} 
 # cgexec -g memory:yz_15g
-
+# gdb --args
 # done
 # timeout 2m
 # > ${LOG_DIR}/log.log

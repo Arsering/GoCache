@@ -89,8 +89,9 @@ class IOServer {
       async_io_backend_ = new IOURing(disk_manager);
       if constexpr (IO_SERVER_ENABLE)
         server_ = std::thread([this]() { Run(); });
-    } else
+    } else if constexpr (IO_BACKEND_TYPE != 1) {
       assert(false);
+    }
   }
   ~IOServer() {
     stop_ = true;
