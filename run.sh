@@ -22,7 +22,7 @@ cd ..
 CUR_DIR=.
 
 export FILE_SIZE_MB=$((1024*10))
-export WORKER_NUM=30
+export WORKER_NUM=10
 export POOL_NUM=8
 export IO_SERVER_NUM=4
 export POOL_SIZE_MB=$(python3 -c "print(int(1024*9.9))")
@@ -39,6 +39,7 @@ cp -r ./$0 ${LOG_DIR}/run.sh
 
 echo 1 > /proc/sys/vm/drop_caches
 
+# gdb --args 
 ./bin/graphscope_bufferpool ${FILE_SIZE_MB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_MB} ${IO_SERVER_NUM} ${IO_SIZE_Byte} ${LOG_DIR} 
 # cgexec -g memory:yz_15g
 # gdb --args
