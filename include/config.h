@@ -6,8 +6,8 @@
 
 #pragma once
 
-#define GRAPHSCOPE
-#define USING_DIRECT_CACHE false
+// #define GRAPHSCOPE
+#define USING_DIRECT_CACHE true
 #define ASSERT_ENABLE false
 #define EVICTION_SYNC_ENABLE true
 #define LAZY_SSD_IO_NEW false
@@ -58,6 +58,8 @@ using mpage_id_type = uint32_t;
 using GBPfile_handle_type = uint32_t;
 using OSfile_handle_type = uint32_t;
 using partition_id_type = uint32_t;
+
+constexpr size_t DIRECT_CACHE_SIZE = 256 * 16;
 
 constexpr bool WAL_ENABLE = false;
 constexpr bool PERSISTENT = true;

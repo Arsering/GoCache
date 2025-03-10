@@ -114,7 +114,6 @@ class DirectCacheImpl5 {
   static bool CleanAllCache();
 
  private:
-  constexpr static size_t DIRECT_CACHE_SIZE = 256 * 8;
   std::vector<Node> cache_;
   size_t capacity_;
   // size_t hit = 0;
