@@ -589,6 +589,7 @@ bool BufferPool::FetchPageSync2(BP_sync_request_type& req) {
         }  // pin失败了就重新执行一遍Begin
         return false;
       }
+
       break;
     }
     case BP_sync_request_type::Phase::ReBegin: {

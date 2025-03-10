@@ -103,6 +103,9 @@ class BufferPoolManager {
                                    GBPfile_handle_type fd = 0) const;
   const void GetBlockBatch(const std::vector<batch_request_type>& requests,
                            std::vector<BufferBlock>& results) const;
+  const void GetBlockBatchWithDirectCache(
+      const std::vector<batch_request_type>& batch_requests,
+      std::vector<BufferBlock>& results) const;
   const std::vector<BufferBlock> GetBlockBatch_new(
       const std::vector<batch_request_type>& batch_requests) const;
   const BufferBlock GetBlockBatch1(size_t file_offset, size_t block_size,

@@ -439,31 +439,18 @@ class BufferBlockImp7 {
 
   template <class OBJ_Type>
   FORCE_INLINE OBJ_Type* Decode(size_t idx = 0) const {
-#ifdef DEBUG_
-    size_t st = gbp::GetSystemTime();
-#endif
-
     constexpr size_t OBJ_NUM_PERPAGE = PAGE_SIZE_MEMORY / sizeof(OBJ_Type);
 #if ASSERT_ENABLE
     // FIXME: 不够准确
-    if (sizeof(OBJ_Type) * (idx + 1) > size_) {
-      GBPLOG << "idx: " << idx << ", size_: " << size_
-             << "obj size: " << sizeof(OBJ_Type);
-    }
     assert(sizeof(OBJ_Type) * (idx + 1) <= size_);
 #endif
     char* ret = nullptr;
     if (likely(page_num_ < 2)) {
       ret = datas_.data + idx * sizeof(OBJ_Type);
-      if (ret == nullptr)
-        GBPLOG << get_thread_id();
     } else {
       if (likely(idx == 0)) {
         assert(InitPage(0));
         ret = datas_.datas[0];
-        if (ret == nullptr)
-          GBPLOG << get_thread_id() << " " << (uintptr_t) datas_.datas[0] << " "
-                 << size_ << " " << page_num_;
       } else {
         auto obj_num_curpage =
             (PAGE_SIZE_MEMORY -
@@ -473,19 +460,12 @@ class BufferBlockImp7 {
         if (obj_num_curpage > idx) {
           assert(InitPage(0));
           ret = datas_.datas[0] + idx * sizeof(OBJ_Type);
-          if (ret == nullptr)
-            GBPLOG << get_thread_id();
         } else {
           idx -= obj_num_curpage;
           auto page_id = idx / OBJ_NUM_PERPAGE + 1;
           assert(InitPage(page_id));
           ret = datas_.datas[page_id] +
                 (idx % OBJ_NUM_PERPAGE) * sizeof(OBJ_Type);
-          if (ret == nullptr)
-            GBPLOG << get_thread_id() << " " << page_id << " " << idx << " "
-                   << OBJ_NUM_PERPAGE << " " << size_ << " " << page_num_ << " "
-                   << ((idx % OBJ_NUM_PERPAGE) * sizeof(OBJ_Type)) << " "
-                   << sizeof(OBJ_Type) << " " << (uintptr_t) datas_.datas[0];
         }
       }
     }
@@ -495,9 +475,6 @@ class BufferBlockImp7 {
 #endif
 
 #if ASSERT_ENABLE
-    if (ret == nullptr) {
-      GBPLOG << "ret is nullptr " << get_thread_id();
-    }
     assert(ret != nullptr);
 #endif
     return reinterpret_cast<OBJ_Type*>(ret);
@@ -509,10 +486,6 @@ class BufferBlockImp7 {
     constexpr size_t OBJ_NUM_PERPAGE = PAGE_SIZE_MEMORY / sizeof(OBJ_Type);
 #if ASSERT_ENABLE
     // FIXME: 不够准确
-    if (sizeof(OBJ_Type) * (idx + 1) > size_) {
-      GBPLOG << "idx: " << idx << ", size_: " << size_
-             << "obj size: " << sizeof(OBJ_Type);
-    }
     assert(sizeof(OBJ_Type) * (idx + 1) <= size_);
 #endif
     char* ret = nullptr;
@@ -549,13 +522,6 @@ class BufferBlockImp7 {
 #if ASSERT_ENABLE
     assert(((uintptr_t) ret / PAGE_SIZE_MEMORY + 1) * PAGE_SIZE_MEMORY >=
            (uintptr_t) (ret + sizeof(OBJ_Type)));
-#endif
-#ifdef DEBUG_
-    st = gbp::GetSystemTime() - st;
-    gbp::get_counter(1) += st;
-    gbp::get_counter(2)++;
-#endif
-#if ASSERT_ENABLE
     assert(ret != nullptr);
 #endif
     return {reinterpret_cast<OBJ_Type*>(ret), target_pte};
