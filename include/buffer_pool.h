@@ -119,9 +119,9 @@ class BP_sync_request_type {
       : fd(_fd),
         fpage_id(_fpage_id),
         fpage_offset(_fpage_offset),
-        page_id_in_block(_page_id_in_block) {
-    runtime_phase = Phase::Begin;
-  }
+        page_id_in_block(_page_id_in_block),
+        is_inserted(false),
+        runtime_phase(Phase::Begin) {}
   ~BP_sync_request_type() = default;
 
  public:
@@ -145,6 +145,7 @@ class BP_sync_request_type {
   Phase runtime_phase;
   pair_min<PTE*, char*> response;
   AsyncMesg* ssd_io_finished;
+  bool is_inserted = false;
 };
 
 struct flush_request_type {

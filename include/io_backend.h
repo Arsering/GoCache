@@ -346,7 +346,7 @@ class IOURing : public IOBackend {
         offset);  // 读取操作的起始地址偏移量
     io_uring_sqe_set_data(sqe, finish);
     num_preparing_++;
-
+    // disk_manager_->counts_[fd].first += count;
     return true;
   }
 
@@ -517,6 +517,7 @@ class RWSysCall : public IOBackend {
     }
     if (finish != nullptr)
       ((AsyncMesg*) finish)->Post();
+    // disk_manager_->counts_[fd].first += 1;
 
     // gbp::PerformanceLogServer::GetPerformanceLogger()
     //     .GetClientReadThroughputByte()
