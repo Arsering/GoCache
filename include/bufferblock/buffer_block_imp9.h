@@ -111,11 +111,11 @@ class BufferBlockImp9 {
     return Compare(right) == 0 ? true : false;
   }
 
-  void InsertPage(size_t idx, char* data, PTE* pte, bool mark = true) {
+  void InsertPage(size_t idx, char* data, PTE* pte, bool mark = false) {
 #if ASSERT_ENABLE
     assert(idx < page_num_);
 #endif
-    if (page_num_ == 1) {
+    if (likely(page_num_ == 1)) {
       datas_.data = data;
       ptes_.pte = pte;
       marks_.mark = mark;

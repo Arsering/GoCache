@@ -112,7 +112,6 @@ class DirectCacheImpl3 {
   static bool CleanAllCache();
 
  private:
-  constexpr static size_t DIRECT_CACHE_SIZE = 256 * 8;
   std::array<Node, DIRECT_CACHE_SIZE> cache_;
   size_t capacity_;
   // size_t hit = 0;

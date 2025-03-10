@@ -117,7 +117,7 @@ class BufferBlockImp7 {
 #if ASSERT_ENABLE
     assert(idx < page_num_);
 #endif
-    if (page_num_ == 1) {
+    if (likely(page_num_ == 1)) {
       datas_.data = data;
       ptes_.pte = pte;
     } else {
