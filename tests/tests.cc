@@ -175,7 +175,7 @@ namespace test
 
     size_t curr_io_fileoffset, ret, io_size;
     size_t st, io_id;
-    size_t batch_size = 10;
+    size_t batch_size = 100;
     std::vector<std::future<BufferBlock>> block_container(batch_size);
     std::vector<gbp::batch_request_type> requests(batch_size);
     std::vector<size_t> io_file_offsets(batch_size);

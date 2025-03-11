@@ -736,7 +736,7 @@ namespace gbp
     return std::move(rets);
   }
 
-  const void BufferPoolManager::GetBlockBatch(
+  const void BufferPoolManager::GetBlockBatchWithoutDirectCache(
       const std::vector<batch_request_type> &batch_requests,
       std::vector<BufferBlock> &results) const
   {
@@ -815,7 +815,7 @@ namespace gbp
       }
     }
 // 批量发送 ssd IO 请求
-#define USING_SSD_IO_BATCH true
+#define USING_SSD_IO_BATCH false
 #if USING_SSD_IO_BATCH
     BatchIOServer::async_SSD_IO_request_batch_type async_SSD_IO_request_batch;
     for (auto req_id = 0; req_id < BP_sync_requests.size(); req_id++)
@@ -830,7 +830,10 @@ namespace gbp
         req.runtime_phase = BP_sync_request_type::Phase::LoadingFinish;
       }
     }
-    io_servers_batch_[get_thread_id() % BATCH_IO_SERVER_NUM]->SendRequest(&async_SSD_IO_request_batch);
+    if (async_SSD_IO_request_batch.ssd_io_requests.size())
+    {
+      io_servers_batch_[get_thread_id() % BATCH_IO_SERVER_NUM]->SendRequest(&async_SSD_IO_request_batch);
+    }
 #else
     for (auto req_id = 0; req_id < BP_sync_requests.size(); req_id++)
     {
@@ -839,16 +842,183 @@ namespace gbp
     }
 #endif
 
+    size_t count = 0;
+    while (count != BP_sync_requests.size())
+    {
+      for (auto req_id = 0; req_id < BP_sync_requests.size(); req_id++)
+      {
+        auto &page_req = BP_sync_requests[req_id];
+        if (!page_req.is_inserted)
+        {
+          auto partition_id = partitioner_->GetPartitionId(page_req.fpage_id);
+          if (page_req.runtime_phase ==
+              BP_sync_request_type::Phase::LoadingFinish)
+          {
+            while (!pools_[partition_id]->FetchPageSync2(page_req))
+              ; // 阻塞式等待每一个request结束
+            results[req_ids[req_id]].InsertPage(
+                page_req.page_id_in_block,
+                page_req.response.second + page_req.fpage_offset,
+                page_req.response.first);
+            page_req.is_inserted = true;
+            count++;
+          }
+          else
+          {
+            if (pools_[partition_id]->FetchPageSync2(page_req))
+            {
+              results[req_ids[req_id]].InsertPage(
+                  page_req.page_id_in_block,
+                  page_req.response.second + page_req.fpage_offset,
+                  page_req.response.first);
+              page_req.is_inserted = true;
+              count++;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  const void BufferPoolManager::GetBlockBatchWithDirectCache(
+      const std::vector<batch_request_type> &batch_requests,
+      std::vector<BufferBlock> &results) const
+  {
+    if (batch_requests.empty())
+    {
+      return;
+    }
+    thread_local std::vector<BP_sync_request_type> BP_sync_requests;
+    BP_sync_requests.clear();
+    thread_local std::vector<uint32_t> req_ids;
+    req_ids.clear();
+
+    for (auto req_id_cur = 0; req_id_cur < batch_requests.size(); req_id_cur++)
+    {
+      auto &batch_request = batch_requests[req_id_cur];
+      if (batch_request.block_size_ == 0)
+      {
+        results.emplace_back();
+        continue;
+      }
+
+      size_t fpage_offset = batch_request.file_offset_ % PAGE_SIZE_FILE;
+      const size_t num_page =
+          fpage_offset == 0 ||
+                  (batch_request.block_size_ <= (PAGE_SIZE_FILE - fpage_offset))
+              ? CEIL(batch_request.block_size_, PAGE_SIZE_FILE)
+              : (CEIL(batch_request.block_size_ - (PAGE_SIZE_FILE - fpage_offset),
+                      PAGE_SIZE_FILE) +
+                 1);
+      fpage_id_type fpage_start_id =
+          batch_request.file_offset_ >> LOG_PAGE_SIZE_FILE;
+      results.emplace_back(batch_request.block_size_, num_page);
+
+      if (likely(num_page == 1))
+      {
+        auto partition_id = partitioner_->GetPartitionId(fpage_start_id);
+        auto pte = DirectCache::GetDirectCache().Find(batch_request.fd_, fpage_start_id);
+        if (likely(pte != nullptr))
+        {
+          auto data = (char *)pools_[partition_id]->memory_pool_.FromPageId(
+              pools_[partition_id]->page_table_->ToPageId(pte));
+          results.back().InsertPage(0, data + fpage_offset, pte, true);
+        }
+        else
+        {
+          auto result =
+              pools_[partition_id]->Pin(fpage_start_id, batch_request.fd_);
+          if (result.first)
+          {
+            results.back().InsertPage(0, result.second + fpage_offset, result.first, DirectCache::GetDirectCache().Insert(batch_request.fd_, fpage_start_id, result.first));
+          }
+          else
+          {
+            BP_sync_requests.emplace_back(batch_request.fd_, fpage_start_id,
+                                          fpage_offset, 0);
+            req_ids.emplace_back(req_id_cur);
+            pools_[partition_id]->FetchPageSync2(BP_sync_requests.back());
+          }
+        }
+      }
+      else
+      {
+        size_t page_id = 0;
+        while (page_id < num_page)
+        {
+          auto partition_id = partitioner_->GetPartitionId(fpage_start_id);
+          auto pte = DirectCache::GetDirectCache().Find(batch_request.fd_, fpage_start_id);
+          if (likely(pte != nullptr))
+          {
+            auto data = (char *)pools_[partition_id]->memory_pool_.FromPageId(
+                pools_[partition_id]->page_table_->ToPageId(pte));
+            results.back().InsertPage(page_id, data + fpage_offset, pte, true);
+          }
+          else
+          {
+            auto result =
+                pools_[partition_id]->Pin(fpage_start_id, batch_request.fd_);
+            if (result.first)
+            {
+              results.back().InsertPage(page_id, result.second + fpage_offset,
+                                        result.first, DirectCache::GetDirectCache().Insert(batch_request.fd_, fpage_start_id, result.first));
+            }
+            else
+            {
+              BP_sync_requests.emplace_back(batch_request.fd_, fpage_start_id,
+                                            fpage_offset, page_id);
+              req_ids.emplace_back(req_id_cur);
+              pools_[partition_id]->FetchPageSync2(BP_sync_requests.back());
+            }
+          }
+          page_id++;
+          fpage_start_id++;
+          fpage_offset = 0;
+        }
+      }
+    }
+
     for (auto req_id = 0; req_id < BP_sync_requests.size(); req_id++)
     {
-      auto &page_req = BP_sync_requests[req_id];
-      auto partition_id = partitioner_->GetPartitionId(page_req.fpage_id);
-      while (!pools_[partition_id]->FetchPageSync2(page_req))
-        ; // 阻塞式等待每一个request结束
-      results[req_ids[req_id]].InsertPage(
-          page_req.page_id_in_block,
-          page_req.response.second + page_req.fpage_offset,
-          page_req.response.first);
+      pools_[partitioner_->GetPartitionId(BP_sync_requests[req_id].fpage_id)]
+          ->FetchPageSync2(BP_sync_requests[req_id]);
+    }
+
+    size_t count = 0;
+    while (count != BP_sync_requests.size())
+    {
+      for (auto req_id = 0; req_id < BP_sync_requests.size(); req_id++)
+      {
+        auto &page_req = BP_sync_requests[req_id];
+        if (!page_req.is_inserted)
+        {
+          auto partition_id = partitioner_->GetPartitionId(page_req.fpage_id);
+          if (page_req.runtime_phase ==
+              BP_sync_request_type::Phase::LoadingFinish)
+          {
+            while (!pools_[partition_id]->FetchPageSync2(page_req))
+              ; // 阻塞式等待每一个request结束
+            results[req_ids[req_id]].InsertPage(
+                page_req.page_id_in_block,
+                page_req.response.second + page_req.fpage_offset,
+                page_req.response.first, DirectCache::GetDirectCache().Insert(page_req.fd, page_req.fpage_id, page_req.response.first));
+            page_req.is_inserted = true;
+            count++;
+          }
+          else
+          {
+            if (pools_[partition_id]->FetchPageSync2(page_req))
+            {
+              results[req_ids[req_id]].InsertPage(
+                  page_req.page_id_in_block,
+                  page_req.response.second + page_req.fpage_offset,
+                  page_req.response.first, DirectCache::GetDirectCache().Insert(page_req.fd, page_req.fpage_id, page_req.response.first));
+              page_req.is_inserted = true;
+              count++;
+            }
+          }
+        }
+      }
     }
   }
 

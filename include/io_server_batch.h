@@ -168,11 +168,7 @@ namespace gbp
         {
           if (request_channel_.pop(async_request))
           {
-            // GBPLOG << (uintptr_t)async_request;
-            // assert(async_request->state == context_type::State::Commit);
-
             assert(ProcessFunc(async_request));
-            async_request = nullptr;
           }
           async_io_backend_->Progress();
 

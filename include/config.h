@@ -7,7 +7,7 @@
 #pragma once
 
 // #define GRAPHSCOPE
-#define USING_DIRECT_CACHE false
+#define USING_DIRECT_CACHE true
 #define ASSERT_ENABLE false
 #define EVICTION_SYNC_ENABLE true
 #define LAZY_SSD_IO_NEW false
@@ -61,6 +61,7 @@ namespace gbp
     using OSfile_handle_type = uint32_t;
     using partition_id_type = uint32_t;
 
+    constexpr size_t DIRECT_CACHE_SIZE = 256 * 16;
     constexpr bool WAL_ENABLE = false;
     constexpr bool PERSISTENT = true;
     constexpr bool DEBUG = false;
@@ -85,7 +86,7 @@ namespace gbp
     constexpr int IO_BACKEND_TYPE =
         2; // 1: pread; 2:
            // IO_Uring（IO_uring模式下每一个IO_server会维护一个thread，用于处理IO请求）
-    constexpr static size_t BATCH_IO_SERVER_NUM = 1;
+    constexpr static size_t BATCH_IO_SERVER_NUM = 4;
     constexpr static size_t ASYNC_SSDIO_SLEEP_TIME_MICROSECOND = 500;
     constexpr bool IO_SERVER_ENABLE = IO_BACKEND_TYPE == 2 && !BP_ASYNC_ENABLE;
     constexpr static size_t IOURing_MAX_DEPTH = 32;
