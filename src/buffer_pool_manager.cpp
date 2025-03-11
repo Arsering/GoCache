@@ -944,11 +944,11 @@ const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(
   fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
   if (likely(num_page == 1)) {
     auto pte = DirectCache::GetDirectCache().Find(fd, fpage_id);
-    if (pte) {
+    if (likely(pte != nullptr)) {
       auto pool = pools_[partitioner_->GetPartitionId(fpage_id)];
       auto data = (char*) pool->memory_pool_.FromPageId(
           pool->page_table_->ToPageId(pte));
-      ret.InsertPage(0, data + fpage_offset, pte);
+      ret.InsertPage(0, data + fpage_offset, pte, true);
     } else {
       auto mpage =
           pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
@@ -967,11 +967,11 @@ const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(
     size_t page_id = 0;
     while (page_id < num_page) {
       auto pte = DirectCache::GetDirectCache().Find(fd, fpage_id);
-      if (pte) {
+      if (likely(pte != nullptr)) {
         auto pool = pools_[partitioner_->GetPartitionId(fpage_id)];
         auto data = (char*) pool->memory_pool_.FromPageId(
             pool->page_table_->ToPageId(pte));
-        ret.InsertPage(page_id, data + fpage_offset, pte);
+        ret.InsertPage(page_id, data + fpage_offset, pte, true);
       } else {
         auto mpage =
             pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
