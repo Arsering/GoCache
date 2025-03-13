@@ -645,6 +645,14 @@ const std::vector<BufferBlock> BufferPoolManager::GetBlockBatch_new(
 const void BufferPoolManager::GetBlockBatchWithoutDirectCache(
     const std::vector<batch_request_type>& batch_requests,
     std::vector<BufferBlock>& results) const {
+
+  #ifdef PROFILE_BATCH
+    if(warmup_mark() == 1){
+      get_counter_local(BATCH_MISS_IDX)=0;
+      get_counter_local(BATCH_TOTAL_IDX)=0;
+    }
+  #endif
+
   if (batch_requests.empty()) {
     return;
   }
@@ -668,6 +676,11 @@ const void BufferPoolManager::GetBlockBatchWithoutDirectCache(
             : (CEIL(batch_request.block_size_ - (PAGE_SIZE_FILE - fpage_offset),
                     PAGE_SIZE_FILE) +
                1);
+    #ifdef PROFILE_BATCH
+      if(warmup_mark() == 1){
+        get_counter_local(BATCH_TOTAL_IDX)+=num_page;
+      }
+    #endif
     fpage_id_type fpage_start_id =
         batch_request.file_offset_ >> LOG_PAGE_SIZE_FILE;
     results.emplace_back(batch_request.block_size_, num_page);
@@ -741,11 +754,33 @@ const void BufferPoolManager::GetBlockBatchWithoutDirectCache(
       }
     }
   }
+  #ifdef PROFILE_BATCH
+    if(warmup_mark() == 1){
+      get_counter_batch_num()++;
+      if(get_counter_local(BATCH_MISS_IDX) != 0){
+        get_counter_batch_io_num()+=1;
+        get_counter_batch_miss_num()+=get_counter_local(BATCH_MISS_IDX);
+        size_t hit_num=get_counter_local(BATCH_TOTAL_IDX)-get_counter_local(BATCH_MISS_IDX);
+        get_counter_batch_total_num()+=hit_num;
+      }
+      get_counter_local(BATCH_MISS_IDX)=0;
+      get_counter_local(BATCH_TOTAL_IDX)=0;
+    }
+  #endif
+
 }
 
 const void BufferPoolManager::GetBlockBatchWithDirectCache(
     const std::vector<batch_request_type>& batch_requests,
     std::vector<BufferBlock>& results) const {
+  
+  #ifdef PROFILE_BATCH
+    if(warmup_mark() == 1){
+      get_counter_local(BATCH_MISS_IDX)=0;
+      get_counter_local(BATCH_TOTAL_IDX)=0;
+    }
+  #endif
+
   if (batch_requests.empty()) {
     return;
   }
@@ -769,6 +804,11 @@ const void BufferPoolManager::GetBlockBatchWithDirectCache(
             : (CEIL(batch_request.block_size_ - (PAGE_SIZE_FILE - fpage_offset),
                     PAGE_SIZE_FILE) +
                1);
+    #ifdef PROFILE_BATCH
+      if(warmup_mark() == 1){
+        get_counter_local(BATCH_TOTAL_IDX)+=num_page;
+      }
+    #endif
     fpage_id_type fpage_start_id =
         batch_request.file_offset_ >> LOG_PAGE_SIZE_FILE;
     results.emplace_back(batch_request.block_size_, num_page);
@@ -866,6 +906,19 @@ const void BufferPoolManager::GetBlockBatchWithDirectCache(
       }
     }
   }
+  #ifdef PROFILE_BATCH
+    if(warmup_mark() == 1){
+      get_counter_batch_num()++;
+      if(get_counter_local(BATCH_MISS_IDX) != 0){
+        get_counter_batch_io_num()+=1;
+        get_counter_batch_miss_num()+=get_counter_local(BATCH_MISS_IDX);
+        size_t hit_num=get_counter_local(BATCH_TOTAL_IDX)-get_counter_local(BATCH_MISS_IDX);
+        get_counter_batch_total_num()+=hit_num;
+      }
+      get_counter_local(BATCH_MISS_IDX)=0;
+      get_counter_local(BATCH_TOTAL_IDX)=0;
+    }
+  #endif
 }
 
 const BufferBlock BufferPoolManager::GetBlockBatch1(

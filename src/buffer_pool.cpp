@@ -1,4 +1,5 @@
 #include "../include/buffer_pool.h"
+#include "flex/graphscope_bufferpool/include/config.h"
 
 namespace gbp {
 
@@ -634,6 +635,11 @@ bool BufferPool::FetchPageSync2(BP_sync_request_type& req) {
       req.ssd_io_finished =
           ReadWriteAsync(req.fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
                          req.response.second, PAGE_SIZE_MEMORY, req.fd, true);
+      #ifdef PROFILE_BATCH
+        if(warmup_mark() == 1){
+          get_counter_local(BATCH_MISS_IDX)+=1;
+        }
+      #endif
 
       // assert(ReadWriteSync(req.fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
       //                      req.response.second, PAGE_SIZE_MEMORY, req.fd,

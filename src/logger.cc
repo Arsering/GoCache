@@ -93,6 +93,26 @@ std::atomic<bool>& warmup_mark() {
   return data;
 }
 
+std::atomic<size_t>& get_counter_batch_num() {
+  static std::atomic<size_t> data;
+  return data;
+}
+
+std::atomic<size_t>& get_counter_batch_io_num() {
+  static std::atomic<size_t> data;
+  return data;
+}
+
+std::atomic<size_t>& get_counter_batch_total_num() {
+  static std::atomic<size_t> data;
+  return data;
+}
+
+std::atomic<size_t>& get_counter_batch_miss_num() {
+  static std::atomic<size_t> data;
+  return data;
+}
+
 std::unordered_map<int, std::pair<void*, size_t>>& get_mmap_results() {
   static std::unordered_map<int, std::pair<void*, size_t>> mmap_results;
   return mmap_results;

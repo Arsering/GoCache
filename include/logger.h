@@ -235,6 +235,10 @@ class ThreadLo {
 };
 
 std::atomic<bool>& warmup_mark();  // 1: 需要warmup; 0: 无需warmup
+std::atomic<size_t>& get_counter_batch_num();
+std::atomic<size_t>& get_counter_batch_io_num();
+std::atomic<size_t>& get_counter_batch_total_num();
+std::atomic<size_t>& get_counter_batch_miss_num();
 
 // 为了replay
 std::vector<std::string>& get_results_vec();

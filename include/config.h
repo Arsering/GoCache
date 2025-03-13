@@ -7,6 +7,7 @@
 #pragma once
 
 // #define GRAPHSCOPE
+#define PROFILE_BATCH
 #define USING_DIRECT_CACHE true
 #define ASSERT_ENABLE false
 #define EVICTION_SYNC_ENABLE true
@@ -122,6 +123,9 @@ class NonCopyable {
 };
 
 std::atomic<size_t>& get_pool_num();
+
+constexpr size_t BATCH_MISS_IDX = 61;
+constexpr size_t BATCH_TOTAL_IDX = 62;
 
 }  // namespace gbp
 
