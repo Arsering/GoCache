@@ -59,7 +59,7 @@ using GBPfile_handle_type = uint32_t;
 using OSfile_handle_type = uint32_t;
 using partition_id_type = uint32_t;
 
-constexpr size_t DIRECT_CACHE_SIZE = 256 * 16;
+constexpr size_t DIRECT_CACHE_SIZE = 256 * 8;
 
 constexpr bool WAL_ENABLE = false;
 constexpr bool PERSISTENT = true;
