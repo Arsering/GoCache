@@ -54,9 +54,7 @@ void write_to_query_file(std::string_view query, bool flush) {
     ::fflush(query_file_string_view);
     return;
   }
-  size_t ts = GetSystemTime();
-  size_t size = query.size() + sizeof(ts);
-  ::fwrite(&ts, sizeof(size_t), 1, query_file_string);
+  size_t size = query.size();
   ::fwrite(query.data(), query.size(), 1, query_file_string);
   ::fwrite(&size, sizeof(size_t), 1, query_file_string_view);
 }
