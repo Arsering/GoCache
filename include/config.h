@@ -7,7 +7,7 @@
 #pragma once
 
 // #define GRAPHSCOPE
-#define USING_DIRECT_CACHE true
+#define USING_DIRECT_CACHE false
 #define ASSERT_ENABLE false
 #define EVICTION_SYNC_ENABLE true
 #define LAZY_SSD_IO_NEW false
