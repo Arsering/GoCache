@@ -650,7 +650,7 @@ int test_concurrency(int argc, char** argv) {
   // std::string file_path = "/home/spdk/p4510/zhengyang/test_write.db";
   // std::string file_path = "/home/spdk/p4510/zhengyang/test_read.db";
 
-  std::string file_path = "/nvme0n1/test_read.db";
+  std::string file_path = "/mnt/nvme/test_read.db";
   // std::string trace_dir =
   //     "/data/zhengyang/data/experiment_space/LDBC_SNB/logs/"
   //     "2024-06-06-20:05:02/"
