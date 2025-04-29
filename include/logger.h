@@ -84,7 +84,7 @@ size_t GetMemoryUsage();
 uint64_t readTLBShootdownCount();
 uint64_t readIObytesOne();
 std::tuple<size_t, size_t> SSD_io_bytes(
-    const std::string& device_name = "nvme0n1");
+    const std::string& device_name = "md0");
 size_t GetMemoryUsageMMAP(std::string& mmap_monitored_dir);
 std::tuple<size_t, size_t> GetCPUTime();
 std::vector<std::tuple<void**, int, size_t>>& GetMAS();
@@ -302,7 +302,7 @@ class PerformanceLogServer {
   std::atomic<size_t> client_read_throughput_Byte_;
   std::atomic<size_t> client_write_throughput_Byte_;
   std::ofstream log_file_;
-  std::string device_name_ = "nvme0n1";
+  std::string device_name_ = "md0";
 
   bool stop_ = false;
   std::thread server_;

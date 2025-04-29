@@ -284,24 +284,66 @@ uint64_t readIObytesOne() {
   return 0;
 }
 
+// std::tuple<size_t, size_t> SSD_io_bytes(const std::string& device_name) {
+//   std::ifstream stat("/proc/diskstats");
+//   assert(!!stat);
+
+//   uint64_t read = 0, write = 0;
+//   for (std::string line = " "; std::getline(stat, line);) {
+//     if (line.find(device_name) != std::string::npos) {
+//       std::vector<std::string> strs;
+//       boost::split(strs, line, boost::is_any_of("\t "),
+//                    boost::token_compress_on);
+//       read += std::stoull(strs[6]) * 512;
+//       write += std::stoull(strs[10]) * 512;
+//     }
+//   }
+//   return {read, write};
+// }
+
 std::tuple<size_t, size_t> SSD_io_bytes(const std::string& device_name) {
   std::ifstream stat("/proc/diskstats");
   assert(!!stat);
+  // std::cout << "device_name: " << device_name << std::endl;
 
   uint64_t read = 0, write = 0;
-  for (std::string line = " "; std::getline(stat, line);) {
+  // for (std::string line = " "; std::getline(stat, line);) {
+  //   if (line.find(device_name) != std::string::npos) {
+  //     std::vector<std::string> strs;
+  //     boost::split(strs, line, boost::is_any_of("\t "),
+  //                  boost::token_compress_on);
+  //     read += std::stoull(strs[6]) * 512;
+  //     write += std::stoull(strs[10]) * 512;
+  //   }
+  // }
+  bool find_device_line = false;
+  for (std::string line; std::getline(stat, line);) {
     if (line.find(device_name) != std::string::npos) {
-      std::vector<std::string> strs;
-      boost::split(strs, line, boost::is_any_of("\t "),
-                   boost::token_compress_on);
-      read += std::stoull(strs[6]) * 512;
-      write += std::stoull(strs[10]) * 512;
+      find_device_line = true;
+      // std::cout << "find device line: " << line << std::endl;
+      std::istringstream iss(line);
+      std::vector<std::string> strs((std::istream_iterator<std::string>(iss)),
+                                    std::istream_iterator<std::string>());
+      // std::cout << "str num is : " << strs.size() << std::endl;
+      // for (size_t i = 0; i < strs.size(); ++i) {
+      //   std::cout << "str[" << i << "]: " << strs[i] << std::endl;
+      // }
+      if (strs.size() >= 10) {
+        read += std::stoull(strs[5]) * 512;
+        write += std::stoull(strs[9]) * 512;
+        // std::cout << "read is : " << read << ", write is : " << write <<
+        // std::endl;
+      }
     }
   }
+  // if (!find_device_line) {
+  //   std::cerr << "no find device line" << device_name << std::endl;
+  // }
   return {read, write};
 }
 
 size_t GetMemoryUsageMMAP(std::string& mmap_monitored_dir) {
+  // std::cout << "GetMemoryUsageMMAP" << mmap_monitored_dir << std::endl;
   std::ifstream smaps_file("/proc/self/smaps");
 
   if (!smaps_file.is_open()) {
