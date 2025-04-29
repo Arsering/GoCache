@@ -22,13 +22,55 @@
 #include "debug.h"
 #include "page_table.h"
 
+#include <numa.h>
+#include <numaif.h>
+
+#define NUMA_SINGLE_NODE false
+#define ALIGNED_ALLOC true
+
 namespace gbp {
 class MemoryPool {
  public:
   MemoryPool() : num_pages_(0), need_free_(false), pool_(nullptr) {};
   MemoryPool(mpage_id_type num_pages) : num_pages_(num_pages) {
-    pool_ = (char*) ::aligned_alloc(PAGE_SIZE_MEMORY,
-                                    PAGE_SIZE_MEMORY * num_pages_);
+#if ALIGNED_ALLOC
+    pool_ = (char*) ::aligned_alloc(PAGE_SIZE_MEMORY,PAGE_SIZE_MEMORY * num_pages_);
+#elif NUMA_SINGLE_NODE
+    pool_ = (char*)numa_alloc_onnode(PAGE_SIZE_MEMORY * num_pages_, 2); // 分配在numa node 2上
+    int node = numa_node_of_cpu(sched_getcpu());
+    int numa_node = -1;
+    if (get_mempolicy(&numa_node, NULL, 0, pool_, MPOL_F_NODE | MPOL_F_ADDR) == 0) {
+        std::cout << "Memory allocated on NUMA node " << numa_node 
+                 << ", current CPU on node " << node
+                 << ", size = " << PAGE_SIZE_MEMORY * num_pages_ << " bytes" << std::endl;
+    } else {
+        std::cout << "Failed to get NUMA node for allocated memory" << std::endl;
+    }
+#else
+    pool_ = (char*)numa_alloc_interleaved(PAGE_SIZE_MEMORY * num_pages_); // 均匀分配在所有numa node上
+    // LOG(INFO) << "Memory interleaved on all NUMA nodes, size = " << PAGE_SIZE_MEMORY * num_pages_ << " bytes";
+    // 获取系统中的NUMA节点数量
+    int max_node = numa_max_node() + 1;
+    std::cout << "Total NUMA nodes: " << max_node << std::endl;
+    // 检查每个NUMA节点上分配的内存
+    for(int i = 0; i < max_node; i++) {
+        long size = numa_node_size64(i, NULL);
+        if(size != -1) {
+            std::cout << "NUMA node " << i << " has " << size/(1024*1024) 
+                     << " MB memory available" << std::endl;
+        }
+    }
+
+    // 验证交错分配的结果
+    int numa_node = -1;
+    if (get_mempolicy(&numa_node, NULL, 0, pool_, MPOL_F_NODE | MPOL_F_ADDR) == 0) {
+        std::cout << "Memory interleaved on all NUMA nodes, total size = " 
+                 << PAGE_SIZE_MEMORY * num_pages_ << " bytes" << std::endl;
+    } else {
+        std::cout << "Failed to get NUMA node for allocated memory" << std::endl;
+    }
+#endif
+
 #ifdef GRAPHSCOPE
     LOG(INFO) << (uintptr_t) pool_ << " | " << PAGE_SIZE_MEMORY * num_pages_;
 #endif

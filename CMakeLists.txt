@@ -67,6 +67,19 @@ find_package(Boost 1.84 REQUIRED COMPONENTS system filesystem fiber program_opti
 find_package(yaml-cpp REQUIRED)
 target_link_libraries(${PROJECT_NAME} yaml-cpp)
 
+# 添加NUMA库链接
+if(DEFINED NUMA_LIBRARIES)
+    target_link_libraries(${PROJECT_NAME} ${NUMA_LIBRARIES})
+else()
+    find_library(NUMA_LIBRARY numa)
+    if(NOT NUMA_LIBRARY)
+        message(FATAL_ERROR "NUMA library not found. Please install libnuma-dev package.")
+    else()
+        target_link_libraries(${PROJECT_NAME} ${NUMA_LIBRARY})
+        message(STATUS "Found NUMA library: ${NUMA_LIBRARY}")
+    endif()
+endif()
+
 # find_library(MIMALLOC_LIBRARY NAMES mimalloc HINTS /usr/local/lib /usr/lib)
 # target_link_libraries(${PROJECT_NAME} mimalloc)
 
