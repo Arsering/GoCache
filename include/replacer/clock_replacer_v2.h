@@ -33,7 +33,7 @@ class ClockReplacer_v2 : public Replacer<mpage_id_type> {
 
   bool Insert(mpage_id_type value) override {
     cache_[value].evictable = true;
-    cache_[value].visited = true;
+    cache_[value].visited = false;
     return true;
   }
 

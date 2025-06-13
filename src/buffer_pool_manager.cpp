@@ -1,11 +1,28 @@
 #include "../include/buffer_pool_manager.h"
 
+#include <bits/stdint-uintn.h>
 #include <sys/mman.h>
 #include <utility>
 
 namespace gbp {
 
 BufferPoolManager::~BufferPoolManager() {
+#if PROFILE_HIT
+// 11: total_access_count
+// 12: total_miss_count
+// 13: temp_access_count
+// 14: temp_miss_count
+  std::cout << "total_access_count = " << get_counter_global(11).load()
+            << std::endl;
+  std::cout << "total_miss_count = " << get_counter_global(12).load() << std::endl;
+  std::cout << "accessed data size = " << get_counter_global(11).load() * PAGE_SIZE_MEMORY
+            << std::endl;
+  std::cout << "missed data size = " << get_counter_global(12).load() * PAGE_SIZE_MEMORY
+            << std::endl;
+  std::cout << "total miss ratio = " << double(get_counter_global(12).load()) /
+                                            get_counter_global(11).load()
+            << std::endl;
+#endif
   if (!initialized_)
     return;
 
@@ -310,6 +327,32 @@ const BufferBlock BufferPoolManager::GetBlockSync(
           : (CEIL(block_size - (PAGE_SIZE_FILE - fpage_offset),
                   PAGE_SIZE_FILE) +
              1);
+  #if PROFILE_HIT
+  if(warmup_mark() == 1) {
+    // add_temp_access_count(num_page);
+    // add_total_access_count(num_page);
+    // if(temp_access_count_.load() > 10000000 && get_thread_id() == 10) {
+    //   print_temp_miss_rate();
+    //   reset_temp_count();
+    // }
+    get_counter_global(11).fetch_add(num_page);
+    get_counter_global(13).fetch_add(num_page);
+    if(get_counter_global(13).load() > 1000000 && get_thread_id() == 10) {
+      std::cout << "temp_miss_rate = " << double(get_counter_global(14).load()) /
+                                            get_counter_global(13).load()
+            << std::endl;
+      get_counter_global(13).store(0);
+      get_counter_global(14).store(0);
+    }
+  }
+#endif
+#if PROFILE_ACCESS
+  if(warmup_mark() == 1) {
+    auto fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
+    uint64_t fpage_id_with_fd = (uint64_t)fd << 32 | fpage_id;
+    get_thread_logfile()<<0<<' '<<fpage_id_with_fd<<' '<<num_page<<std::endl;
+  }
+#endif
   BufferBlock ret(block_size, num_page);
 
   fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
@@ -939,6 +982,32 @@ const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(
           : (CEIL(block_size - (PAGE_SIZE_FILE - fpage_offset),
                   PAGE_SIZE_FILE) +
              1);
+#if PROFILE_HIT
+  if(warmup_mark() == 1) {
+    // add_temp_access_count(num_page);
+    // add_total_access_count(num_page);
+    // if(temp_access_count_.load() > 10000000 && get_thread_id() == 10) {
+    //   print_temp_miss_rate();
+    //   reset_temp_count();
+    // }
+    get_counter_global(11).fetch_add(num_page);
+    get_counter_global(13).fetch_add(num_page);
+    if(get_counter_global(13).load() > 1000000 && get_thread_id() == 10) {
+      std::cout << "temp_miss_rate = " << double(get_counter_global(14).load()) /
+                                            get_counter_global(13).load()
+            << std::endl;
+      get_counter_global(13).store(0);
+      get_counter_global(14).store(0);
+    }
+  }
+#endif
+#if PROFILE_ACCESS
+  if(warmup_mark() == 1) {
+    auto fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
+    uint64_t fpage_id_with_fd = (uint64_t)fd << 32 | fpage_id;
+    get_thread_logfile()<<0<<' '<<fpage_id_with_fd<<' '<<num_page<<std::endl;
+  }
+#endif
   BufferBlock ret(block_size, num_page);
   assert(block_size > 0);
   fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
@@ -950,6 +1019,12 @@ const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(
           pool->page_table_->ToPageId(pte));
       ret.InsertPage(0, data + fpage_offset, pte, true);
     } else {
+// #if PROFILE_HIT
+//       if(warmup_mark() == 1) {
+//         add_temp_miss_count(1);
+//         add_total_miss_count(1);
+//       }
+// #endif
       auto mpage =
           pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
               fpage_id, fd);
@@ -973,6 +1048,12 @@ const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(
             pool->page_table_->ToPageId(pte));
         ret.InsertPage(page_id, data + fpage_offset, pte, true);
       } else {
+// #if PROFILE_HIT
+//         if(warmup_mark() == 1) {
+//           add_temp_miss_count(1);
+//           add_total_miss_count(1);
+//         }
+// #endif
         auto mpage =
             pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
                 fpage_id, fd);

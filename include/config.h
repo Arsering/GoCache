@@ -13,6 +13,8 @@
 #define LAZY_SSD_IO_NEW false
 #define PROFILE_ENABLE false
 // #define USING_EDGE_ITER
+#define PROFILE_HIT false
+#define PROFILE_ACCESS false
 
 #ifdef GRAPHSCOPE
 #include <glog/logging.h>
@@ -59,7 +61,7 @@ using GBPfile_handle_type = uint32_t;
 using OSfile_handle_type = uint32_t;
 using partition_id_type = uint32_t;
 
-constexpr size_t DIRECT_CACHE_SIZE = 256 * 8;
+constexpr size_t DIRECT_CACHE_SIZE = 256 * 8;//原本是256*8
 
 constexpr bool WAL_ENABLE = false;
 constexpr bool PERSISTENT = true;

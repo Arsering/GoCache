@@ -156,9 +156,14 @@ void PerformanceLogServer::Logging() {
                     "User CPU Time (us)", "Sys CPU Time (us)",
                     "SSD_Read_Throughput_Total", "SSD_write_Throughput_Total");
   log_file_.write(buf, size);
+  struct timespec last_time, cur_time;
+  clock_gettime(CLOCK_MONOTONIC, &last_time);
 
   while (true) {
     sleep(1);
+    clock_gettime(CLOCK_MONOTONIC, &cur_time);
+    double time_diff = (cur_time.tv_sec - last_time.tv_sec) +
+                       (cur_time.tv_nsec - last_time.tv_nsec) / 1e9;
     shootdowns = readTLBShootdownCount();
     std::tie(SSD_read_bytes, SSD_write_bytes) = SSD_io_bytes(device_name_);
     cur_Client_Read_throughput = client_read_throughput_Byte_.load();
@@ -170,17 +175,18 @@ void PerformanceLogServer::Logging() {
 
     size = ::snprintf(
         buf, 4096,
-        "%-25lf%-25lf%-25lf%-25lf%-25lu%-25lf%-25lf%-25lu%-25lu%-25lf%-25lf\n",
+        "%-25lf%-25lf%-25lf%-25lf%-25lf%-25lf%-25lf%-25lf%-25lf%-25lf%-25lf\n",
         (cur_Client_Read_throughput - last_Client_Read_throughput) /
-            (double) B2GB,
+            ((double) B2GB * time_diff),
         (cur_Client_Write_throughput - last_Client_Write_throughput) /
-            (double) B2GB,
-        (SSD_read_bytes - last_SSD_read_bytes) / (double) B2GB,
-        (SSD_write_bytes - last_SSD_write_bytes) / (double) B2GB,
-        (shootdowns - last_shootdowns), GetMemoryUsage() / (1024.0 * 1024),
+            ((double) B2GB * time_diff),
+        (SSD_read_bytes - last_SSD_read_bytes) / ((double) B2GB * time_diff),
+        (SSD_write_bytes - last_SSD_write_bytes) / ((double) B2GB * time_diff),
+        (shootdowns - last_shootdowns) / time_diff,
+        GetMemoryUsage() / (1024.0 * 1024),
         GetMemoryUsageMMAP(mmap_monitored_dir) / (1024.0 * 1024),
-        cur_user_cpu_time - last_user_cpu_time,
-        cur_sys_cpu_time - last_sys_cpu_time,
+        (cur_user_cpu_time - last_user_cpu_time) / time_diff,
+        (cur_sys_cpu_time - last_sys_cpu_time) / time_diff,
         (SSD_read_bytes - SSD_read_bytes_sp_) / (double) B2GB,
         (SSD_write_bytes - SSD_write_bytes_sp_) / (double) B2GB);
     log_file_.write(buf, size);
@@ -196,6 +202,7 @@ void PerformanceLogServer::Logging() {
     last_Client_Write_throughput = cur_Client_Write_throughput;
     last_user_cpu_time = cur_user_cpu_time;
     last_sys_cpu_time = cur_sys_cpu_time;
+    last_time = cur_time;
     // last_eviction_operation_count = cur_eviction_operation_count;
     // last_fetch_count = cur_fetch_count;
     // last_contention_count = cur_contention_count;

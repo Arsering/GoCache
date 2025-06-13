@@ -209,6 +209,40 @@ class BufferPoolManager {
             free_list_usage};
   }
 
+  #if PROFILE_HIT
+  mutable std::atomic<uint64_t> temp_access_count_;
+  mutable std::atomic<uint64_t> temp_miss_count_;
+  mutable std::atomic<uint64_t> total_access_count_;
+  mutable std::atomic<uint64_t> total_miss_count_;
+  void add_temp_access_count(uint64_t num_page) const {
+    temp_access_count_.fetch_add(num_page);
+  }
+  void add_temp_miss_count(uint64_t num_page) const {
+    temp_miss_count_.fetch_add(num_page);
+  }
+  void add_total_access_count(uint64_t num_page) const {
+    total_access_count_.fetch_add(num_page);
+  }
+  void add_total_miss_count(uint64_t num_page) const {
+    total_miss_count_.fetch_add(num_page);
+  }
+  void reset_temp_count() const {
+    temp_access_count_.store(0);
+    temp_miss_count_.store(0);
+  }
+  void reset_total_count() const {
+    total_access_count_.store(0);
+    total_miss_count_.store(0);
+  }
+  void print_temp_miss_rate() const {
+    uint64_t access = temp_access_count_.load();
+    uint64_t miss = temp_miss_count_.load();
+    std::cout << "temp_access_count_: " << access
+              << " temp_miss_count_: " << miss
+              << " temp_miss_rate_: " << double(miss) / access << std::endl;
+  }
+#endif
+
  private:
   void RegisterFile(OSfile_handle_type fd);
 
@@ -331,6 +365,7 @@ class BufferPoolManager {
   // LockFreeQueue<async_BPM_request_type*> request_channel_{
   //     FIBER_CHANNEL_BUFFER_POOL};
   std::atomic<bool> stop_;
+
 };
 
 }  // namespace gbp

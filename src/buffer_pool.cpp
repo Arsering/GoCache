@@ -40,7 +40,7 @@ void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
   // replacer_ = new FIFOReplacer(page_table_);
   // replacer_ = new ClockReplacer(page_table_);
   // replacer_ = new LRUReplacer(page_table_);
-  // replacer_ = new LRUReplacer_v2(page_table_, pool_sizze_);
+  // replacer_ = new LRUReplacer_v2(page_table_, pool_size_);
 
   // replacer_ = new TwoQLRUReplacer(page_table_);
   // replacer_ = new SieveReplacer(page_table_);
@@ -298,11 +298,22 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
   if (ret.first) {  // 1.1
     return ret;
   }
+  #if PROFILE_HIT
+  if (gbp::warmup_mark() == 1) {
+    gbp::get_counter_global(12).fetch_add(1);
+    gbp::get_counter_global(14).fetch_add(1);
+  }
+  #endif
+  #if PROFILE_ACCESS
+  if(warmup_mark() == 1) {
+    uint64_t fpage_id_with_fd = (uint64_t)fd << 32 | fpage_id;
+    get_thread_logfile()<<1<<' '<<fpage_id_with_fd<<std::endl;
+  }
+#endif
   // if (gbp::warmup_mark() == 1)
   //   get_counter_global(11)++;
   // if (gbp::warmup_mark() == 1)
   //   as_atomic(disk_manager_->counts_[fd].second)++;
-
   auto stat = BP_async_request_type::Phase::Begin;
   size_t count = 0;
   while (true) {
