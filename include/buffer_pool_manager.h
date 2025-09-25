@@ -29,6 +29,8 @@
 #include "rw_lock.h"
 #include "utils.h"
 
+#include "vmcache.h"
+
 namespace gbp {
 struct batch_request_type {
   batch_request_type() = default;
@@ -121,6 +123,19 @@ class BufferPoolManager {
   const BufferBlock GetBlockBatch1(size_t file_offset, size_t block_size,
                                    GBPfile_handle_type fd) const;
 
+const BufferBlock GetBlock(
+      size_t file_offset, size_t block_size, GBPfile_handle_type fd = 0) const{
+        #if USING_DIRECT_CACHE
+            return GetBlockWithDirectCacheSync(file_offset,
+                                                             block_size,
+                                                             fd);
+#else
+
+    return GetBlockSync(file_offset, block_size,
+    fd);
+    #endif
+
+      }
   const BufferBlock GetBlockWithDirectCacheSync(
       size_t file_offset, size_t block_size, GBPfile_handle_type fd = 0) const;
   int SetBlock(const BufferBlock& buf, size_t file_offset, size_t block_size,

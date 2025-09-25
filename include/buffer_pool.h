@@ -27,6 +27,7 @@
 #include "replacer/fifo_replacer.h"
 #include "replacer/fifo_replacer_v2.h"
 
+
 #include "io_backend.h"
 #include "io_server.h"
 #include "logger.h"
@@ -40,6 +41,8 @@
 #include "replacer/sieve_replacer.h"
 #include "replacer/sieve_replacer_v2.h"
 #include "replacer/sieve_replacer_v3.h"
+#include "replacer/sieve_replacer_v4.h"
+
 #include "rw_lock.h"
 
 #include "eviction_server.h"
@@ -246,8 +249,8 @@ class BufferPool {
     auto [success, mpage_id] = page_table_->FindMapping(fd, fpage_id);
     if (success) {
       auto pte = page_table_->FromPageId(mpage_id);
-      // auto [has_inc, pre_ref_count] = tar->IncRefCount(fpage_id_inpool, fd);
-      auto has_inc = pte->IncRefCount1(fpage_id, fd);
+      auto has_inc = pte->IncRefCount(fpage_id, fd);
+      // auto has_inc = pte->IncRefCount1(fpage_id, fd);
 
       if (has_inc) {
         assert(replacer_->Promote(page_table_->ToPageId(pte)));

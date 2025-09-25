@@ -376,7 +376,7 @@ class BufferBlockImp9 {
     return ret;
   }
 
- private:
+// private:
   bool LoadPage(size_t page_id) const;
 
   FORCE_INLINE int Compare_inner(const std::string_view right,
@@ -434,9 +434,7 @@ class BufferBlockImp9 {
 
   template <class OBJ_Type>
   FORCE_INLINE OBJ_Type* Decode(size_t idx = 0) const {
-#ifdef DEBUG_
-    size_t st = gbp::GetSystemTime();
-#endif
+    // auto t1 = gbp::GetSystemTime();
 
     constexpr size_t OBJ_NUM_PERPAGE = PAGE_SIZE_MEMORY / sizeof(OBJ_Type);
 #if ASSERT_ENABLE
@@ -472,24 +470,18 @@ class BufferBlockImp9 {
     assert(((uintptr_t) ret / PAGE_SIZE_MEMORY + 1) * PAGE_SIZE_MEMORY >=
            (uintptr_t) (ret + sizeof(OBJ_Type)));
 #endif
-#ifdef DEBUG_
-    st = gbp::GetSystemTime() - st;
-    gbp::get_counter(1) += st;
-    gbp::get_counter(2)++;
-#endif
+
 #if ASSERT_ENABLE
     assert(ret != nullptr);
 #endif
+  //   t1 = gbp::GetSystemTime()-t1;
+  // gbp::get_counter_local(11) += t1; 
     return reinterpret_cast<OBJ_Type*>(ret);
   }
 
- private:
+//  private:
   template <class OBJ_Type>
   FORCE_INLINE pair_min<OBJ_Type*, PTE*> DecodeWithPTE(size_t idx = 0) const {
-#ifdef DEBUG_
-    size_t st = gbp::GetSystemTime();
-#endif
-
     constexpr size_t OBJ_NUM_PERPAGE = PAGE_SIZE_MEMORY / sizeof(OBJ_Type);
 #if ASSERT_ENABLE
     // FIXME: 不够准确
@@ -530,11 +522,7 @@ class BufferBlockImp9 {
     assert(((uintptr_t) ret / PAGE_SIZE_MEMORY + 1) * PAGE_SIZE_MEMORY >=
            (uintptr_t) (ret + sizeof(OBJ_Type)));
 #endif
-#ifdef DEBUG_
-    st = gbp::GetSystemTime() - st;
-    gbp::get_counter(1) += st;
-    gbp::get_counter(2)++;
-#endif
+
 #if ASSERT_ENABLE
     assert(ret != nullptr);
 #endif

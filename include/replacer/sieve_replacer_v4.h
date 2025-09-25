@@ -10,18 +10,18 @@
 
 namespace gbp {
 
-class SieveReplacer_v3 : public Replacer<mpage_id_type> {
+class SieveReplacer_v4 : public Replacer<mpage_id_type> {
  public:
   // do not change public interface
-  SieveReplacer_v3(PageTable* page_table, mpage_id_type capacity)
+  SieveReplacer_v4(PageTable* page_table, mpage_id_type capacity)
       : list_(capacity), page_table_(page_table) {
     pointer_ = list_.head_;
   }
 
-  SieveReplacer_v3(const SieveReplacer_v3& other) = delete;
-  SieveReplacer_v3& operator=(const SieveReplacer_v3&) = delete;
+  SieveReplacer_v4(const SieveReplacer_v4& other) = delete;
+  SieveReplacer_v4& operator=(const SieveReplacer_v4&) = delete;
 
-  ~SieveReplacer_v3() override {}
+  ~SieveReplacer_v4() override {}
 
   bool Insert(mpage_id_type value) override {
 #if EVICTION_SYNC_ENABLE
@@ -32,7 +32,7 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
     assert(!list_.inList(value));
 #endif
 
-    list_.getValue(value).store(0);
+    // list_.getValue(value).store(0);
     assert(list_.moveToFront(value));
     return true;
   }
@@ -42,7 +42,10 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
     assert(list_.inList(value));
 #endif
 
-    list_.getValue(value).store(1);
+    // list_.getValue(value).store(1);
+    auto pte = page_table_->FromPageId(value);
+    as_atomic(pte->AsPacked()).fetch_or(1<<28);
+
     return true;
 
     // return ret;
@@ -67,11 +70,33 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
         assert(false);
         return false;
       }
-      while (list_.getValue(to_evict).load() > 0) {
-        list_.getValue(to_evict).fetch_sub(1);
+      // while (list_.getValue(to_evict).load() > 0) {
+      //   list_.getValue(to_evict).fetch_sub(1);
+      //   to_evict = Hop(to_evict);
+      // }
+      const uint64_t mask_visited =  ~(1LL << 28);
+      while (true) {
+        // pte = page_table_->FromPageId(to_evict);
+        // uint64_t old_pte = as_atomic(pte->AsPacked()).fetch_and(mask_visited);
+        // if (PTE::FromPacked(old_pte).visited!=list_.getValue(to_evict).load() > 0){
+        //   assert(false);
+        // }
+        // if(list_.getValue(to_evict).load() > 0){
+        // list_.getValue(to_evict).fetch_sub(1);
+        // }else{
+        //   break;
+        // }
+
+        pte = page_table_->FromPageId(to_evict);
+        uint64_t old_pte = as_atomic(pte->AsPacked()).fetch_and(mask_visited);
+        if (!PTE::FromPacked(old_pte).visited){
+          break;
+        }
+
         to_evict = Hop(to_evict);
       }
-      pte = page_table_->FromPageId(to_evict);
+
+      // pte = page_table_->FromPageId(to_evict);
       if (pte->ref_count != 0) {  // FIXME: 可能对cache hit ratio有一定的损伤
         count--;
 

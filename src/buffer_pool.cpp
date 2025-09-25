@@ -46,7 +46,9 @@ void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
   // replacer_ = new SieveReplacer(page_table_);
   // replacer_ = new SieveReplacer_v2(page_table_, pool_size_);
   // replacer_ = new FIFOReplacer_v2(page_table_, pool_size_);
+  // replacer_ = new SieveReplacer_v3(page_table_, pool_size_);
   replacer_ = new SieveReplacer_v3(page_table_, pool_size_);
+
   // replacer_ = new ClockReplacer_v2(page_table_, pool_size_);
 
   for (int i = 0; i < disk_manager_->fd_oss_.size(); i++) {
@@ -291,11 +293,18 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
 #if ASSERT_ENABLE
   assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
 #endif
+
   auto ret = Pin(fpage_id, fd);
   // if (gbp::warmup_mark() == 1) {
   //   as_atomic(disk_manager_->counts_[fd].first)++;
   // }
+  // if (gbp::warmup_mark() == 1) {
+  //   gbp::get_counter_local(10)++;
+  // }
   if (ret.first) {  // 1.1
+    // if (gbp::warmup_mark() == 1) {
+    //   gbp::get_counter_local(11)++;
+    // }
     return ret;
   }
   // if (gbp::warmup_mark() == 1)

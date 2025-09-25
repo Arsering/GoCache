@@ -480,7 +480,8 @@ class BufferBlockImp7 {
     return reinterpret_cast<OBJ_Type*>(ret);
   }
 
- private:
+//  private:
+public:
   template <class OBJ_Type>
   FORCE_INLINE pair_min<OBJ_Type*, PTE*> DecodeWithPTE(size_t idx = 0) const {
     constexpr size_t OBJ_NUM_PERPAGE = PAGE_SIZE_MEMORY / sizeof(OBJ_Type);

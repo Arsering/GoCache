@@ -1427,4 +1427,50 @@ using BufferBlock = BufferBlockImp7;
 
 #endif
 
+template <typename OBJ_Type>
+class BufferBlockIter {
+ public:
+  BufferBlockIter() = default;
+  BufferBlockIter(const BufferBlock& buffer_obj) {
+    buffer_obj_ = &buffer_obj;
+    cur_page_id_ = 0;
+    if (buffer_obj_->page_num_ > 1) {        
+            cur_ptr_ = reinterpret_cast<OBJ_Type*>(buffer_obj_->datas_.datas[0]);
+    }
+    else{
+      cur_ptr_ = reinterpret_cast<OBJ_Type*>(buffer_obj_->datas_.data);
+    }   
+    cur_page_num_rest_ =
+                  (PAGE_SIZE_MEMORY -
+                  ((uintptr_t) cur_ptr_ % PAGE_SIZE_MEMORY)) /
+                  sizeof(OBJ_Type);              
+    cur_page_num_rest_--;
+
+  }
+  ~BufferBlockIter() = default;
+
+  FORCE_INLINE OBJ_Type* next() {
+    if (likely(cur_page_num_rest_ > 0)) {
+      cur_page_num_rest_--;
+      cur_ptr_++;
+    } else {
+      cur_page_id_++;
+      if(cur_page_id_ >= buffer_obj_->page_num_){
+        cur_ptr_ = nullptr;
+      }else {
+      cur_ptr_ = reinterpret_cast<OBJ_Type*>(buffer_obj_->datas_.datas[cur_page_id_]);
+      cur_page_num_rest_ = PAGE_SIZE_MEMORY / sizeof(OBJ_Type) - 1;
+      }
+    }
+    return cur_ptr_;
+  }
+  FORCE_INLINE OBJ_Type* current() const { return cur_ptr_; }
+
+ private:
+  const BufferBlock* buffer_obj_;
+  uint16_t cur_page_id_;
+  uint16_t cur_page_num_rest_;
+  OBJ_Type* cur_ptr_;
+};
+
 }  // namespace gbp

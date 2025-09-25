@@ -43,4 +43,5 @@ void test_csv(const std::string& file_path);
 void test_vertex(const std::string& config_file_path,
                  const std::string& data_file_path,
                  const std::string& db_dir_path);
+int test_VMCache();
 }  // namespace test

@@ -9,6 +9,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <bitset>
+#include <cstdint>
 #include <filesystem>
 #include <iostream>
 #include <string>
@@ -84,6 +85,7 @@ void read_mmap(char* data_file_mmaped, size_t file_size_inByte,
   size_t curr_io_fileoffset, ret, offset_tmp;
   size_t st, io_id, io_size;
   int count = 1;
+
   while (count != 0) {
     count--;
     // size_t query_count = get_trace_global()[thread_id].size();
@@ -98,16 +100,15 @@ void read_mmap(char* data_file_mmaped, size_t file_size_inByte,
       //         rnd(gen) % (io_num / ZipfianGenerator::GetGen().GetN());
       // io_id = fileoffsetgenerator::GetGen().generate_offset() /
       // sizeof(size_t);
-      // io_id = rnd(gen);
+      io_id = rnd(gen);
       //   // io_size = rnd_io_size(gen) * sizeof(size_t);
       //   io_size = 8 * 512;
       io_size = io_size_in;
-      io_id = io_id / 512 * 512;
 
       curr_io_fileoffset = start_offset + io_id * sizeof(size_t);
       // curr_io_fileoffset =
       //     get_trace_global()[thread_id][query_count] - 139874067804160;
-      io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
+      // io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
 
 #ifdef DEBUG_1
       st = gbp::GetSystemTime();
@@ -124,10 +125,13 @@ void read_mmap(char* data_file_mmaped, size_t file_size_inByte,
             //                                           i * sizeof(size_t))
             //             << " | " << (curr_io_fileoffset / sizeof(size_t) + i)
             //             << std::endl;
+
             assert(*reinterpret_cast<size_t*>(data_file_mmaped +
                                               curr_io_fileoffset +
                                               i * sizeof(size_t)) ==
                    (curr_io_fileoffset / sizeof(size_t) + i));
+                   break;
+
           }
         }
       }
@@ -194,7 +198,7 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
     io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
 
     // st = gbp::GetSystemTime();
-    size_t id_in_batch = 0;
+    size_t id_in_batch = 10;
     while (batch_size != id_in_batch) {
       io_id = rnd(gen);
       io_size = io_size_in;
@@ -241,6 +245,7 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
     //   for (size_t i = 0; i < block.Size() / sizeof(size_t); i++) {
     //     assert(gbp::BufferBlock::Ref<size_t>(block, i) ==
     //            (requests[req_idx].file_offset_ / sizeof(size_t) + i));
+    //            break;
     //   }
     // }
 
@@ -767,6 +772,14 @@ int test_concurrency(int argc, char** argv) {
   ssd_io_byte = std::get<0>(gbp::SSD_io_bytes()) - ssd_io_byte;
   std::cout << "SSD IO = " << ssd_io_byte << "B" << std::endl;
 
+  return 0;
+}
+
+int test_VMCache(){
+
+  auto& vmCache = gbp::VMCache::GetGlobalInstance();
+  vmCache.load(0);
+  vmCache.evict(0);
   return 0;
 }
 }  // namespace test

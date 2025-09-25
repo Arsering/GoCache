@@ -119,7 +119,6 @@ class PageTableInner {
       std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
       uint64_t old_packed = atomic_packed.load(std::memory_order_relaxed),
                new_packed;
-      uint16_t old_ref_count;
 
       do {
         new_packed = old_packed;
@@ -134,13 +133,12 @@ class PageTableInner {
                (std::numeric_limits<uint16_t>::max() >> 2) - 1);
         assert(fd < (std::numeric_limits<uint16_t>::max() >> 2) - 1);
 #endif
+// 检查文件页信息是有必要的，防止在refcount+1期间，文件页信息被修改
         if (new_unpacked.fpage_id_cur != fpage_id ||
             new_unpacked.fd_cur != fd) {
           return false;
         }
 
-        old_ref_count = new_unpacked.ref_count;
-        // new_unpacked.ref_count++;
         new_packed++;
       } while (!atomic_packed.compare_exchange_weak(old_packed, new_packed,
                                                     std::memory_order_release,
@@ -148,7 +146,9 @@ class PageTableInner {
       return true;
     }
 
+
     // 需要获得文件页的相关信息，因为该内存页可能被用于存储其他文件页
+    // 该调用的问题：refcount可能会超过其最大值！！！
     FORCE_INLINE bool IncRefCount1(fpage_id_type fpage_id,
                                    GBPfile_handle_type fd) {
       std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
@@ -292,7 +292,8 @@ class PageTableInner {
 
    public:
     uint16_t ref_count : 16;
-    GBPfile_handle_type fd_cur : 13;
+    GBPfile_handle_type fd_cur : 12;
+    bool visited: 1;
     bool initialized : 1;
     bool dirty : 1;
     bool busy : 1;
@@ -304,7 +305,7 @@ class PageTableInner {
     PTE ptes[8];
 
     constexpr static size_t NUM_PACK_PAGES = 8;
-    constexpr static PTE EMPTY_PTE = {0, INVALID_FILE_HANDLE >> 3, 0, 0,
+    constexpr static PTE EMPTY_PTE = {0, INVALID_FILE_HANDLE >> 4, 0, 0,0,
                                       0, INVALID_PAGE_ID};
   };
 

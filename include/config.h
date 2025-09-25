@@ -7,7 +7,7 @@
 #pragma once
 
 // #define GRAPHSCOPE
-#define USING_DIRECT_CACHE true
+#define USING_DIRECT_CACHE false
 #define ASSERT_ENABLE false
 #define EVICTION_SYNC_ENABLE true
 #define LAZY_SSD_IO_NEW false
@@ -31,6 +31,7 @@
 #define FORCE_INLINE __attribute__((always_inline))
 #define likely(x) __builtin_expect((x), 1)
 #define unlikely(x) __builtin_expect((x), 0)
+
 
 #define LBMalloc(size) ::malloc(size)
 #define LBFree(p) ::free(p)
@@ -59,7 +60,7 @@ using GBPfile_handle_type = uint32_t;
 using OSfile_handle_type = uint32_t;
 using partition_id_type = uint32_t;
 
-constexpr size_t DIRECT_CACHE_SIZE = 256 * 8;
+constexpr size_t DIRECT_CACHE_SIZE = 256 *4;
 
 constexpr bool WAL_ENABLE = false;
 constexpr bool PERSISTENT = true;

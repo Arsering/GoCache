@@ -26,6 +26,7 @@ std::string get_stack_trace() {
   free(strs);
   return ret;
 }
+
 size_t GetSystemTime() {
   size_t hi, lo;
   __asm__ __volatile__("" : : : "memory");

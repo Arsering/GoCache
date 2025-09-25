@@ -928,7 +928,12 @@ const BufferBlock BufferPoolManager::GetBlockBatch1(
 
 const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(
     size_t file_offset, size_t block_size, GBPfile_handle_type fd) const {
+      // auto t1 = gbp::GetSystemTime();
+
   if (block_size == 0) {
+  // t1 = gbp::GetSystemTime()-t1;
+  // gbp::get_counter_local(10) += t1; 
+
     return BufferBlock();
   }
 
@@ -998,6 +1003,8 @@ const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(
   // }
 
   // gbp::get_counter_global(11).fetch_add(ret.PageNum());
+  //   t1 = gbp::GetSystemTime()-t1;
+  // gbp::get_counter_local(10) += t1; 
   return ret;
 }
 
