@@ -26,6 +26,8 @@
 #include "replacer/clock_replacer_v2.h"
 #include "replacer/fifo_replacer.h"
 #include "replacer/fifo_replacer_v2.h"
+#include "replacer/TwoQ.h"
+#include "replacer/ARC.h"
 
 
 #include "io_backend.h"

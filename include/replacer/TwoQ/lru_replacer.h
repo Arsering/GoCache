@@ -18,22 +18,22 @@
 #include <unordered_map>
 #include <vector>
 
-#include "flex/graphscope_bufferpool/include/utils.h"
-#include "replacer.h"
+#include "../replacer.h"
+
 
 namespace gbp {
 
-class LRUReplacer_v2 : public Replacer<mpage_id_type> {
+class LRUReplacer  {
  public:
   // do not change public interface
-  LRUReplacer_v2(PageTable* page_table, mpage_id_type capacity)
+  LRUReplacer(PageTable* page_table, mpage_id_type capacity)
       : list_(capacity), page_table_(page_table) {}
-  LRUReplacer_v2(const LRUReplacer_v2& other) = delete;
-  LRUReplacer_v2& operator=(const LRUReplacer_v2&) = delete;
+  LRUReplacer(const LRUReplacer& other) = delete;
+  LRUReplacer& operator=(const LRUReplacer&) = delete;
 
-  ~LRUReplacer_v2() override = default;
+  ~LRUReplacer()  = default;
 
-  bool Insert(mpage_id_type value) override {
+  bool Insert(mpage_id_type value)  {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
@@ -42,10 +42,11 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
 #endif
 
     list_.getValue(value) = 0;
-    return list_.insertToFront(value, 0);
+    assert(list_.moveToFront(value));
+    return true;
   }
 
-  bool Promote(mpage_id_type value) override {
+  bool Promote(mpage_id_type value)  {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
@@ -54,27 +55,21 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
 #endif
     // bool ret = false;
 
-    return list_.moveToFront(value);
+    assert(list_.moveToFront(value));
+    return true;
+
+    // return ret;
   }
 
-  bool Victim(mpage_id_type& mpage_id) override {
+  bool Victim(mpage_id_type& mpage_id)  {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
     ListArray<listarray_value_type>::index_type nodeIndex = list_.GetTail();
-    if (nodeIndex == list_.head_){
-      return false;
-    }
-    size_t stop_count = 5;
     while (true) {
-      if (nodeIndex == list_.head_){
-        nodeIndex = list_.GetTail();
-        stop_count--;
-        if(stop_count==0){
-          return false;
-        }
-      }
+      if (nodeIndex == list_.head_)
+        return false;
 
       auto* pte = page_table_->FromPageId(nodeIndex);
       if (pte->ref_count != 0) {
@@ -101,7 +96,7 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
   }
 
   bool Victim(std::vector<mpage_id_type>& value,
-              mpage_id_type page_num) override {
+              mpage_id_type page_num)  {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
@@ -117,7 +112,7 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
     }
   }
 
-  bool Erase(mpage_id_type value) override {
+  bool Erase(mpage_id_type value)  {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
@@ -126,14 +121,14 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
     return true;
   }
 
-  size_t Size() const override {
+  size_t Size() const  {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
     return list_.size();
   }
 
-  size_t GetMemoryUsage() const override { return list_.GetMemoryUsage(); }
+  size_t GetMemoryUsage() const  { return list_.GetMemoryUsage(); }
 
  private:
   using listarray_value_type = uint8_t;

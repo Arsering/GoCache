@@ -29,9 +29,7 @@ class SieveReplacer_v2 : public Replacer<mpage_id_type> {
 #endif
     bool ret = false;
     if (!list_.inList(value)) {
-      list_.getValue(value) = false;
-      assert(list_.moveToFront(value));
-      ret = true;
+      ret = list_.insertToFront(value, false);
     }
     return ret;
   }

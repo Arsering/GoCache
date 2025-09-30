@@ -31,10 +31,8 @@ class SieveReplacer_v3 : public Replacer<mpage_id_type> {
 #if ASSERT_ENABLE
     assert(!list_.inList(value));
 #endif
-
-    list_.getValue(value).store(0);
-    assert(list_.moveToFront(value));
-    return true;
+    list_.getValue(value) = 0;
+    return list_.insertToFront(value);
   }
 
   FORCE_INLINE bool Promote(mpage_id_type value) override {

@@ -1,4 +1,6 @@
 #include "../include/buffer_pool.h"
+#include <flat_hash_map/flat_hash_map.hpp>
+#include "flex/graphscope_bufferpool/include/logger.h"
 
 namespace gbp {
 
@@ -47,7 +49,11 @@ void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
   // replacer_ = new SieveReplacer_v2(page_table_, pool_size_);
   // replacer_ = new FIFOReplacer_v2(page_table_, pool_size_);
   // replacer_ = new SieveReplacer_v3(page_table_, pool_size_);
-  replacer_ = new SieveReplacer_v3(page_table_, pool_size_);
+  // replacer_ = new SieveReplacer_v4(page_table_, pool_size_);
+    replacer_ = new TwoQ(page_table_, pool_size_);
+    // replacer_ = new ARC(page_table_, pool_size_);
+
+
 
   // replacer_ = new ClockReplacer_v2(page_table_, pool_size_);
 
@@ -339,6 +345,7 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
     }
     case BP_async_request_type::Phase::Initing: {  // 1.2
       mpage_id_type mpage_id;
+      // get_counter_local(20) = 1; // for eviction policy ARC
       if (free_list_->Poll(mpage_id)) {
         stat = BP_async_request_type::Phase::Loading;
       } else {
@@ -362,6 +369,9 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
             assert(false);
             break;
           }
+
+          // get_counter_local(20) =  static_cast<ARC*>(replacer_)->Victim(mpage_id,fd,fpage_id);
+        
         }
         stat = BP_async_request_type::Phase::Evicting;
       }
@@ -428,6 +438,7 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
       tmp.fd_cur = fd;
       as_atomic(ret.first->AsPacked()).store(tmp.AsPacked());
       assert(replacer_->Insert(page_table_->ToPageId(ret.first)));
+      // assert(static_cast<ARC*>(replacer_)->Insert(page_table_->ToPageId(ret.first), get_counter_local(20)));
 
       std::atomic_thread_fence(std::memory_order_release);
       assert(page_table_->CreateMapping(fd, fpage_id,

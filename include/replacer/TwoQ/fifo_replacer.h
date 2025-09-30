@@ -10,42 +10,43 @@
 #pragma once
 
 #include <assert.h>
+#include <cstdint>
 #include <iostream>
 #include <map>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
 
-#include "replacer.h"
+#include "../replacer.h"
 
 namespace gbp {
 
-class FIFOReplacer_v2 : public Replacer<mpage_id_type> {
+class FIFOReplacer {
  public:
   // do not change public interface
-  FIFOReplacer_v2(PageTable* page_table, mpage_id_type capacity)
+  FIFOReplacer(PageTable* page_table, mpage_id_type capacity)
       : list_(capacity), page_table_(page_table) {}
-  FIFOReplacer_v2(const FIFOReplacer_v2& other) = delete;
-  FIFOReplacer_v2& operator=(const FIFOReplacer_v2&) = delete;
+  FIFOReplacer(const FIFOReplacer& other) = delete;
+  FIFOReplacer& operator=(const FIFOReplacer&) = delete;
 
-  ~FIFOReplacer_v2() override = default;
+  ~FIFOReplacer()  = default;
 
-  bool Insert(mpage_id_type value) override {
+  bool Insert(mpage_id_type value)  {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
     bool ret = false;
     if (!list_.inList(value)) {
-      assert(list_.insertToFront(value,0));
+      assert(list_.moveToFront(value));
       ret = true;
     }
     return ret;
   }
 
-  bool Promote(mpage_id_type value) override { return true; }
+  bool Promote(mpage_id_type value)  { return true; }
 
-  bool Victim(mpage_id_type& mpage_id) override {
+  bool Victim(mpage_id_type& mpage_id, uint64_t fpage_key)  {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
@@ -62,8 +63,10 @@ class FIFOReplacer_v2 : public Replacer<mpage_id_type> {
           pte_unpacked.fd_cur, pte_unpacked.fpage_id_cur);
 
       if (locked && pte->ref_count == 0 &&
-          mpage_id != PageMapping::Mapping::EMPTY_VALUE)
-        break;
+          mpage_id != PageMapping::Mapping::EMPTY_VALUE){
+            break;
+
+          }
 
       if (locked)
         assert(page_table_->UnLockMapping(pte->fd_cur, pte->fpage_id_cur,
@@ -78,7 +81,7 @@ class FIFOReplacer_v2 : public Replacer<mpage_id_type> {
   }
 
   bool Victim(std::vector<mpage_id_type>& mpage_ids,
-              mpage_id_type page_num) override {
+              mpage_id_type page_num)  {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
@@ -118,11 +121,11 @@ class FIFOReplacer_v2 : public Replacer<mpage_id_type> {
 
     return true;
   }
-  bool Clean() override {
+  bool Clean()  {
     list_.Clean();
     return true;
   }
-  bool Erase(mpage_id_type value) override {
+  bool Erase(mpage_id_type value)  {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
@@ -130,7 +133,7 @@ class FIFOReplacer_v2 : public Replacer<mpage_id_type> {
     list_.removeFromIndex(value);
     return true;
   }
-  size_t Size() const override {
+  size_t Size() const  {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
@@ -138,7 +141,7 @@ class FIFOReplacer_v2 : public Replacer<mpage_id_type> {
     return list_.size();
   }
 
-  size_t GetMemoryUsage() const override { return list_.GetMemoryUsage(); }
+  size_t GetMemoryUsage() const  { return list_.GetMemoryUsage(); }
 
  private:
   ListArray<mpage_id_type> list_;

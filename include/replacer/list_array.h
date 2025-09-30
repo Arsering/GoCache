@@ -40,7 +40,7 @@ class ListArray {
 
   // 移动到队首
   FORCE_INLINE bool moveToFront(index_type nodeIndex) {
-    if (nodeIndex >= capacity_)
+    if (nodeIndex >= capacity_ || !inList(nodeIndex))
       return false;
 
     removeNode(nodeIndex);
@@ -48,16 +48,23 @@ class ListArray {
     return true;
   }
 
-  // 移动到队首
-  FORCE_INLINE bool insertToFront(index_type nodeIndex, value_type value) {
-    if (nodeIndex >= capacity_)
+  // 插到队首
+  FORCE_INLINE bool insertToFront(index_type nodeIndex) {
+    if (nodeIndex >= capacity_){
       return false;
+    }
 
-    nodes_[nodeIndex] = value;
     removeNode(nodeIndex);
     addNodeToFront(nodeIndex);
 
     return true;
+  }
+
+  // 插到队首
+  FORCE_INLINE bool insertToFront(index_type nodeIndex, value_type value) {
+    nodes_[nodeIndex] = value;
+
+    return insertToFront(nodeIndex);
   }
 
   // 从nodes数组的index上删除
@@ -66,8 +73,6 @@ class ListArray {
       return false;
 
     removeNode(nodeIndex);
-    size_--;
-
     return true;
   }
 
@@ -148,6 +153,8 @@ class ListArray {
     nodes_[nodes_[nodeIndex].prev].next = nodes_[nodeIndex].next;
     nodes_[nodes_[nodeIndex].next].prev = nodes_[nodeIndex].prev;
     nodes_[nodeIndex].next = nodes_[nodeIndex].prev = INVALID_INDEX;
+    size_--;
+
     return true;
   }
 
@@ -158,6 +165,7 @@ class ListArray {
 
     nodes_[nodes_[head_].next].prev = nodeIndex;
     nodes_[head_].next = nodeIndex;
+    size_++;
   }
 
   // 添加节点到队尾

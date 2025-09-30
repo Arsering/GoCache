@@ -10,6 +10,7 @@ make -j
 
 
 
+
 if [ $? -ne 0 ]; then
     echo -e "\033[41;36m Compile failed \033[0m"
     exit
@@ -22,10 +23,10 @@ cd ..
 CUR_DIR=.
 
 export FILE_SIZE_MB=$((10*1024))
-export WORKER_NUM=1
+export WORKER_NUM=10
 export POOL_NUM=1
-export IO_SERVER_NUM=4
-export POOL_SIZE_MB=$(python3 -c "print(int(5*1024))")
+export IO_SERVER_NUM=1
+export POOL_SIZE_MB=$(python3 -c "print(int(9*1024))")
 export IO_SIZE_Byte=$((512*8))
 # export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD
 # 2 3 4 5 7 9 11 13 15 20 25 30

@@ -198,7 +198,7 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
     io_size = std::min(io_size, file_size_inByte - curr_io_fileoffset);
 
     // st = gbp::GetSystemTime();
-    size_t id_in_batch = 10;
+    size_t id_in_batch = 1;
     while (batch_size != id_in_batch) {
       io_id = rnd(gen);
       io_size = io_size_in;
@@ -235,30 +235,30 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
       id_in_batch++;
     }
 
-    // for (auto req_idx = 0; req_idx < batch_size; req_idx++) {
-    //   // auto block = bpm.GetBlockBatch1(requests[req_idx].file_offset_,
-    //   //                                 requests[req_idx].block_size_,
-    //   //                                 requests[req_idx].fd_);
-    //   auto block = bpm.GetBlockSync(requests[req_idx].file_offset_,
-    //                                 requests[req_idx].block_size_,
-    //                                 requests[req_idx].fd_);
-    //   for (size_t i = 0; i < block.Size() / sizeof(size_t); i++) {
-    //     assert(gbp::BufferBlock::Ref<size_t>(block, i) ==
-    //            (requests[req_idx].file_offset_ / sizeof(size_t) + i));
-    //            break;
-    //   }
-    // }
-
-    std::vector<BufferBlock> results;
-    results.reserve(batch_size);
-    bpm.GetBlockBatch(requests, results);
-    for (size_t i = 0; i < batch_size; i++) {
-      auto& item = results[i];
-      for (size_t j = 0; j < item.GetSize() / sizeof(size_t); j++) {
-        assert(gbp::BufferBlock::Ref<size_t>(item, j) ==
-               (requests[i].file_offset_ / sizeof(size_t) + j));
+    for (auto req_idx = 0; req_idx < batch_size; req_idx++) {
+      // auto block = bpm.GetBlockBatch1(requests[req_idx].file_offset_,
+      //                                 requests[req_idx].block_size_,
+      //                                 requests[req_idx].fd_);
+      auto block = bpm.GetBlockSync(requests[req_idx].file_offset_,
+                                    requests[req_idx].block_size_,
+                                    requests[req_idx].fd_);
+      for (size_t i = 0; i < block.Size() / sizeof(size_t); i++) {
+        assert(gbp::BufferBlock::Ref<size_t>(block, i) ==
+               (requests[req_idx].file_offset_ / sizeof(size_t) + i));
+               break;
       }
     }
+
+    // std::vector<BufferBlock> results;
+    // results.reserve(batch_size);
+    // bpm.GetBlockBatch(requests, results);
+    // for (size_t i = 0; i < batch_size; i++) {
+    //   auto& item = results[i];
+    //   for (size_t j = 0; j < item.GetSize() / sizeof(size_t); j++) {
+    //     assert(gbp::BufferBlock::Ref<size_t>(item, j) ==
+    //            (requests[i].file_offset_ / sizeof(size_t) + j));
+    //   }
+    // }
 
     // for (size_t i = 0; i < batch_size; i++) {
     //   auto item = block_container[i].get();

@@ -32,9 +32,9 @@ class SieveReplacer_v4 : public Replacer<mpage_id_type> {
     assert(!list_.inList(value));
 #endif
 
-    // list_.getValue(value).store(0);
-    assert(list_.moveToFront(value));
-    return true;
+
+    list_.getValue(value) = 0;
+    return list_.insertToFront(value);
   }
 
   FORCE_INLINE bool Promote(mpage_id_type value) override {
@@ -70,22 +70,8 @@ class SieveReplacer_v4 : public Replacer<mpage_id_type> {
         assert(false);
         return false;
       }
-      // while (list_.getValue(to_evict).load() > 0) {
-      //   list_.getValue(to_evict).fetch_sub(1);
-      //   to_evict = Hop(to_evict);
-      // }
       const uint64_t mask_visited =  ~(1LL << 28);
       while (true) {
-        // pte = page_table_->FromPageId(to_evict);
-        // uint64_t old_pte = as_atomic(pte->AsPacked()).fetch_and(mask_visited);
-        // if (PTE::FromPacked(old_pte).visited!=list_.getValue(to_evict).load() > 0){
-        //   assert(false);
-        // }
-        // if(list_.getValue(to_evict).load() > 0){
-        // list_.getValue(to_evict).fetch_sub(1);
-        // }else{
-        //   break;
-        // }
 
         pte = page_table_->FromPageId(to_evict);
         uint64_t old_pte = as_atomic(pte->AsPacked()).fetch_and(mask_visited);
@@ -96,15 +82,10 @@ class SieveReplacer_v4 : public Replacer<mpage_id_type> {
         to_evict = Hop(to_evict);
       }
 
-      // pte = page_table_->FromPageId(to_evict);
       if (pte->ref_count != 0) {  // FIXME: 可能对cache hit ratio有一定的损伤
         count--;
 
-        // // TODO:可能效果不好
-        // list_.getValue(to_evict) = 1;
-
         to_evict = Hop(to_evict);
-
         continue;
       }
       auto pte_unpacked = pte->ToUnpacked();
@@ -120,8 +101,6 @@ class SieveReplacer_v4 : public Replacer<mpage_id_type> {
         assert(page_table_->UnLockMapping(pte->fd_cur, pte->fpage_id_cur,
                                           mpage_id));
       count--;
-      // // TODO:可能效果不好
-      // list_.getValue(to_evict) = 1;
 
       to_evict = Hop(to_evict);
     }
@@ -130,11 +109,9 @@ class SieveReplacer_v4 : public Replacer<mpage_id_type> {
     mpage_id = to_evict;
     list_.removeFromIndex(to_evict);
 
-
-    // GBPLOG << mpage_id;
-
     return true;
   }
+
   FORCE_INLINE size_t Hop(size_t current){
 
     return list_.getPrevNodeIndex(current) == list_.head_

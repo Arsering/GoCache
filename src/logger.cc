@@ -182,15 +182,15 @@ void PerformanceLogServer::Logging() {
 
     size = ::snprintf(
         buf, 4096,
-        "%-25lf%-25lf%-25lf%-25lf%-25lu%-25lf%-25lf%-25lu%-25lu%-25lf%-25lf\n",
+        "%-25lf%-25lf%-25lf%-25lf%-25lf%-25lf%-25lf%-25lf%-25lf%-25lf%-25lf\n",
         (cur_Client_Read_throughput - last_Client_Read_throughput) /time_len/
             (double) B2GB,
         (cur_Client_Write_throughput - last_Client_Write_throughput) /time_len/
             (double) B2GB,
         (SSD_read_bytes - last_SSD_read_bytes) /time_len/ (double) B2GB,
         (SSD_write_bytes - last_SSD_write_bytes) /time_len/ (double) B2GB,
-        (shootdowns - last_shootdowns)/time_len, GetMemoryUsage() /time_len/ (1024.0 * 1024),
-        GetMemoryUsageMMAP(mmap_monitored_dir) /time_len/ (1024.0 * 1024),
+        (shootdowns - last_shootdowns)/time_len, GetMemoryUsage() / (1024.0 * 1024),
+        GetMemoryUsageMMAP(mmap_monitored_dir) / (1024.0 * 1024),
         (cur_user_cpu_time - last_user_cpu_time)/time_len,
         (cur_sys_cpu_time - last_sys_cpu_time)/time_len,
         (SSD_read_bytes - SSD_read_bytes_sp_) / (double) B2GB,
