@@ -1,6 +1,7 @@
 #include "../include/buffer_pool_manager.h"
 
-#include "cgraph/vertex.h"
+// #include "cgraph/vertex.h"
+#include "vmcache/vmcache.h"
 
 namespace test {
 

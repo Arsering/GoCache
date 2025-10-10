@@ -123,24 +123,36 @@ class BufferPoolManager {
   const BufferBlock GetBlockBatch1(size_t file_offset, size_t block_size,
                                    GBPfile_handle_type fd) const;
 
-const BufferBlock GetBlock(
-      size_t file_offset, size_t block_size, GBPfile_handle_type fd = 0) const{
-        #if USING_DIRECT_CACHE
-            return GetBlockWithDirectCacheSync(file_offset,
-                                                             block_size,
-                                                             fd);
+  const BufferBlock GetBlock(size_t file_offset, size_t block_size,
+                             GBPfile_handle_type fd = 0) const {
+#if USING_DIRECT_CACHE
+    return GetBlockWithDirectCacheSync(file_offset, block_size, fd);
 #else
 
-    return GetBlockSync(file_offset, block_size,
-    fd);
-    #endif
-
-      }
+    return GetBlockSync(file_offset, block_size, fd);
+#endif
+  }
   const BufferBlock GetBlockWithDirectCacheSync(
       size_t file_offset, size_t block_size, GBPfile_handle_type fd = 0) const;
   int SetBlock(const BufferBlock& buf, size_t file_offset, size_t block_size,
                GBPfile_handle_type fd = 0, bool flush = false);
 
+  const pair_min<PTE*, char*> PinPage(fpage_id_type fpage_id,
+                                      GBPfile_handle_type fd) const;
+  void UnpinPage(fpage_id_type fpage_id, GBPfile_handle_type fd, PTE* pte);
+  const pair_min<PTE*, char*> LockPage(size_t fpage_id,
+                                       GBPfile_handle_type fd) const;
+  void UnlockPage(fpage_id_type fpage_id, GBPfile_handle_type fd, PTE* pte);
+  const pair_min<PTE*, char*> GetPageOpt(fpage_id_type fpage_id,
+                                         GBPfile_handle_type fd,
+                                         size_t& version_old) const;
+  bool ReleasePageOpt(fpage_id_type fpage_id, GBPfile_handle_type fd, PTE* pte,
+                      const size_t version_old);
+  fpage_id_type toFPageId(void* page_ptr) const {
+    return memory_pool_global_
+        ->GetPageState((memory_pool_global_->ToPageId(page_ptr)))
+        ->fpage_id_cur;
+  }
   int Resize(GBPfile_handle_type fd, size_t new_size_inByte) {
     disk_manager_->Resize(fd, new_size_inByte);
     for (auto pool : pools_) {
@@ -240,7 +252,7 @@ const BufferBlock GetBlock(
         while (page_id < req.page_num) {
           auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->Pin(
               fpage_id, req.fd);
-          if (likely(mpage.first != nullptr)) {
+          if (GS_likely(mpage.first != nullptr)) {
             req.response.InsertPage(page_id, mpage.second + fpage_offset,
                                     mpage.first);
           } else {

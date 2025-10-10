@@ -88,7 +88,6 @@ class DiskManager {
     fd_oss_.push_back(std::make_pair(fd_os, true));
     file_names_.push_back(file_path);
     file_size_inBytes_.push_back(GetFileSize(fd_oss_.size() - 1));
-
 #ifdef DEBUG
     debug::get_bitmaps().emplace_back(
         ceil(file_sizes_[file_sizes_.size() - 1], PAGE_SIZE_MEMORY));
@@ -427,7 +426,7 @@ class RWSysCall : public IOBackend {
     }
     assert(ret != -1);  // check for I/O error
 #endif
-    if (unlikely(disk_manager_->file_size_inBytes_[fd] - offset < size))
+    if (GS_unlikely(disk_manager_->file_size_inBytes_[fd] - offset < size))
       disk_manager_->Resize(fd, disk_manager_->file_size_inBytes_[fd]);
 
     ::fdatasync(disk_manager_->fd_oss_[fd]
@@ -455,8 +454,8 @@ class RWSysCall : public IOBackend {
     assert(ret != -1);  // check for I/O error
 #endif
 
-    if (unlikely(disk_manager_->file_size_inBytes_[fd] - offset <
-                 io_info[0].iov_len))
+    if (GS_unlikely(disk_manager_->file_size_inBytes_[fd] - offset <
+                    io_info[0].iov_len))
       disk_manager_->Resize(fd, disk_manager_->file_size_inBytes_[fd]);
     fsync(disk_manager_->fd_oss_[fd]
               .first);  // needs to flush to keep disk file in sync
@@ -543,7 +542,7 @@ class RWSysCall : public IOBackend {
 #if ASSERT_ENABLE
     assert(ret != -1);
 #endif
-    if (unlikely(io_count > iovec_max)) {
+    if (GS_unlikely(io_count > iovec_max)) {
       io_count -= iovec_max;
       io_info += iovec_max;
       size_t size_cur = 0;

@@ -1,6 +1,6 @@
 #include "../include/buffer_pool.h"
 #include <flat_hash_map/flat_hash_map.hpp>
-#include "flex/graphscope_bufferpool/include/logger.h"
+#include "../include/logger.h"
 
 namespace gbp {
 
@@ -37,7 +37,8 @@ void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
 
   // a consecutive memory space for buffer pool
   memory_pool_ = memory_pool;
-  page_table_ = new PageTable(pool_size_, partitioner_);
+  page_table_ =
+      new PageTable(pool_size_, memory_pool_.GetPageState(0), partitioner_);
 
   // replacer_ = new FIFOReplacer(page_table_);
   // replacer_ = new ClockReplacer(page_table_);
@@ -50,10 +51,8 @@ void BufferPool::init(u_int32_t pool_ID, mpage_id_type pool_size,
   // replacer_ = new FIFOReplacer_v2(page_table_, pool_size_);
   // replacer_ = new SieveReplacer_v3(page_table_, pool_size_);
   // replacer_ = new SieveReplacer_v4(page_table_, pool_size_);
-    replacer_ = new TwoQ(page_table_, pool_size_);
-    // replacer_ = new ARC(page_table_, pool_size_);
-
-
+  replacer_ = new TwoQ(page_table_, pool_size_);
+  // replacer_ = new ARC(page_table_, pool_size_);
 
   // replacer_ = new ClockReplacer_v2(page_table_, pool_size_);
 
@@ -307,6 +306,7 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
   // if (gbp::warmup_mark() == 1) {
   //   gbp::get_counter_local(10)++;
   // }
+
   if (ret.first) {  // 1.1
     // if (gbp::warmup_mark() == 1) {
     //   gbp::get_counter_local(11)++;
@@ -320,6 +320,7 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
 
   auto stat = BP_async_request_type::Phase::Begin;
   size_t count = 0;
+
   while (true) {
     switch (stat) {
     case BP_async_request_type::Phase::Begin: {
@@ -336,11 +337,16 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
           }  // pin失败了就重新执行一遍Begin
         }
       } else if (mpage_id != PageMapping::Mapping::BUSY_VALUE) {
+        if (mpage_id == PageMapping::Mapping::EMPTY_VALUE) {
+          // 说明本页早已被load到内存了
+          assert(false);
+        }
         ret = Pin(fpage_id, fd);
         if (ret.first) {  // pin成功了就返回
           stat = BP_async_request_type::Phase::End;
         }  // pin失败了就重新执行一遍Begin
       }
+
       break;
     }
     case BP_async_request_type::Phase::Initing: {  // 1.2
@@ -370,8 +376,8 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
             break;
           }
 
-          // get_counter_local(20) =  static_cast<ARC*>(replacer_)->Victim(mpage_id,fd,fpage_id);
-        
+          // get_counter_local(20) =
+          // static_cast<ARC*>(replacer_)->Victim(mpage_id,fd,fpage_id);
         }
         stat = BP_async_request_type::Phase::Evicting;
       }
@@ -395,7 +401,7 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
       disk_manager_->SetUsedMark(fd_old, fpage_id_old, false);
       assert(disk_manager_->GetUsedMark(fd_old, fpage_id_old) == false);
 #endif
-
+      GBPLOG << "cp";
       if (ret.first->dirty) {
         assert(ReadWriteSync(ret.first->fpage_id_cur * PAGE_SIZE_FILE,
                              PAGE_SIZE_FILE, ret.second, PAGE_SIZE_MEMORY,
@@ -438,7 +444,8 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
       tmp.fd_cur = fd;
       as_atomic(ret.first->AsPacked()).store(tmp.AsPacked());
       assert(replacer_->Insert(page_table_->ToPageId(ret.first)));
-      // assert(static_cast<ARC*>(replacer_)->Insert(page_table_->ToPageId(ret.first), get_counter_local(20)));
+      // assert(static_cast<ARC*>(replacer_)->Insert(page_table_->ToPageId(ret.first),
+      // get_counter_local(20)));
 
       std::atomic_thread_fence(std::memory_order_release);
       assert(page_table_->CreateMapping(fd, fpage_id,
@@ -452,6 +459,25 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
     }
   }
   assert(false);
+}
+
+pair_min<PTE*, char*> BufferPool::LockPage(fpage_id_type fpage_id,
+                                           GBPfile_handle_type fd) {
+#if ASSERT_ENABLE
+  assert(fpage_id < CEIL(disk_manager_->GetFileSizeFast(fd), PAGE_SIZE_MEMORY));
+  assert(partitioner_->GetPartitionId(fpage_id) == pool_ID_);
+#endif
+  auto ret = FetchPageSync(fpage_id, fd);  // 确保文件页已被加载进内存
+
+  while (!page_table_->LockPage(fd, fpage_id))
+    ;
+
+  return ret;
+}
+
+void BufferPool::UnlockPage(fpage_id_type fpage_id, GBPfile_handle_type fd,
+                            PTE* pte) {
+  assert(page_table_->CreateMapping(fd, fpage_id, page_table_->ToPageId(pte)));
 }
 
 bool BufferPool::FetchPageSync1(BP_sync_request_type& req) {
@@ -655,9 +681,10 @@ bool BufferPool::FetchPageSync2(BP_sync_request_type& req) {
           ReadWriteAsync(req.fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
                          req.response.second, PAGE_SIZE_MEMORY, req.fd, true);
 
-      // assert(ReadWriteSync(req.fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
-      //                      req.response.second, PAGE_SIZE_MEMORY, req.fd,
-      //                      true));
+      // assert(ReadWriteSync(req.fpage_id * PAGE_SIZE_FILE,
+      // PAGE_SIZE_MEMORY,
+      //                      req.response.second, PAGE_SIZE_MEMORY,
+      //                      req.fd, true));
       // gbp::get_counter_local(10)++;
       req.runtime_phase = BP_sync_request_type::Phase::LoadingFinish;
 

@@ -10,17 +10,15 @@
 #pragma once
 
 #include <assert.h>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <mutex>
 #include <unordered_map>
 #include <vector>
-#include <cmath>
 
-#include "flex/graphscope_bufferpool/include/config.h"
 #include "fifo_replacer_v2.h"
 #include "lru_replacer_v2.h"
-
 
 #include "replacer.h"
 
@@ -30,7 +28,11 @@ class TwoQ : public Replacer<mpage_id_type> {
  public:
   // do not change public interface
   TwoQ(PageTable* page_table, mpage_id_type capacity)
-      : list_Ain_(page_table, capacity), list_Am_(page_table, capacity), page_table_(page_table),capacity_Ain_(capacity*0.25), capacity_Aout_(capacity*0.5) {}
+      : list_Ain_(page_table, capacity),
+        list_Am_(page_table, capacity),
+        page_table_(page_table),
+        capacity_Ain_(capacity * 0.25),
+        capacity_Aout_(capacity * 0.5) {}
   TwoQ(const TwoQ& other) = delete;
   TwoQ& operator=(const TwoQ&) = delete;
 
@@ -40,17 +42,15 @@ class TwoQ : public Replacer<mpage_id_type> {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
-#if ASSERT_ENABLE
-    assert(!list_.inList(value));
-#endif
     auto* pte = page_table_->FromPageId(value);
-    uint64_t fpage_key = (static_cast<uint64_t>(pte->fd_cur) << 32) | pte->fpage_id_cur;
+    uint64_t fpage_key =
+        (static_cast<uint64_t>(pte->fd_cur) << 32) | pte->fpage_id_cur;
     auto fpage_index = map_Aout_.find(fpage_key);
-    if(fpage_index!= map_Aout_.end()){
+    if (fpage_index != map_Aout_.end()) {
       assert(list_Am_.Insert(value));
       list_Aout_.erase(fpage_index->second);
       map_Aout_.erase(fpage_index);
-    }else{
+    } else {
       size_Ain_++;
       assert(list_Ain_.Insert(value));
     }
@@ -61,13 +61,11 @@ class TwoQ : public Replacer<mpage_id_type> {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
-#if ASSERT_ENABLE
-    assert(list_.inList(value));
-#endif
 
     auto* pte = page_table_->FromPageId(value);
-    uint64_t fpage_key = (static_cast<uint64_t>(pte->fd_cur) << 32) | pte->fpage_id_cur;
-    if(map_Aout_.find(fpage_key) != map_Aout_.end()){
+    uint64_t fpage_key =
+        (static_cast<uint64_t>(pte->fd_cur) << 32) | pte->fpage_id_cur;
+    if (map_Aout_.find(fpage_key) != map_Aout_.end()) {
       return list_Am_.Promote(value);
     }
     return true;
@@ -78,24 +76,24 @@ class TwoQ : public Replacer<mpage_id_type> {
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
-    if(size_Ain_ > capacity_Ain_){
+    if (size_Ain_ > capacity_Ain_) {
       list_Ain_.Victim(mpage_id);
       size_Ain_--;
 
       auto fpage_key = GetFpageKey(mpage_id);
       list_Aout_.push_front(fpage_key);
       map_Aout_[fpage_key] = list_Aout_.begin();
-      while(list_Aout_.size() > capacity_Aout_){
+      while (list_Aout_.size() > capacity_Aout_) {
         map_Aout_.erase(list_Aout_.back());
         list_Aout_.pop_back();
       }
-    }else{
+    } else {
       list_Am_.Victim(mpage_id);
     }
     return true;
   }
-  
-  FORCE_INLINE uint64_t GetFpageKey(mpage_id_type mpage_id){
+
+  FORCE_INLINE uint64_t GetFpageKey(mpage_id_type mpage_id) {
     auto* pte = page_table_->FromPageId(mpage_id);
     return (static_cast<uint64_t>(pte->fd_cur) << 32) | pte->fpage_id_cur;
   }
@@ -110,9 +108,7 @@ class TwoQ : public Replacer<mpage_id_type> {
     return false;
   }
 
-  void traverse_node() {
-    assert(false);
-  }
+  void traverse_node() { assert(false); }
 
   bool Erase(mpage_id_type value) override {
 #if EVICTION_SYNC_ENABLE
@@ -131,7 +127,10 @@ class TwoQ : public Replacer<mpage_id_type> {
     return 0;
   }
 
-  size_t GetMemoryUsage() const override { assert(false); return 0; }
+  size_t GetMemoryUsage() const override {
+    assert(false);
+    return 0;
+  }
 
  private:
   using listarray_value_type = uint8_t;
@@ -141,7 +140,8 @@ class TwoQ : public Replacer<mpage_id_type> {
   LRUReplacer_v2 list_Am_;
 
   size_t list_in_size_;
-  std::unordered_map<uint64_t, typename std::list<uint64_t>::iterator> map_Aout_;
+  std::unordered_map<uint64_t, typename std::list<uint64_t>::iterator>
+      map_Aout_;
 
   size_t capacity_Ain_;
   size_t capacity_Aout_;

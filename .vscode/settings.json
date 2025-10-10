@@ -78,6 +78,7 @@
         "regex": "cpp",
         "source_location": "cpp",
         "strstream": "cpp",
-        "cfenv": "cpp"
+        "cfenv": "cpp",
+        "span": "cpp"
     }
 }

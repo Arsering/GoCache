@@ -18,7 +18,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "flex/graphscope_bufferpool/include/utils.h"
 #include "replacer.h"
 
 namespace gbp {
@@ -63,15 +62,15 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
 #endif
 
     ListArray<listarray_value_type>::index_type nodeIndex = list_.GetTail();
-    if (nodeIndex == list_.head_){
+    if (nodeIndex == list_.head_) {
       return false;
     }
     size_t stop_count = 5;
     while (true) {
-      if (nodeIndex == list_.head_){
+      if (nodeIndex == list_.head_) {
         nodeIndex = list_.GetTail();
         stop_count--;
-        if(stop_count==0){
+        if (stop_count == 0) {
           return false;
         }
       }

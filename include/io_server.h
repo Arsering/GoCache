@@ -172,10 +172,10 @@ class IOServer {
     assert(async_io_backend_ != nullptr);
 #endif
 
-    if (unlikely(req == nullptr))
+    if (GS_unlikely(req == nullptr))
       return false;
 
-    if (likely(blocked))
+    if (GS_likely(blocked))
       while (!request_channel_.push(req))
         ;
     else {

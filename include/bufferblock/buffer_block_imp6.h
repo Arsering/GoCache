@@ -216,7 +216,7 @@ class BufferBlockImp6 {
   void free() {
     // 如果ptes不为空，则free
     if (size_ != 0) {
-      if (likely(page_num_ == 1)) {
+      if (GS_likely(page_num_ == 1)) {
         ptes_.pte->DecRefCount();
       } else if (page_num_ > 1) {
         while (page_num_ != 0) {
@@ -415,11 +415,11 @@ class BufferBlockImp6 {
     char* ret = nullptr;
     PTE* target_pte;
 
-    if (likely(page_num_ < 2)) {
+    if (GS_likely(page_num_ < 2)) {
       ret = datas_.data + idx * sizeof(T);
       target_pte = ptes_.pte;
     } else {
-      if (likely(idx == 0)) {
+      if (GS_likely(idx == 0)) {
         assert(InitPage(0));
         ret = datas_.datas[0];
         target_pte = ptes_.ptes[0];

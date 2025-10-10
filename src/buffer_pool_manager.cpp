@@ -298,6 +298,49 @@ int BufferPoolManager::SetBlock(const BufferBlock& buf, size_t file_offset,
   return buf_size;
 }
 
+const pair_min<PTE*, char*> BufferPoolManager::PinPage(
+    fpage_id_type fpage_id, GBPfile_handle_type fd) const {
+  return pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(fpage_id,
+                                                                       fd);
+}
+void BufferPoolManager::UnpinPage(fpage_id_type fpage_id,
+                                  GBPfile_handle_type fd, PTE* pte) {
+  pte->DecRefCount();
+}
+
+const pair_min<PTE*, char*> BufferPoolManager::GetPageOpt(
+    fpage_id_type fpage_id, GBPfile_handle_type fd, size_t& version_now) const {
+  auto ret = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
+      fpage_id, fd);
+  version_now =
+      pools_[partitioner_->GetPartitionId(fpage_id)]->GetVersion(fpage_id, fd);
+
+  return ret;
+}
+
+bool BufferPoolManager::ReleasePageOpt(fpage_id_type fpage_id,
+                                       GBPfile_handle_type fd, PTE* pte,
+                                       const size_t version_old) {
+  pte->DecRefCount();
+  auto version_cur =
+      pools_[partitioner_->GetPartitionId(fpage_id)]->GetVersion(fpage_id, fd);
+  return version_cur == version_old;
+}
+
+const pair_min<PTE*, char*> BufferPoolManager::LockPage(
+    size_t fpage_id, GBPfile_handle_type fd) const {
+  auto ret =
+      pools_[partitioner_->GetPartitionId(fpage_id)]->LockPage(fpage_id, fd);
+
+  return ret;
+}
+
+void BufferPoolManager::UnlockPage(fpage_id_type fpage_id,
+                                   GBPfile_handle_type fd, PTE* pte) {
+  pte->DecRefCount();
+  pools_[partitioner_->GetPartitionId(fpage_id)]->UnlockPage(fpage_id, fd, pte);
+}
+
 const BufferBlock BufferPoolManager::GetBlockSync(
     size_t file_offset, size_t block_size, GBPfile_handle_type fd) const {
   if (block_size == 0) {
@@ -313,7 +356,7 @@ const BufferBlock BufferPoolManager::GetBlockSync(
   BufferBlock ret(block_size, num_page);
 
   fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
-  if (likely(num_page == 1)) {
+  if (GS_likely(num_page == 1)) {
     auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
         fpage_id, fd);
 #if ASSERT_ENABLE
@@ -355,7 +398,7 @@ const BufferBlock BufferPoolManager::GetBlockSync1(
   BufferBlock ret(block_size, num_page);
 
   fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
-  if (likely(num_page == 1)) {
+  if (GS_likely(num_page == 1)) {
     // get_counter_local(13) = 0;
 
     auto mpage = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
@@ -498,7 +541,7 @@ std::future<BufferBlock> BufferPoolManager::GetBlockAsync(
                   PAGE_SIZE_FILE) +
              1);
 
-  if (likely(num_page == 1)) {
+  if (GS_likely(num_page == 1)) {
     fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
     auto mpage =
         pools_[partitioner_->GetPartitionId(fpage_id)]->Pin(fpage_id, fd);
@@ -672,7 +715,7 @@ const void BufferPoolManager::GetBlockBatchWithoutDirectCache(
         batch_request.file_offset_ >> LOG_PAGE_SIZE_FILE;
     results.emplace_back(batch_request.block_size_, num_page);
 
-    if (likely(num_page == 1)) {
+    if (GS_likely(num_page == 1)) {
       auto partition_id = partitioner_->GetPartitionId(fpage_start_id);
       auto result =
           pools_[partition_id]->Pin(fpage_start_id, batch_request.fd_);
@@ -773,11 +816,11 @@ const void BufferPoolManager::GetBlockBatchWithDirectCache(
         batch_request.file_offset_ >> LOG_PAGE_SIZE_FILE;
     results.emplace_back(batch_request.block_size_, num_page);
 
-    if (likely(num_page == 1)) {
+    if (GS_likely(num_page == 1)) {
       auto partition_id = partitioner_->GetPartitionId(fpage_start_id);
       auto pte =
           DirectCache::GetDirectCache().Find(batch_request.fd_, fpage_start_id);
-      if (likely(pte != nullptr)) {
+      if (GS_likely(pte != nullptr)) {
         auto data = (char*) pools_[partition_id]->memory_pool_.FromPageId(
             pools_[partition_id]->page_table_->ToPageId(pte));
         results.back().InsertPage(0, data + fpage_offset, pte, true);
@@ -802,7 +845,7 @@ const void BufferPoolManager::GetBlockBatchWithDirectCache(
         auto partition_id = partitioner_->GetPartitionId(fpage_start_id);
         auto pte = DirectCache::GetDirectCache().Find(batch_request.fd_,
                                                       fpage_start_id);
-        if (likely(pte != nullptr)) {
+        if (GS_likely(pte != nullptr)) {
           auto data = (char*) pools_[partition_id]->memory_pool_.FromPageId(
               pools_[partition_id]->page_table_->ToPageId(pte));
           results.back().InsertPage(page_id, data + fpage_offset, pte, true);
@@ -885,7 +928,7 @@ const BufferBlock BufferPoolManager::GetBlockBatch1(
              1);
   fpage_id_type fpage_start_id = file_offset >> LOG_PAGE_SIZE_FILE;
   auto ret = BufferBlock(block_size, num_page);
-  if (likely(num_page == 1)) {
+  if (GS_likely(num_page == 1)) {
     auto partition_id = partitioner_->GetPartitionId(fpage_start_id);
     auto result = pools_[partition_id]->Pin(fpage_start_id, fd);
     if (result.first) {
@@ -928,11 +971,11 @@ const BufferBlock BufferPoolManager::GetBlockBatch1(
 
 const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(
     size_t file_offset, size_t block_size, GBPfile_handle_type fd) const {
-      // auto t1 = gbp::GetSystemTime();
+  // auto t1 = gbp::GetSystemTime();
 
   if (block_size == 0) {
-  // t1 = gbp::GetSystemTime()-t1;
-  // gbp::get_counter_local(10) += t1; 
+    // t1 = gbp::GetSystemTime()-t1;
+    // gbp::get_counter_local(10) += t1;
 
     return BufferBlock();
   }
@@ -947,9 +990,9 @@ const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(
   BufferBlock ret(block_size, num_page);
   assert(block_size > 0);
   fpage_id_type fpage_id = file_offset >> LOG_PAGE_SIZE_FILE;
-  if (likely(num_page == 1)) {
+  if (GS_likely(num_page == 1)) {
     auto pte = DirectCache::GetDirectCache().Find(fd, fpage_id);
-    if (likely(pte != nullptr)) {
+    if (GS_likely(pte != nullptr)) {
       auto pool = pools_[partitioner_->GetPartitionId(fpage_id)];
       auto data = (char*) pool->memory_pool_.FromPageId(
           pool->page_table_->ToPageId(pte));
@@ -972,7 +1015,7 @@ const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(
     size_t page_id = 0;
     while (page_id < num_page) {
       auto pte = DirectCache::GetDirectCache().Find(fd, fpage_id);
-      if (likely(pte != nullptr)) {
+      if (GS_likely(pte != nullptr)) {
         auto pool = pools_[partitioner_->GetPartitionId(fpage_id)];
         auto data = (char*) pool->memory_pool_.FromPageId(
             pool->page_table_->ToPageId(pte));
@@ -1004,7 +1047,7 @@ const BufferBlock BufferPoolManager::GetBlockWithDirectCacheSync(
 
   // gbp::get_counter_global(11).fetch_add(ret.PageNum());
   //   t1 = gbp::GetSystemTime()-t1;
-  // gbp::get_counter_local(10) += t1; 
+  // gbp::get_counter_local(10) += t1;
   return ret;
 }
 

@@ -69,7 +69,7 @@ class EvictionServer {
     auto* req =
         new async_eviction_request_type(replacer, free_list, page_num, finish);
 
-    if (likely(blocked))
+    if (GS_likely(blocked))
       while (!request_channel_.push(req))
         ;
     else {
@@ -88,7 +88,7 @@ class EvictionServer {
       assert(req.free_list->Push(page));
     }
     req.page_num -= pages.size();
-    if (unlikely(req.page_num == 0)) {
+    if (GS_unlikely(req.page_num == 0)) {
       return true;
     }
 

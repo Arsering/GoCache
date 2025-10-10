@@ -21,14 +21,13 @@
 #include "config.h"
 #include "debug.h"
 #include "extendible_hash.h"
+#include "replacer/ARC.h"
+#include "replacer/TwoQ.h"
 #include "replacer/TwoQLRU_replacer.h"
 #include "replacer/clock_replacer.h"
 #include "replacer/clock_replacer_v2.h"
 #include "replacer/fifo_replacer.h"
 #include "replacer/fifo_replacer_v2.h"
-#include "replacer/TwoQ.h"
-#include "replacer/ARC.h"
-
 
 #include "io_backend.h"
 #include "io_server.h"
@@ -243,8 +242,13 @@ class BufferPool {
 
   pair_min<PTE*, char*> FetchPageSync(fpage_id_type fpage_id,
                                       GBPfile_handle_type fd);
+  pair_min<PTE*, char*> LockPage(fpage_id_type fpage_id,
+                                 GBPfile_handle_type fd);
+  void UnlockPage(fpage_id_type fpage_id, GBPfile_handle_type fd, PTE* pte);
+
   bool FetchPageSync1(BP_sync_request_type& req);
   bool FetchPageSync2(BP_sync_request_type& req);
+
   FORCE_INLINE pair_min<PTE*, char*> Pin(fpage_id_type fpage_id,
                                          GBPfile_handle_type fd) {
     // 1.1
@@ -256,10 +260,14 @@ class BufferPool {
 
       if (has_inc) {
         assert(replacer_->Promote(page_table_->ToPageId(pte)));
+
         return {pte, (char*) memory_pool_.FromPageId(mpage_id)};
       }
     }
     return {nullptr, nullptr};
+  }
+  size_t GetVersion(fpage_id_type fpage_id, GBPfile_handle_type fd) {
+    return page_table_->GetVersion(fpage_id, fd);
   }
 
   std::tuple<size_t, size_t, size_t, size_t, size_t> GetMemoryUsage() {

@@ -8,11 +8,12 @@
 
 // #define GRAPHSCOPE
 #define USING_DIRECT_CACHE false
-#define ASSERT_ENABLE false
+#define ASSERT_ENABLE true
 #define EVICTION_SYNC_ENABLE true
 #define LAZY_SSD_IO_NEW false
 #define PROFILE_ENABLE false
 // #define USING_EDGE_ITER
+#define ENABLE_OPTIMISTIC_LOCK true
 
 #ifdef GRAPHSCOPE
 #include <glog/logging.h>
@@ -29,9 +30,8 @@
 // #include "../deps/mimalloc/include/mimalloc.h"
 
 #define FORCE_INLINE __attribute__((always_inline))
-#define likely(x) __builtin_expect((x), 1)
-#define unlikely(x) __builtin_expect((x), 0)
-
+#define GS_likely(x) __builtin_expect((x), 1)
+#define GS_unlikely(x) __builtin_expect((x), 0)
 
 #define LBMalloc(size) ::malloc(size)
 #define LBFree(p) ::free(p)
@@ -60,7 +60,7 @@ using GBPfile_handle_type = uint32_t;
 using OSfile_handle_type = uint32_t;
 using partition_id_type = uint32_t;
 
-constexpr size_t DIRECT_CACHE_SIZE = 256 *4;
+constexpr size_t DIRECT_CACHE_SIZE = 256 * 4;
 
 constexpr bool WAL_ENABLE = false;
 constexpr bool PERSISTENT = true;
@@ -125,12 +125,3 @@ class NonCopyable {
 std::atomic<size_t>& get_pool_num();
 
 }  // namespace gbp
-
-// #ifdef DEBUG
-// st = gbp::GetSystemTime() - st;
-// gbp::get_counter(1).fetch_add(st);
-// #endif
-
-// #ifdef DEBUG
-// st = gbp::GetSystemTime();
-// #endif

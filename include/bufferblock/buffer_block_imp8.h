@@ -117,7 +117,7 @@ class BufferBlockImp7 {
 #if ASSERT_ENABLE
     assert(idx < page_num_);
 #endif
-    if (likely(page_num_ == 1)) {
+    if (GS_likely(page_num_ == 1)) {
       datas_.data = data;
       ptes_.pte = pte;
     } else {
@@ -220,7 +220,7 @@ class BufferBlockImp7 {
     // 如果ptes不为空，则free
     if (size_ != 0) {
       // std::this_thread::sleep_for(std::chrono::nanoseconds(5));
-      if (likely(page_num_ == 1)) {
+      if (GS_likely(page_num_ == 1)) {
         ptes_.pte->DecRefCount();
       } else if (page_num_ > 1) {
         while (page_num_ != 0) {
@@ -445,10 +445,10 @@ class BufferBlockImp7 {
     assert(sizeof(OBJ_Type) * (idx + 1) <= size_);
 #endif
     char* ret = nullptr;
-    if (likely(page_num_ < 2)) {
+    if (GS_likely(page_num_ < 2)) {
       ret = datas_.data + idx * sizeof(OBJ_Type);
     } else {
-      if (likely(idx == 0)) {
+      if (GS_likely(idx == 0)) {
         assert(InitPage(0));
         ret = datas_.datas[0];
       } else {
@@ -480,8 +480,8 @@ class BufferBlockImp7 {
     return reinterpret_cast<OBJ_Type*>(ret);
   }
 
-//  private:
-public:
+  //  private:
+ public:
   template <class OBJ_Type>
   FORCE_INLINE pair_min<OBJ_Type*, PTE*> DecodeWithPTE(size_t idx = 0) const {
     constexpr size_t OBJ_NUM_PERPAGE = PAGE_SIZE_MEMORY / sizeof(OBJ_Type);
@@ -492,11 +492,11 @@ public:
     char* ret = nullptr;
     PTE* target_pte;
 
-    if (likely(page_num_ < 2)) {
+    if (GS_likely(page_num_ < 2)) {
       ret = datas_.data + idx * sizeof(OBJ_Type);
       target_pte = ptes_.pte;
     } else {
-      if (likely(idx == 0)) {
+      if (GS_likely(idx == 0)) {
         assert(InitPage(0));
         ret = datas_.datas[0];
         target_pte = ptes_.ptes[0];

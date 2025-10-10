@@ -130,8 +130,7 @@ void read_mmap(char* data_file_mmaped, size_t file_size_inByte,
                                               curr_io_fileoffset +
                                               i * sizeof(size_t)) ==
                    (curr_io_fileoffset / sizeof(size_t) + i));
-                   break;
-
+            break;
           }
         }
       }
@@ -245,7 +244,7 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
       for (size_t i = 0; i < block.Size() / sizeof(size_t); i++) {
         assert(gbp::BufferBlock::Ref<size_t>(block, i) ==
                (requests[req_idx].file_offset_ / sizeof(size_t) + i));
-               break;
+        break;
       }
     }
 
@@ -640,13 +639,186 @@ std::vector<std::vector<size_t>> read_trace(const std::string& trace_dir,
   return std::move(vecs);
 }
 
+int test_tpcc() {
+  size_t nthreads = vmcache::envOr("THREAD", 1);
+  u64 n = vmcache::envOr("DATASIZE", 10);
+  u64 runForSec = vmcache::envOr("RUNFOR", 30);
+  bool isRndread = vmcache::envOr("RNDREAD", 0);
+
+  u64 statDiff = 1e8;
+  atomic<u64> txProgress(0);
+  atomic<bool> keepRunning(true);
+
+  auto statFn = [&]() {
+    cout << "ts,tx,rmb,wmb,system,threads,datasize,workload,batch" << endl;
+    u64 cnt = 0;
+    while (true) {
+      sleep(1);
+      u64 prog = txProgress.exchange(0);
+      cout << cnt++ << "," << prog << "," << nthreads << "," << n << ","
+           << (isRndread ? "rndread" : "tpcc") << endl;
+    }
+  };
+
+  bool TPC_C = false;
+  if (TPC_C) {
+    thread statThread(statFn);
+
+    // TPC-C
+    Integer warehouseCount = n;
+    vmcache::vmcacheAdapter<warehouse_t> warehouse;
+    vmcache::vmcacheAdapter<district_t> district;
+    vmcache::vmcacheAdapter<customer_t> customer;
+    vmcache::vmcacheAdapter<customer_wdl_t> customerwdl;
+    vmcache::vmcacheAdapter<history_t> history;
+    vmcache::vmcacheAdapter<neworder_t> neworder;
+    vmcache::vmcacheAdapter<order_t> order;
+    vmcache::vmcacheAdapter<order_wdc_t> order_wdc;
+    vmcache::vmcacheAdapter<orderline_t> orderline;
+    vmcache::vmcacheAdapter<item_t> item;
+    vmcache::vmcacheAdapter<stock_t> stock;
+
+    TPCCWorkload<vmcache::vmcacheAdapter> tpcc(
+        warehouse, district, customer, customerwdl, history, neworder, order,
+        order_wdc, orderline, item, stock, true, warehouseCount, true);
+
+    {
+      tpcc.loadItem();
+      tpcc.loadWarehouse();
+      GBPLOG << "warehouse loaded";
+      vmcache::parallel_for(1, warehouseCount + 1, nthreads,
+                            [&](uint64_t worker, uint64_t begin, uint64_t end) {
+                              workerThreadId = worker;
+
+                              for (Integer w_id = begin; w_id < end; w_id++) {
+                                tpcc.loadStock(w_id);
+                                tpcc.loadDistrinct(w_id);
+                                for (Integer d_id = 1; d_id <= 10; d_id++) {
+                                  tpcc.loadCustomer(w_id, d_id);
+                                  tpcc.loadOrders(w_id, d_id);
+                                }
+                              }
+                            });
+    }
+    cout << "initial load done" << endl;
+    cerr << "space: "
+         << (vmcache::BufferredFile::GetBF().GetFileSize() *
+             vmcache::pageSize) /
+                (float) vmcache::GB
+         << " GB " << endl;
+
+    vmcache::parallel_for(0, nthreads, nthreads,
+                          [&](uint64_t worker, uint64_t begin, uint64_t end) {
+                            workerThreadId = worker;
+                            u64 cnt = 0;
+                            while (true) {
+                              int w_id =
+                                  tpcc.urand(1, warehouseCount);  // wh crossing
+                              tpcc.tx(w_id);
+                              cnt++;
+                              if (cnt > 100) {
+                                txProgress += cnt;
+                                cnt = 0;
+                              }
+                            }
+                            txProgress += cnt;
+                          });
+    statThread.join();
+
+  } else {
+    std::atomic<size_t> thpt_read = 0;
+
+    auto statFn = [&]() {
+      std::string device_name = "nvme0n1";
+      size_t last_SSD_read_bytes, last_SSD_write_bytes, cur_SSD_read_bytes,
+          cur_SSD_write_bytes, cur_thpt_read, last_thpt_read = 0;
+      size_t time_before = 0, time_after = 0;
+
+      std::tie(last_SSD_read_bytes, last_SSD_write_bytes) =
+          vmcache::SSD_io_bytes(device_name);
+      time_before = vmcache::get_time_in_ms();
+
+      while (keepRunning) {
+        sleep(1);
+        std::tie(cur_SSD_read_bytes, cur_SSD_write_bytes) =
+            SSD_io_bytes(device_name);
+        time_after = vmcache::get_time_in_ms();
+
+        u64 prog = txProgress.exchange(0) * 1e6 / (time_after - time_before);
+        float rgb =
+            (cur_SSD_read_bytes - last_SSD_read_bytes) / (1024.0 * 1024 * 1024);
+        float wgb = (cur_SSD_write_bytes - last_SSD_write_bytes) /
+                    (1024.0 * 1024 * 1024);
+        cur_thpt_read = thpt_read.exchange(0);
+
+        cout << prog << " " << prog * 4.0 / 1024 / 1024 << " " << rgb << " "
+             << wgb << " "
+             << (cur_thpt_read * vmcache::pageSize / (1024.0 * 1024 * 1024))
+             << endl;
+
+        last_SSD_read_bytes = cur_SSD_read_bytes;
+        last_SSD_write_bytes = cur_SSD_write_bytes;
+        time_before = time_after;
+        last_thpt_read = cur_thpt_read;
+      }
+    };
+
+    thread statThread(statFn);
+
+    vmcache::parallel_for(
+        0, n, nthreads, [&](uint64_t worker, uint64_t begin, uint64_t end) {
+          workerThreadId = worker;
+
+          std::random_device rd;
+          std::mt19937 gen(rd());
+          std::uniform_int_distribution<uint64_t> rnd(begin, end - 1);
+
+          while (true) {
+            auto page_id = rnd(gen);
+            vmcache::GuardO<vmcache::PageNode> page(page_id);
+            if (page->payload[0] != page_id * 512) {
+              cerr << "data error" << page_id << endl;
+              exit(0);
+            }
+            txProgress++;
+
+            // GuardO<PageNode> page_10(10);
+
+            // for (auto page_id = 20; page_id < end; page_id++) {
+            //   vmcache::GuardO<vmcache::PageNode> page(page_id);
+
+            //   if (page->payload[0] != page_id * 512) {
+            //     assert(false);
+            //   }
+            //   txProgress++;
+            // }
+            // if(page_10->payload[0] != 10*512){
+            //    cerr << "data error" << 0 << endl;
+            //    exit(0);
+            // }
+          }
+        });
+    statThread.join();
+  }
+  cerr << "space: "
+       << (vmcache::BufferredFile::GetBF().GetFileSize() * vmcache::pageSize) /
+              (float) vmcache::GB
+       << " GB " << endl;
+
+  return 0;
+}
+
 int test_concurrency(int argc, char** argv) {
+  GBPLOG << "cp";
   size_t file_size_MB = std::stoull(argv[1]);
   size_t worker_num = std::stoull(argv[2]);
   size_t pool_num = std::stoull(argv[3]);
   size_t pool_size_MB = std::stoull(argv[4]);
   size_t io_server_num = std::stoull(argv[5]);
   size_t io_size = std::stoull(argv[6]);
+  std::string file_path = getenv("DB_PATH") == nullptr
+                              ? "/mnt/nvme/test_read.db"
+                              : std::string{getenv("DB_PATH")};
 
   // set_cpu_affinity(2);
 
@@ -655,7 +827,6 @@ int test_concurrency(int argc, char** argv) {
   // std::string file_path = "/home/spdk/p4510/zhengyang/test_write.db";
   // std::string file_path = "/home/spdk/p4510/zhengyang/test_read.db";
 
-  std::string file_path = "/mnt/nvme/test_read.db";
   // std::string trace_dir =
   //     "/data/zhengyang/data/experiment_space/LDBC_SNB/logs/"
   //     "2024-06-06-20:05:02/"
@@ -683,9 +854,10 @@ int test_concurrency(int argc, char** argv) {
 
   // gbp::DiskManager disk_manager(file_path);
   // gbp::IOBackend* io_backend = new gbp::RWSysCall(&disk_manager);
-
+  GBPLOG << pool_size_page;
   auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
   bpm.init(pool_num, pool_size_page, io_server_num, file_path);
+
   // bpm.Resize(0, file_size_inByte);
   gbp::log_enable().store(0);
   // std::cout << "warm up starting" << std::endl;
@@ -716,6 +888,9 @@ int test_concurrency(int argc, char** argv) {
 
   std::vector<std::thread> thread_pool;
   size_t ssd_io_byte = std::get<0>(gbp::SSD_io_bytes());
+  test_tpcc();
+  return 0;
+
   for (size_t i = 0; i < worker_num; i++) {
     // thread_pool.emplace_back(write_mmap, data_file_mmaped,
     //                          (1024LU * 1024LU * 1024LU * 1), io_size,
@@ -775,11 +950,4 @@ int test_concurrency(int argc, char** argv) {
   return 0;
 }
 
-int test_VMCache(){
-
-  auto& vmCache = gbp::VMCache::GetGlobalInstance();
-  vmCache.load(0);
-  vmCache.evict(0);
-  return 0;
-}
 }  // namespace test

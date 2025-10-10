@@ -19,7 +19,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "flex/graphscope_bufferpool/include/config.h"
 #include "lru_replacer_v2.h"
 #include "replacer.h"
 
@@ -29,9 +28,12 @@ class ARC : public Replacer<mpage_id_type> {
  public:
   // do not change public interface
   ARC(PageTable* page_table, mpage_id_type capacity)
-      : capacity_(capacity), page_table_(page_table), T1_list_(page_table, capacity), T2_list_(page_table, capacity) {}
+      : capacity_(capacity),
+        page_table_(page_table),
+        T1_list_(page_table, capacity),
+        T2_list_(page_table, capacity) {}
   ARC(const ARC& other) = delete;
-  ARC& operator=(const ARC&) = delete; 
+  ARC& operator=(const ARC&) = delete;
 
   ~ARC() override = default;
 
@@ -39,23 +41,16 @@ class ARC : public Replacer<mpage_id_type> {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
-#if ASSERT_ENABLE
-    assert(!list_.inList(value));
-#endif
-
     return true;
   }
-  bool Insert(mpage_id_type value, size_t location=1) {
+  bool Insert(mpage_id_type value, size_t location = 1) {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
-#if ASSERT_ENABLE
-    assert(!list_.inList(value));
-#endif
-    if(location == 1){
+    if (location == 1) {
       assert(T1_list_.Insert(value));
       T1_size_++;
-    }else {
+    } else {
       assert(T2_list_.Insert(value));
       T2_size_++;
     }
@@ -66,11 +61,8 @@ class ARC : public Replacer<mpage_id_type> {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
-#if ASSERT_ENABLE
-    assert(list_.inList(value));
-#endif
 
-    if(!T2_list_.Promote(value)){
+    if (!T2_list_.Promote(value)) {
       // 说明该node在T1里
       assert(T1_list_.Erase(value));
       T1_size_--;
@@ -88,29 +80,31 @@ class ARC : public Replacer<mpage_id_type> {
     return true;
   }
 
-  size_t Victim(mpage_id_type& mpage_id, GBPfile_handle_type target_fd, fpage_id_type target_fpage_id) {
+  size_t Victim(mpage_id_type& mpage_id, GBPfile_handle_type target_fd,
+                fpage_id_type target_fpage_id) {
 #if EVICTION_SYNC_ENABLE
     std::lock_guard<std::mutex> lck(latch_);
 #endif
     // target在B1中有记录
-    auto target_fpage_key = (static_cast<uint64_t>(target_fd) << 32) | target_fpage_id;
+    auto target_fpage_key =
+        (static_cast<uint64_t>(target_fd) << 32) | target_fpage_id;
     auto target_fpage_index = B1_map_.find(target_fpage_key);
-    if(target_fpage_index!=B1_map_.end()){
-      P = std::min(P+std::max(B2_map_.size()/B1_map_.size(), (size_t)1), capacity_);
-      if(T1_size_>0 && T1_size_ >= P && T1_list_.Victim(mpage_id)){
+    if (target_fpage_index != B1_map_.end()) {
+      P = std::min(P + std::max(B2_map_.size() / B1_map_.size(), (size_t) 1),
+                   capacity_);
+      if (T1_size_ > 0 && T1_size_ >= P && T1_list_.Victim(mpage_id)) {
         // if(!T1_list_.Victim(mpage_id)){
         //   GBPLOG << T1_size_ << " "<< P;
         //   assert(false);
         // }
         T1_size_--;
-        auto victim_fpage_id=GetFpageKey(mpage_id);
+        auto victim_fpage_id = GetFpageKey(mpage_id);
         B1_list_.push_front(victim_fpage_id);
         B1_map_[victim_fpage_id] = B1_list_.begin();
-      }
-      else{
+      } else {
         assert(T2_list_.Victim(mpage_id));
         T2_size_--;
-        auto victim_fpage_id=GetFpageKey(mpage_id);
+        auto victim_fpage_id = GetFpageKey(mpage_id);
         B2_list_.push_front(victim_fpage_id);
         B2_map_[victim_fpage_id] = B2_list_.begin();
       }
@@ -120,23 +114,24 @@ class ARC : public Replacer<mpage_id_type> {
 
       DeleteHistory();
 
-      return 2; // 新的数据插入T2 
+      return 2;  // 新的数据插入T2
     }
 
     // target在B2中有记录
     target_fpage_index = B2_map_.find(target_fpage_key);
-    if(target_fpage_index != B2_map_.end()){
-      P = std::max(P-std::max(B1_map_.size()/B2_map_.size(), (size_t)1), (size_t)0);
-      if(T1_size_>0 && T1_size_ >= P && T1_list_.Victim(mpage_id)){
+    if (target_fpage_index != B2_map_.end()) {
+      P = std::max(P - std::max(B1_map_.size() / B2_map_.size(), (size_t) 1),
+                   (size_t) 0);
+      if (T1_size_ > 0 && T1_size_ >= P && T1_list_.Victim(mpage_id)) {
         T1_size_--;
-        auto victim_fpage_id=GetFpageKey(mpage_id);
+        auto victim_fpage_id = GetFpageKey(mpage_id);
         B1_list_.push_front(victim_fpage_id);
         B1_map_[victim_fpage_id] = B1_list_.begin();
-      }else{
-        assert(T2_size_>0);
+      } else {
+        assert(T2_size_ > 0);
         assert(T2_list_.Victim(mpage_id));
         T2_size_--;
-        auto victim_fpage_id=GetFpageKey(mpage_id);
+        auto victim_fpage_id = GetFpageKey(mpage_id);
         B2_list_.push_front(victim_fpage_id);
         B2_map_[victim_fpage_id] = B2_list_.begin();
       }
@@ -145,42 +140,42 @@ class ARC : public Replacer<mpage_id_type> {
       B2_map_.erase(target_fpage_index);
 
       DeleteHistory();
-      return 2; // 新的数据插入T2 
+      return 2;  // 新的数据插入T2
     }
 
     // target在B1、B2中都没有记录
-    if(T1_size_>0 && T1_size_ >= P){
+    if (T1_size_ > 0 && T1_size_ >= P) {
       assert(T1_list_.Victim(mpage_id));
       T1_size_--;
-      auto victim_fpage_id=GetFpageKey(mpage_id);
+      auto victim_fpage_id = GetFpageKey(mpage_id);
       B1_list_.push_front(victim_fpage_id);
       B1_map_[victim_fpage_id] = B1_list_.begin();
-    }else{
-      assert(T2_size_>0);
+    } else {
+      assert(T2_size_ > 0);
       assert(T2_list_.Victim(mpage_id));
       T2_size_--;
-      auto victim_fpage_id=GetFpageKey(mpage_id);
+      auto victim_fpage_id = GetFpageKey(mpage_id);
       B2_list_.push_front(victim_fpage_id);
       B2_map_[victim_fpage_id] = B2_list_.begin();
     }
 
     DeleteHistory();
-    return 1; // 新的数据插入T1
+    return 1;  // 新的数据插入T1
   }
 
-  FORCE_INLINE void DeleteHistory(){
-    while(B1_map_.size()>capacity_){
+  FORCE_INLINE void DeleteHistory() {
+    while (B1_map_.size() > capacity_) {
       B1_map_.erase(B1_list_.back());
       B1_list_.pop_back();
     }
 
-    while(B2_map_.size()>capacity_){
+    while (B2_map_.size() > capacity_) {
       B2_map_.erase(B2_list_.back());
       B2_list_.pop_back();
     }
   }
 
-  FORCE_INLINE uint64_t GetFpageKey(mpage_id_type mpage_id){
+  FORCE_INLINE uint64_t GetFpageKey(mpage_id_type mpage_id) {
     auto* pte = page_table_->FromPageId(mpage_id);
     return (static_cast<uint64_t>(pte->fd_cur) << 32) | pte->fpage_id_cur;
   }
@@ -195,9 +190,7 @@ class ARC : public Replacer<mpage_id_type> {
     return false;
   }
 
-  void traverse_node() {
-    assert(false);
-  }
+  void traverse_node() { assert(false); }
 
   bool Erase(mpage_id_type value) override {
 #if EVICTION_SYNC_ENABLE
@@ -216,9 +209,9 @@ class ARC : public Replacer<mpage_id_type> {
     return 0;
   }
 
-  size_t GetMemoryUsage() const override {     
+  size_t GetMemoryUsage() const override {
     assert(false);
-    return 0; 
+    return 0;
   }
 
  private:
@@ -236,8 +229,6 @@ class ARC : public Replacer<mpage_id_type> {
 
   std::list<uint64_t> B2_list_;
   std::unordered_map<uint64_t, typename std::list<uint64_t>::iterator> B2_map_;
-
-
 
   mutable std::mutex latch_;
   // add your member variables here

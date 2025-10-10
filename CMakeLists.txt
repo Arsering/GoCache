@@ -3,8 +3,8 @@ set(CMAKE_C_COMPILER "/usr/bin/gcc")
 set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 # set(CMAKE_C_FLAGS "-fxray-instrument")
 
-set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fPIC -rdynamic -pthread -Wextra")
+set(CMAKE_BUILD_TYPE "Debug")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -fPIC -rdynamic -pthread -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 set(CMAKE_LIBRARY_PATH "/usr/local/lib;/usr/lib/x86_64-linux-gnu;/usr/lib64")
@@ -66,6 +66,9 @@ find_package(Boost 1.84 REQUIRED COMPONENTS system filesystem fiber program_opti
 
 find_package(yaml-cpp REQUIRED)
 target_link_libraries(${PROJECT_NAME} yaml-cpp)
+
+target_link_libraries(${PROJECT_NAME} rt)
+
 
 # 添加NUMA库链接
 if(DEFINED NUMA_LIBRARIES)

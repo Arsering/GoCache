@@ -23,7 +23,7 @@ std::string& get_log_dir() {
 std::ofstream& get_thread_logfile() {
   static thread_local std::ofstream log_file;
   static thread_local size_t count = 0;
-  if (unlikely(!log_file.is_open())) {
+  if (GS_unlikely(!log_file.is_open())) {
     log_file.open(get_log_dir() + "/thread_log_" +
                   std::to_string(get_thread_id()) + ".log");
   }
@@ -119,10 +119,10 @@ std::atomic<size_t>& get_type() {
   thread_local std::atomic<size_t> data(0);
   return data;
 }
-size_t get_time_in_ms(){
+size_t get_time_in_ms() {
   struct timeval tv;
   gettimeofday(&tv, nullptr);  // 获取当前时间
-  
+
   // 计算总微秒数：秒数*1000000 + 微秒数
   return tv.tv_sec * 1000000LL + tv.tv_usec;
 }
@@ -177,22 +177,23 @@ void PerformanceLogServer::Logging() {
     // auto cur_contention_count = debug::get_counter_contention().load();
     time_after = get_time_in_ms();
 
-    double time_len = (time_after-time_before)*1.0/1e6;
+    double time_len = (time_after - time_before) * 1.0 / 1e6;
     time_before = time_after;
 
     size = ::snprintf(
         buf, 4096,
         "%-25lf%-25lf%-25lf%-25lf%-25lf%-25lf%-25lf%-25lf%-25lf%-25lf%-25lf\n",
-        (cur_Client_Read_throughput - last_Client_Read_throughput) /time_len/
+        (cur_Client_Read_throughput - last_Client_Read_throughput) / time_len /
             (double) B2GB,
-        (cur_Client_Write_throughput - last_Client_Write_throughput) /time_len/
-            (double) B2GB,
-        (SSD_read_bytes - last_SSD_read_bytes) /time_len/ (double) B2GB,
-        (SSD_write_bytes - last_SSD_write_bytes) /time_len/ (double) B2GB,
-        (shootdowns - last_shootdowns)/time_len, GetMemoryUsage() / (1024.0 * 1024),
+        (cur_Client_Write_throughput - last_Client_Write_throughput) /
+            time_len / (double) B2GB,
+        (SSD_read_bytes - last_SSD_read_bytes) / time_len / (double) B2GB,
+        (SSD_write_bytes - last_SSD_write_bytes) / time_len / (double) B2GB,
+        (shootdowns - last_shootdowns) / time_len,
+        GetMemoryUsage() / (1024.0 * 1024),
         GetMemoryUsageMMAP(mmap_monitored_dir) / (1024.0 * 1024),
-        (cur_user_cpu_time - last_user_cpu_time)/time_len,
-        (cur_sys_cpu_time - last_sys_cpu_time)/time_len,
+        (cur_user_cpu_time - last_user_cpu_time) / time_len,
+        (cur_sys_cpu_time - last_sys_cpu_time) / time_len,
         (SSD_read_bytes - SSD_read_bytes_sp_) / (double) B2GB,
         (SSD_write_bytes - SSD_write_bytes_sp_) / (double) B2GB);
     log_file_.write(buf, size);

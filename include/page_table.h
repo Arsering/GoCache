@@ -66,7 +66,7 @@ class PageTableInner {
     }
 
     // non-atomic
-    FORCE_INLINE UnpackedPTE ToUnpacked() const {
+    FORCE_INLINE UnpackedPTE ToUnpacked() {
       auto packed_header =
           as_atomic(AsPacked()).load(std::memory_order_relaxed);
       auto pte = PTE::FromPacked(packed_header);
@@ -118,7 +118,7 @@ class PageTableInner {
                                   GBPfile_handle_type fd) {
       std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
       uint64_t old_packed = atomic_packed.load(std::memory_order_relaxed),
-               new_packed;
+               new_packed, ref_count;
 
       do {
         new_packed = old_packed;
@@ -129,23 +129,30 @@ class PageTableInner {
         }
 
 #if ASSERT_ENABLE
+        if (!(new_unpacked.ref_count <
+              (std::numeric_limits<uint16_t>::max() >> 2) - 1)) {
+          GBPLOG << "ref_count: " << new_unpacked.ref_count << " " << fd << " "
+                 << fpage_id << " "
+                 << ((std::numeric_limits<uint16_t>::max() >> 2) - 1);
+        }
         assert(new_unpacked.ref_count <
                (std::numeric_limits<uint16_t>::max() >> 2) - 1);
         assert(fd < (std::numeric_limits<uint16_t>::max() >> 2) - 1);
 #endif
-// 检查文件页信息是有必要的，防止在refcount+1期间，文件页信息被修改
+        // 检查文件页信息是有必要的，防止在refcount+1期间，文件页信息被修改
         if (new_unpacked.fpage_id_cur != fpage_id ||
             new_unpacked.fd_cur != fd) {
           return false;
         }
-
-        new_packed++;
+        ref_count = new_unpacked.ref_count++;
       } while (!atomic_packed.compare_exchange_weak(old_packed, new_packed,
                                                     std::memory_order_release,
                                                     std::memory_order_relaxed));
+      // if (fpage_id == 18025) {
+      //   gbp::GBPLOG << "cp " << ref_count;
+      // }
       return true;
     }
-
 
     // 需要获得文件页的相关信息，因为该内存页可能被用于存储其他文件页
     // 该调用的问题：refcount可能会超过其最大值！！！
@@ -230,6 +237,7 @@ class PageTableInner {
     // 无需获得文件页的相关信息，因为该内存页的 ref_count >0
     // 时不可能被用于存储其他文件页
     FORCE_INLINE void DecRefCount(bool is_write, bool write_to_ssd = false) {
+      assert(false);
       std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
       if (is_write)
         atomic_packed.fetch_or(1 << 30);
@@ -240,13 +248,19 @@ class PageTableInner {
     }
     // 无需获得文件页的相关信息，因为该内存页的 ref_count >0
     // 时不可能被用于存储其他文件页
-    FORCE_INLINE void DecRefCount() { as_atomic(AsPacked()).fetch_sub(1); }
+    FORCE_INLINE void DecRefCount() {
+#if ASSERT_ENABLE
+      assert(ref_count > 0);
+#endif
+      as_atomic(AsPacked()).fetch_sub(1);
+    }
 #endif
 
     bool SetDirty(bool _dirty) {
       dirty = _dirty;
       return true;
     }
+
     bool Lock() {
       std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
       uint64_t old_packed = atomic_packed.load(std::memory_order_acquire),
@@ -293,7 +307,7 @@ class PageTableInner {
    public:
     uint16_t ref_count : 16;
     GBPfile_handle_type fd_cur : 12;
-    bool visited: 1;
+    bool visited : 1;
     bool initialized : 1;
     bool dirty : 1;
     bool busy : 1;
@@ -305,7 +319,7 @@ class PageTableInner {
     PTE ptes[8];
 
     constexpr static size_t NUM_PACK_PAGES = 8;
-    constexpr static PTE EMPTY_PTE = {0, INVALID_FILE_HANDLE >> 4, 0, 0,0,
+    constexpr static PTE EMPTY_PTE = {0, INVALID_FILE_HANDLE >> 4, 0, 0, 0,
                                       0, INVALID_PAGE_ID};
   };
 
@@ -330,14 +344,11 @@ class PageTableInner {
     return object_size;
   }
 
-  PageTableInner() = default;
-  PageTableInner(size_t num_pages) : num_pages_(num_pages) {
-    pool_ = (PTE*) new PackedPTECacheLine[ceil(
-        num_pages, sizeof(PackedPTECacheLine) / sizeof(PTE))];
-    for (size_t page_id = 0; page_id < num_pages; page_id++)
-      pool_[page_id].Clean();
+  PageTableInner() = delete;
+  PageTableInner(PTE* ptes, mpage_id_type num_pages) : num_pages_(num_pages) {
+    pool_ = ptes;
   }
-  ~PageTableInner() { delete[] pool_; };
+  ~PageTableInner() {};
 
   uint16_t GetRefCount(mpage_id_type mpage_id) const {
 #if ASSERT_ENABLE
@@ -377,13 +388,17 @@ using PTE = PageTableInner::PTE;
 
 class PageMapping {
  public:
-  constexpr static size_t NUM_PER_CACHELINE =
-      CACHELINE_SIZE / sizeof(mpage_id_type);
-  static_assert(CACHELINE_SIZE % sizeof(mpage_id_type) == 0);
-
+#if ENABLE_OPTIMISTIC_LOCK
+  using mapping_number_type = uint64_t;
+#else
+  using mapping_number_type = uint32_t;
+#endif
   struct alignas(sizeof(mpage_id_type)) Mapping {
     mpage_id_type mpage_id : 31;
     bool visited : 1;
+#if ENABLE_OPTIMISTIC_LOCK
+    uint32_t version;
+#endif
 
     constexpr static mpage_id_type EMPTY_VALUE =
         std::numeric_limits<mpage_id_type>::max() >> 1;
@@ -394,17 +409,22 @@ class PageMapping {
       *this = PackedMappingCacheLine::EMPTY_PTE;
       return true;
     }
-    static inline Mapping& FromPacked(mpage_id_type& packed) {
+    static inline Mapping& FromPacked(mapping_number_type& packed) {
       return (Mapping&) packed;
     }
   };
 
+  constexpr static size_t NUM_PER_CACHELINE =
+      CACHELINE_SIZE / sizeof(PageMapping::Mapping);
+
   struct alignas(CACHELINE_SIZE) PackedMappingCacheLine {
     Mapping ptes[NUM_PER_CACHELINE];
-
+#if ENABLE_OPTIMISTIC_LOCK
+    constexpr static Mapping EMPTY_PTE = {Mapping::EMPTY_VALUE, false, 0};
+#else
     constexpr static Mapping EMPTY_PTE = {Mapping::EMPTY_VALUE, false};
+#endif
   };
-  static_assert(sizeof(PackedMappingCacheLine) == CACHELINE_SIZE);
 
   PageMapping() = default;
   PageMapping(fpage_id_type fpage_num) : mappings_(), size_(0) {
@@ -418,16 +438,16 @@ class PageMapping {
     assert(fpage_id_inpool < size_);
 #endif
 
-    std::atomic<mpage_id_type>& atomic_data =
-        as_atomic((mpage_id_type&) mappings_[fpage_id_inpool]);
-    mpage_id_type data = atomic_data.load(std::memory_order_relaxed);
+    std::atomic<mapping_number_type>& atomic_data =
+        as_atomic((mapping_number_type&) mappings_[fpage_id_inpool]);
+    mapping_number_type data = atomic_data.load(std::memory_order_relaxed);
 
     auto& unpacked_data = Mapping::FromPacked(data);
 
-    if (unlikely(unpacked_data.mpage_id == Mapping::EMPTY_VALUE ||
-                 unpacked_data.mpage_id == Mapping::BUSY_VALUE))
+    if (GS_unlikely(unpacked_data.mpage_id == Mapping::EMPTY_VALUE ||
+                    unpacked_data.mpage_id == Mapping::BUSY_VALUE)) {
       return {false, unpacked_data.mpage_id};
-    else
+    } else
       return {true, unpacked_data.mpage_id};
   }
 
@@ -436,10 +456,10 @@ class PageMapping {
     assert(fpage_id_inpool < size_);
 #endif
 
-    std::atomic<mpage_id_type>& atomic_data =
-        as_atomic((mpage_id_type&) mappings_[fpage_id_inpool]);
-    mpage_id_type old_data = atomic_data.load(std::memory_order_relaxed),
-                  new_data;
+    std::atomic<mapping_number_type>& atomic_data =
+        as_atomic((mapping_number_type&) mappings_[fpage_id_inpool]);
+    mapping_number_type old_data = atomic_data.load(std::memory_order_relaxed),
+                        new_data;
 
     do {
       new_data = old_data;
@@ -459,10 +479,10 @@ class PageMapping {
 #if ASSERT_ENABLE
     assert(fpage_id_inpool < size_);
 #endif
-    std::atomic<mpage_id_type>& atomic_data =
-        as_atomic((mpage_id_type&) mappings_[fpage_id_inpool]);
-    mpage_id_type old_data = atomic_data.load(std::memory_order_relaxed),
-                  new_data;
+    std::atomic<mapping_number_type>& atomic_data =
+        as_atomic((mapping_number_type&) mappings_[fpage_id_inpool]);
+    mapping_number_type old_data = atomic_data.load(std::memory_order_relaxed),
+                        new_data;
 
     do {
       new_data = old_data;
@@ -483,10 +503,11 @@ class PageMapping {
 #if ASSERT_ENABLE
     assert(fpage_id_inpool < size_);
 #endif
-    std::atomic<mpage_id_type>& atomic_data =
-        as_atomic((mpage_id_type&) mappings_[fpage_id_inpool]);
-    mpage_id_type old_data = atomic_data.load(std::memory_order_relaxed),
-                  new_data;
+
+    std::atomic<mapping_number_type>& atomic_data =
+        as_atomic((mapping_number_type&) mappings_[fpage_id_inpool]);
+    mapping_number_type old_data = atomic_data.load(std::memory_order_relaxed),
+                        new_data;
 
     do {
       new_data = old_data;
@@ -495,15 +516,28 @@ class PageMapping {
       if (unpacked_data.mpage_id == Mapping::BUSY_VALUE) {
         return {false, unpacked_data.mpage_id};
       }
-      // if (for_modify && unpacked_data.mpage_id != Mapping::EMPTY_VALUE) {
-      //   return { false, unpacked_data.mpage_id };
-      // }
+// if (for_modify && unpacked_data.mpage_id != Mapping::EMPTY_VALUE) {
+//   return { false, unpacked_data.mpage_id };
+// }
+#if ENABLE_OPTIMISTIC_LOCK
+      unpacked_data.version++;
+#endif
       unpacked_data.mpage_id = Mapping::BUSY_VALUE;
     } while (!atomic_data.compare_exchange_weak(old_data, new_data,
                                                 std::memory_order_release,
                                                 std::memory_order_relaxed));
 
     return {true, Mapping::FromPacked(old_data).mpage_id};
+  }
+
+  size_t GetVersion(fpage_id_type fpage_id_inpool) {
+#if ASSERT_ENABLE
+    assert(fpage_id_inpool < size_);
+#endif
+    std::atomic<mapping_number_type>& atomic_data =
+        as_atomic((mapping_number_type&) mappings_[fpage_id_inpool]);
+    mapping_number_type old_data = atomic_data.load(std::memory_order_relaxed);
+    return Mapping::FromPacked(old_data).version;
   }
 
   // FIXME: 不支持线程安全
@@ -546,9 +580,10 @@ class PageMapping {
 class PageTable {
  public:
   PageTable() : mappings_(), page_table_inner_(), partitioner_(nullptr) {}
-  PageTable(mpage_id_type mpage_num, RoundRobinPartitioner* partitioner)
+  PageTable(mpage_id_type page_num, PTE* ptes,
+            RoundRobinPartitioner* partitioner)
       : partitioner_(partitioner) {
-    page_table_inner_ = new PageTableInner(mpage_num);
+    page_table_inner_ = new PageTableInner(ptes, page_num);
   }
   ~PageTable() {
     for (auto page_table : mappings_)
@@ -697,6 +732,30 @@ class PageTable {
       return false;
 
     return true;
+  }
+
+  // 本函数不保证该页已经被加载进内存
+  FORCE_INLINE bool LockPage(GBPfile_handle_type fd, fpage_id_type fpage_id) {
+#if ASSERT_ENABLE
+    assert(fd < mappings_.size());
+    assert(mappings_[fd] != nullptr);
+#endif
+    auto fpage_id_inpool = partitioner_->GetFPageIdInPartition(fpage_id);
+    auto [success, mpage_id] = mappings_[fd]->LockMapping(fpage_id_inpool);
+
+    if (!success)
+      return false;
+    return true;
+  }
+
+  FORCE_INLINE size_t GetVersion(fpage_id_type fpage_id,
+                                 GBPfile_handle_type fd) {
+#if ASSERT_ENABLE
+    assert(fd < mappings_.size());
+    assert(mappings_[fd] != nullptr);
+#endif
+    auto fpage_id_inpool = partitioner_->GetFPageIdInPartition(fpage_id);
+    return mappings_[fd]->GetVersion(fpage_id_inpool);
   }
 
   FORCE_INLINE PTE* FromPageId(mpage_id_type mpage_id) const {

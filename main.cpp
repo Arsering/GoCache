@@ -522,6 +522,7 @@ int main(int argc, char** argv) {
   // mi_malloc(10);
 
   test::test_concurrency(argc, argv);
+
   // test::test_csv(
   //     "/nvme0n1/lgraph_db/sf0.1/social_network/dynamic/person_0_0.csv");
   // test::test_vertex(
