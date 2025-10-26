@@ -154,7 +154,7 @@ void PerformanceLogServer::Logging() {
   last_Client_Read_throughput = client_read_throughput_Byte_.load();
   last_Client_Write_throughput = client_write_throughput_Byte_.load();
   std::tie(last_user_cpu_time, last_sys_cpu_time) = GetCPUTime();
-
+  GBPLOG << "Device Name = " << device_name_;
   size = ::snprintf(buf, 4096,
                     "%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s\n",
                     "Client_Read_Throughput", "Client_Write_Throughput",

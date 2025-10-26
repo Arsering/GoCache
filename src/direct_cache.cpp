@@ -25,6 +25,16 @@ bool DirectCache::CleanAllCache() {
   }
   return true;
 }
+void DirectCache::CreateSnapshotGlobal() {
+#if ASSERT_ENABLE
+  assert(get_thread_id() < direct_cache_num);
+#endif
+
+  for (auto& cache : direct_caches) {
+    cache.CreateSnapshot();
+  }
+}
+
 // bool DirectCache::ErasePage() {
 // #if ASSERT_ENABLE
 //   assert(get_thread_id() < 40);

@@ -88,6 +88,15 @@ class BufferPoolManager {
   inline int GetFileDescriptor(GBPfile_handle_type fd) {
     return disk_manager_->GetFileDescriptor(fd);
   }
+  void CreateSnapshot(size_t mode = 0) {
+    if (mode == 0) {
+      memory_pool_global_->CreateSnapshot();
+    } else if (mode == 1) {
+      gbp::DirectCache::CreateSnapshotGlobal();
+    } else {
+      assert(false);
+    }
+  }
 
   int GetBlock(char* buf, size_t file_offset, size_t block_size,
                GBPfile_handle_type fd = 0) const;
@@ -103,7 +112,7 @@ class BufferPoolManager {
                                          GBPfile_handle_type fd = 0) const;
   const BufferBlock GetBlockAsync1(size_t file_offset, size_t block_size,
                                    GBPfile_handle_type fd = 0) const;
-  FORCE_INLINE const void GetBlockBatch(
+  FORCE_INLINE void GetBlockBatch(
       const std::vector<batch_request_type>& requests,
       std::vector<BufferBlock>& results) const {
 #if USING_DIRECT_CACHE
@@ -112,10 +121,10 @@ class BufferPoolManager {
     GetBlockBatchWithoutDirectCache(requests, results);
 #endif
   }
-  const void GetBlockBatchWithoutDirectCache(
+  void GetBlockBatchWithoutDirectCache(
       const std::vector<batch_request_type>& requests,
       std::vector<BufferBlock>& results) const;
-  const void GetBlockBatchWithDirectCache(
+  void GetBlockBatchWithDirectCache(
       const std::vector<batch_request_type>& batch_requests,
       std::vector<BufferBlock>& results) const;
   const std::vector<BufferBlock> GetBlockBatch_new(
@@ -125,12 +134,31 @@ class BufferPoolManager {
 
   const BufferBlock GetBlock(size_t file_offset, size_t block_size,
                              GBPfile_handle_type fd = 0) const {
+    BufferBlock ret;
+    // auto time = CacheInfo::get_time_in_ns();
 #if USING_DIRECT_CACHE
-    return GetBlockWithDirectCacheSync(file_offset, block_size, fd);
+    ret = GetBlockWithDirectCacheSync(file_offset, block_size, fd);
 #else
-
-    return GetBlockSync(file_offset, block_size, fd);
+    ret = GetBlockSync(file_offset, block_size, fd);
 #endif
+
+    // size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
+    // size_t num_page =
+    //     fpage_offset == 0 || (block_size <= (PAGE_SIZE_FILE - fpage_offset))
+    //         ? CEIL(block_size, PAGE_SIZE_FILE)
+    //         : (CEIL(block_size - (PAGE_SIZE_FILE - fpage_offset),
+    //                 PAGE_SIZE_FILE) +
+    //            1);
+
+    // auto fpage_id = file_offset / PAGE_SIZE_FILE;
+    // for (auto page_id = 0; page_id < num_page; page_id++) {
+    //   // CacheInfo::GetCacheInfo().Insert(fd, page_id + fpage_id);
+    //   auto key = (static_cast<uint64_t>(fd) << 32) | (page_id + fpage_id);
+    //   gbp::get_thread_logfile() << key << std::endl;
+    // }
+    // time = CacheInfo::get_time_in_ns() - time;
+    // gbp::get_thread_logfile() << time << std::endl;
+    return ret;
   }
   const BufferBlock GetBlockWithDirectCacheSync(
       size_t file_offset, size_t block_size, GBPfile_handle_type fd = 0) const;
@@ -177,7 +205,8 @@ class BufferPoolManager {
   void WarmUp() {
     std::vector<std::thread> thread_pool;
 
-    for (int fd = 0; fd < disk_manager_->fd_oss_.size(); fd++) {
+    for (std::vector<std::pair<unsigned int, bool>>::size_type fd = 0;
+         fd < disk_manager_->fd_oss_.size(); fd++) {
       if (disk_manager_->ValidFD(fd)) {
         // ret = FlushFile(fd);
         thread_pool.emplace_back([&, fd]() { LoadFile(fd); });

@@ -31,7 +31,7 @@ class TwoQ : public Replacer<mpage_id_type> {
       : list_Ain_(page_table, capacity),
         list_Am_(page_table, capacity),
         page_table_(page_table),
-        capacity_Ain_(capacity * 0.25),
+        capacity_Ain_(capacity * 0.1),
         capacity_Aout_(capacity * 0.5) {}
   TwoQ(const TwoQ& other) = delete;
   TwoQ& operator=(const TwoQ&) = delete;
@@ -47,12 +47,12 @@ class TwoQ : public Replacer<mpage_id_type> {
         (static_cast<uint64_t>(pte->fd_cur) << 32) | pte->fpage_id_cur;
     auto fpage_index = map_Aout_.find(fpage_key);
     if (fpage_index != map_Aout_.end()) {
-      assert(list_Am_.Insert(value));
+      assert(list_Am_.Insert(value));  // 他是被多次访问的数据
       list_Aout_.erase(fpage_index->second);
       map_Aout_.erase(fpage_index);
     } else {
+      assert(list_Ain_.Insert(value));  // 之前未被访问
       size_Ain_++;
-      assert(list_Ain_.Insert(value));
     }
     return true;
   }
@@ -62,11 +62,19 @@ class TwoQ : public Replacer<mpage_id_type> {
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
-    auto* pte = page_table_->FromPageId(value);
-    uint64_t fpage_key =
-        (static_cast<uint64_t>(pte->fd_cur) << 32) | pte->fpage_id_cur;
-    if (map_Aout_.find(fpage_key) != map_Aout_.end()) {
-      return list_Am_.Promote(value);
+    // auto* pte = page_table_->FromPageId(value);
+    // uint64_t fpage_key =
+    //     (static_cast<uint64_t>(pte->fd_cur) << 32) | pte->fpage_id_cur;
+    // if (map_Aout_.find(fpage_key) != map_Aout_.end()) {
+    //   return list_Am_.Promote(value);
+    // }
+    if (list_Am_.Promote(value)) {
+      return true;
+    } else {
+      assert(list_Ain_.Erase(value));
+      size_Ain_--;
+
+      list_Am_.Insert(value);
     }
     return true;
   }
@@ -79,17 +87,18 @@ class TwoQ : public Replacer<mpage_id_type> {
     if (size_Ain_ > capacity_Ain_) {
       list_Ain_.Victim(mpage_id);
       size_Ain_--;
-
-      auto fpage_key = GetFpageKey(mpage_id);
-      list_Aout_.push_front(fpage_key);
-      map_Aout_[fpage_key] = list_Aout_.begin();
-      while (list_Aout_.size() > capacity_Aout_) {
-        map_Aout_.erase(list_Aout_.back());
-        list_Aout_.pop_back();
-      }
     } else {
       list_Am_.Victim(mpage_id);
     }
+    auto fpage_key = GetFpageKey(mpage_id);
+    list_Aout_.emplace_front(fpage_key);
+    map_Aout_[fpage_key] = list_Aout_.begin();
+
+    while (list_Aout_.size() > capacity_Aout_) {
+      map_Aout_.erase(list_Aout_.back());
+      list_Aout_.pop_back();
+    }
+
     return true;
   }
 
@@ -135,7 +144,7 @@ class TwoQ : public Replacer<mpage_id_type> {
  private:
   using listarray_value_type = uint8_t;
 
-  FIFOReplacer_v2 list_Ain_;
+  LRUReplacer_v2 list_Ain_;
   std::list<uint64_t> list_Aout_;
   LRUReplacer_v2 list_Am_;
 

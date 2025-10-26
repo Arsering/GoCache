@@ -17,7 +17,7 @@ BufferPoolManager::~BufferPoolManager() {
   //   LOG(INFO) << "page_used_num = " << page_used_num;
   // #endif
   // #endif
-
+  gbp::DirectCache::CleanAllCache();
   if constexpr (PERSISTENT) {
     Flush();
   }
@@ -298,8 +298,32 @@ int BufferPoolManager::SetBlock(const BufferBlock& buf, size_t file_offset,
   return buf_size;
 }
 
+struct PageMark {
+  std::vector<uint8_t> marks;
+  PageMark() {
+    marks.resize((size_t) 20 * 1024 * 1024 * 1024 / PAGE_SIZE_MEMORY, 0);
+  }
+  ~PageMark() {
+    size_t count = 0;
+    for (auto& mark : marks) {
+      if (mark != 0) {
+        count++;
+      }
+    }
+    GBPLOG << "hot page num: " << count;
+  }
+  uint8_t& GetMark(fpage_id_type page_id) { return marks[page_id]; }
+  static PageMark& GetGlobalInstance() {
+    static PageMark pm;
+    return pm;
+  }
+};
+
 const pair_min<PTE*, char*> BufferPoolManager::PinPage(
     fpage_id_type fpage_id, GBPfile_handle_type fd) const {
+  // if (get_counter_global(15) == 1) {
+  //   PageMark::GetGlobalInstance().GetMark(fpage_id) = 1;
+  // }
   return pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(fpage_id,
                                                                        fd);
 }
@@ -310,6 +334,9 @@ void BufferPoolManager::UnpinPage(fpage_id_type fpage_id,
 
 const pair_min<PTE*, char*> BufferPoolManager::GetPageOpt(
     fpage_id_type fpage_id, GBPfile_handle_type fd, size_t& version_now) const {
+  // if (get_counter_global(15) == 1) {
+  //   PageMark::GetGlobalInstance().GetMark(fpage_id) = 1;
+  // }
   auto ret = pools_[partitioner_->GetPartitionId(fpage_id)]->FetchPageSync(
       fpage_id, fd);
   version_now =
@@ -329,6 +356,9 @@ bool BufferPoolManager::ReleasePageOpt(fpage_id_type fpage_id,
 
 const pair_min<PTE*, char*> BufferPoolManager::LockPage(
     size_t fpage_id, GBPfile_handle_type fd) const {
+  // if (get_counter_global(15) == 1) {
+  //   PageMark::GetGlobalInstance().GetMark(fpage_id) = 1;
+  // }
   auto ret =
       pools_[partitioner_->GetPartitionId(fpage_id)]->LockPage(fpage_id, fd);
 
@@ -337,7 +367,7 @@ const pair_min<PTE*, char*> BufferPoolManager::LockPage(
 
 void BufferPoolManager::UnlockPage(fpage_id_type fpage_id,
                                    GBPfile_handle_type fd, PTE* pte) {
-  pte->DecRefCount();
+  pte->UnLock();
   pools_[partitioner_->GetPartitionId(fpage_id)]->UnlockPage(fpage_id, fd, pte);
 }
 
@@ -685,7 +715,7 @@ const std::vector<BufferBlock> BufferPoolManager::GetBlockBatch_new(
   return std::move(rets);
 }
 
-const void BufferPoolManager::GetBlockBatchWithoutDirectCache(
+void BufferPoolManager::GetBlockBatchWithoutDirectCache(
     const std::vector<batch_request_type>& batch_requests,
     std::vector<BufferBlock>& results) const {
   if (batch_requests.empty()) {
@@ -786,7 +816,7 @@ const void BufferPoolManager::GetBlockBatchWithoutDirectCache(
   }
 }
 
-const void BufferPoolManager::GetBlockBatchWithDirectCache(
+void BufferPoolManager::GetBlockBatchWithDirectCache(
     const std::vector<batch_request_type>& batch_requests,
     std::vector<BufferBlock>& results) const {
   if (batch_requests.empty()) {

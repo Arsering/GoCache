@@ -359,7 +359,7 @@ class IOURing : public IOBackend {
     }
 
     auto num_ready = io_uring_peek_batch_cqe(&ring_, cqes_, IOURing_MAX_DEPTH);
-    for (int i = 0; i < num_ready; i++) {
+    for (uint i = 0; i < num_ready; i++) {
       void* finish = io_uring_cqe_get_data(cqes_[i]);
 
       if (finish != nullptr) {
@@ -400,7 +400,7 @@ class RWSysCall : public IOBackend {
     auto ret = ::pwrite(disk_manager_->fd_oss_[fd].first, data.data(),
                         data.size(), offset);
 #if ASSERT_ENABLE
-    assert(ret == data.size());  // check for I/O error
+    assert(ret == (ssize_t) data.size());  // check for I/O error
 #endif
     ::fdatasync(disk_manager_->fd_oss_[fd]
                     .first);  // needs to flush to keep disk file in sync
@@ -482,7 +482,7 @@ class RWSysCall : public IOBackend {
                        data.size(), offset);
 
     // if file ends before reading PAGE_SIZE
-    if (ret < data.size()) {
+    if (ret < (ssize_t) data.size()) {
       memset(const_cast<char*>(data.data()) + ret, 0, data.size() - ret);
     }
     if (finish != nullptr)
@@ -504,6 +504,7 @@ class RWSysCall : public IOBackend {
            disk_manager_
                ->file_size_inBytes_[fd]);  // check if read beyond file length
 #endif
+    get_counter_global(10)++;
 
     auto ret = ::pread(disk_manager_->fd_oss_[fd].first, data, size, offset);
 
@@ -511,7 +512,7 @@ class RWSysCall : public IOBackend {
     assert(ret != -1);
 #endif
 
-    if (ret < size) {
+    if (ret < (ssize_t) size) {
       memset(data + ret, 0, size - ret);
     }
     if (finish != nullptr)

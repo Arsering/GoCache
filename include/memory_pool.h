@@ -95,7 +95,13 @@ class MemoryPool {
 
     counter_per_memorypage(0, (uintptr_t) pool_, num_pages);
   }
-
+  void CreateSnapshot() {
+    for (auto page_id = 0; page_id < num_pages_; page_id++) {
+      auto key = (static_cast<uint64_t>(page_states_[page_id].fd_cur) << 32) |
+                 page_states_[page_id].fpage_id_cur;
+      gbp::get_thread_logfile() << key << std::endl;
+    }
+  }
   MemoryPool(const MemoryPool& src) { src.Move(*this); }
   MemoryPool& operator=(const MemoryPool&& src) noexcept {
     src.Move(*this);

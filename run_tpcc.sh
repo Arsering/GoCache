@@ -19,14 +19,13 @@ else
 fi
 
 cd ..
-
 CUR_DIR=.
 
-export FILE_SIZE_MB=$((10*1024))
+export FILE_SIZE_MB=$((20*1024))
 export WORKER_NUM=1
 export POOL_NUM=1
 export IO_SERVER_NUM=1
-export POOL_SIZE_MB=$(python3 -c "print(int(1*1024))")
+export POOL_SIZE_MB=$(python3 -c "print(int(1024*1))")
 export IO_SIZE_Byte=$((512*8))
 export DB_PATH=/mnt/nvme/vmcache_test/vm_file
 # export TEST_TYPE="Buffer_Pool+Pread" # Buffer_Pool+Pread or MMAP or PREAD
@@ -40,6 +39,8 @@ mkdir -p ${LOG_DIR}
 cp -r ./$0 ${LOG_DIR}/run.sh
 
 echo 1 > /proc/sys/vm/drop_caches
+echo 1 > /proc/sys/vm/drop_caches
+
 
 FILE_SIZE_PAGE=$(python3 -c "print(int(256*1024*10))")
 export RNDREAD=0 
@@ -48,16 +49,15 @@ export BLOCK=/mnt/nvme/vmcache_test/vm_file
 # export BLOCK=/dev/loop1
 export THREAD=1
 export DATASIZE=${FILE_SIZE_PAGE}
-# export DATASIZE=10
+export DATASIZE=15
 export VIRTGB=32
-export PHYSMB=$(python3 -c "print(int(1024*1))")
 export EXMAP=0
+export ALPHA=0.6
+export TRACE_DIR=/data-2/zhengyang/traces/
 
 ./bin/graphscope_bufferpool ${FILE_SIZE_MB} ${WORKER_NUM} ${POOL_NUM} ${POOL_SIZE_MB} ${IO_SERVER_NUM} ${IO_SIZE_Byte} ${LOG_DIR} &> ${LOG_DIR}/log.log
 
-
-
-
+# &> ${LOG_DIR}/log.log
 
 # cgexec -g memory:yz_15g
 # gdb --args

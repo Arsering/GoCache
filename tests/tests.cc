@@ -166,14 +166,25 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
 
   size_t curr_io_fileoffset, ret, io_size;
   size_t st, io_id;
-  size_t batch_size = 80;
+  size_t batch_size = 1;
   std::vector<std::future<BufferBlock>> block_container(batch_size);
   std::vector<gbp::batch_request_type> requests(batch_size);
   std::vector<size_t> io_file_offsets(batch_size);
-  int count = 1;
+  int count = 10000000;
+  auto alpha = std::stof(getenv("ALPHA"));
 
+  // ZipfGenerator zipf_gen(file_size_inByte / 4096, alpha, true);
+  // size_t query_num = 20000000;
+  // zipf_gen.GenToFile(12, query_num);
+  // GBPLOG << zipf_gen.GetFromFile();
+  // GBPLOG << zipf_gen.GetFromFile();
+  // return;
+
+  ZipfGenerator zipf(file_size_inByte / 4096, alpha, false, thread_id);
+  volatile size_t result = 0;
+  // zipf.GetFromFile();
   while (count != 0) {
-    // count--;
+    count--;
 
     // size_t query_count = get_trace_global()[thread_id].size();
 
@@ -234,19 +245,26 @@ void read_bufferpool(size_t start_offset, size_t file_size_inByte,
       id_in_batch++;
     }
 
-    for (auto req_idx = 0; req_idx < batch_size; req_idx++) {
-      // auto block = bpm.GetBlockBatch1(requests[req_idx].file_offset_,
-      //                                 requests[req_idx].block_size_,
-      //                                 requests[req_idx].fd_);
-      auto block = bpm.GetBlockSync(requests[req_idx].file_offset_,
-                                    requests[req_idx].block_size_,
-                                    requests[req_idx].fd_);
-      for (size_t i = 0; i < block.Size() / sizeof(size_t); i++) {
-        assert(gbp::BufferBlock::Ref<size_t>(block, i) ==
-               (requests[req_idx].file_offset_ / sizeof(size_t) + i));
-        break;
-      }
-    }
+    // for (auto req_idx = 0; req_idx < batch_size; req_idx++) {
+    //   // auto block = bpm.GetBlockBatch1(requests[req_idx].file_offset_,
+    //   //                                 requests[req_idx].block_size_,
+    //   //                                 requests[req_idx].fd_);
+    //   auto block = bpm.GetBlockSync(requests[req_idx].file_offset_,
+    //                                 requests[req_idx].block_size_,
+    //                                 requests[req_idx].fd_);
+    //   for (size_t i = 0; i < block.Size() / sizeof(size_t); i++) {
+    //     assert(gbp::BufferBlock::Ref<size_t>(block, i) ==
+    //            (requests[req_idx].file_offset_ / sizeof(size_t) + i));
+    //     break;
+    //   }
+    // }
+
+    auto page_id = zipf.GetFromFile();
+    if (page_id == std::numeric_limits<size_t>::max())
+      break;
+    auto block = bpm.GetBlock(page_id * 4096, 512, 0);
+    assert(gbp::BufferBlock::Ref<size_t>(block, 0) ==
+           (page_id * 4096 / sizeof(size_t)));
 
     // std::vector<BufferBlock> results;
     // results.reserve(batch_size);
@@ -647,12 +665,12 @@ int test_tpcc() {
 
   u64 statDiff = 1e8;
   atomic<u64> txProgress(0);
-  atomic<bool> keepRunning(true);
+  atomic<size_t> keepRunning = nthreads;
 
   auto statFn = [&]() {
     cout << "ts,tx,rmb,wmb,system,threads,datasize,workload,batch" << endl;
     u64 cnt = 0;
-    while (true) {
+    while (keepRunning) {
       sleep(1);
       u64 prog = txProgress.exchange(0);
       cout << cnt++ << "," << prog << "," << nthreads << "," << n << ","
@@ -660,10 +678,8 @@ int test_tpcc() {
     }
   };
 
-  bool TPC_C = false;
+  bool TPC_C = true;
   if (TPC_C) {
-    thread statThread(statFn);
-
     // TPC-C
     Integer warehouseCount = n;
     vmcache::vmcacheAdapter<warehouse_t> warehouse;
@@ -681,7 +697,7 @@ int test_tpcc() {
     TPCCWorkload<vmcache::vmcacheAdapter> tpcc(
         warehouse, district, customer, customerwdl, history, neworder, order,
         order_wdc, orderline, item, stock, true, warehouseCount, true);
-
+    get_counter_global(15) = 0;
     {
       tpcc.loadItem();
       tpcc.loadWarehouse();
@@ -691,8 +707,11 @@ int test_tpcc() {
                               workerThreadId = worker;
 
                               for (Integer w_id = begin; w_id < end; w_id++) {
+                                GBPLOG << "loadStock " << w_id;
                                 tpcc.loadStock(w_id);
+                                GBPLOG << "loadDistrinct " << w_id;
                                 tpcc.loadDistrinct(w_id);
+                                GBPLOG << "loadCustomer && loadOrders " << w_id;
                                 for (Integer d_id = 1; d_id <= 10; d_id++) {
                                   tpcc.loadCustomer(w_id, d_id);
                                   tpcc.loadOrders(w_id, d_id);
@@ -706,22 +725,28 @@ int test_tpcc() {
              vmcache::pageSize) /
                 (float) vmcache::GB
          << " GB " << endl;
+    get_counter_global(15) = 1;
 
+    thread statThread(statFn);
+    size_t tx_per_thread = 500000;
     vmcache::parallel_for(0, nthreads, nthreads,
                           [&](uint64_t worker, uint64_t begin, uint64_t end) {
                             workerThreadId = worker;
                             u64 cnt = 0;
-                            while (true) {
+                            u64 txProgress_local = 0;
+                            while (txProgress_local++ < tx_per_thread) {
                               int w_id =
                                   tpcc.urand(1, warehouseCount);  // wh crossing
-                              tpcc.tx(w_id);
-                              cnt++;
+                              auto ret = tpcc.tx(w_id);
+                              if (ret == 1 || ret == 3)
+                                cnt++;
                               if (cnt > 100) {
                                 txProgress += cnt;
                                 cnt = 0;
                               }
                             }
                             txProgress += cnt;
+                            keepRunning--;
                           });
     statThread.join();
 
@@ -751,8 +776,7 @@ int test_tpcc() {
                     (1024.0 * 1024 * 1024);
         cur_thpt_read = thpt_read.exchange(0);
 
-        cout << prog << " " << prog * 4.0 / 1024 / 1024 << " " << rgb << " "
-             << wgb << " "
+        cout << prog * 4.0 / 1024 / 1024 << " " << rgb << " " << wgb << " "
              << (cur_thpt_read * vmcache::pageSize / (1024.0 * 1024 * 1024))
              << endl;
 
@@ -775,11 +799,12 @@ int test_tpcc() {
 
           while (true) {
             auto page_id = rnd(gen);
-            vmcache::GuardO<vmcache::PageNode> page(page_id);
-            if (page->payload[0] != page_id * 512) {
-              cerr << "data error" << page_id << endl;
-              exit(0);
-            }
+            vmcache::GuardX<vmcache::PageNode> page(page_id);
+            volatile auto ptr = &(page->payload[0]);
+            // if (page->payload[0] != page_id * 512) {
+            //   cerr << "data error" << page_id << endl;
+            //   exit(0);
+            // }
             txProgress++;
 
             // GuardO<PageNode> page_10(10);
@@ -808,8 +833,46 @@ int test_tpcc() {
   return 0;
 }
 
+void test_pingpong() {
+  std::string file_path =
+      "/data-1/zhengyang/data/graphscope-flex/experiment_space/LDBC_SNB/python/"
+      "b_column_sorted.csv";
+  std::ifstream file(file_path);  // 打开文件
+  if (!file.is_open()) {
+    std::cerr << "无法打开文件" << std::endl;
+    assert(false);
+  }
+  auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
+
+  std::string line;
+  std::getline(file, line);
+  size_t count = 0;
+  size_t count_tmp = 0;
+  size_t result = 0;
+  while (count < 20000000) {
+    if (!std::getline(file, line))
+      break;
+    auto page_id = std::stoull(line);
+
+    auto ret = bpm.GetBlock(page_id * gbp::PAGE_SIZE_MEMORY, 512, 0);
+    assert(gbp::BufferBlock::Ref<size_t>(ret, 0) ==
+           (page_id * gbp::PAGE_SIZE_MEMORY / sizeof(size_t)));
+    count++;
+    count_tmp++;
+    if (count_tmp > 100) {
+      gbp::PerformanceLogServer::GetPerformanceLogger()
+          .GetClientReadThroughputByte()
+          .fetch_add(gbp::PAGE_SIZE_MEMORY * count_tmp);
+      count_tmp = 0;
+    }
+    if (count % 1000000 == 0) {
+      GBPLOG << count;
+    }
+  }
+  GBPLOG << result;
+  file.close();  // 关闭文件
+}
 int test_concurrency(int argc, char** argv) {
-  GBPLOG << "cp";
   size_t file_size_MB = std::stoull(argv[1]);
   size_t worker_num = std::stoull(argv[2]);
   size_t pool_num = std::stoull(argv[3]);
@@ -839,7 +902,7 @@ int test_concurrency(int argc, char** argv) {
   int data_file = -1;
   data_file = ::open(file_path.c_str(), O_RDWR | O_CREAT | O_DIRECT, 0777);
   assert(data_file != -1);
-  // ::ftruncate(data_file, file_size_inByte);
+  ::ftruncate(data_file, file_size_inByte);
 
   char* data_file_mmaped = nullptr;
 
@@ -854,7 +917,7 @@ int test_concurrency(int argc, char** argv) {
 
   // gbp::DiskManager disk_manager(file_path);
   // gbp::IOBackend* io_backend = new gbp::RWSysCall(&disk_manager);
-  GBPLOG << pool_size_page;
+
   auto& bpm = gbp::BufferPoolManager::GetGlobalInstance();
   bpm.init(pool_num, pool_size_page, io_server_num, file_path);
 
@@ -887,9 +950,17 @@ int test_concurrency(int argc, char** argv) {
       std::string{argv[7]} + "/performance.log", "nvme0n1");
 
   std::vector<std::thread> thread_pool;
-  size_t ssd_io_byte = std::get<0>(gbp::SSD_io_bytes());
-  test_tpcc();
-  return 0;
+  size_t ssd_io_byte = std::get<0>(gbp::SSD_io_bytes("nvme0n1"));
+  get_counter_global(10) = 0;
+
+  // test_tpcc();
+
+  // test_pingpong();
+  // ssd_io_byte = std::get<0>(gbp::SSD_io_bytes("nvme0n1")) - ssd_io_byte;
+  // GBPLOG << "SSD IO = " << ssd_io_byte << "B";
+  // GBPLOG << " " << get_counter_global(10);
+
+  // return 0;
 
   for (size_t i = 0; i < worker_num; i++) {
     // thread_pool.emplace_back(write_mmap, data_file_mmaped,
@@ -944,8 +1015,9 @@ int test_concurrency(int argc, char** argv) {
   for (auto& thread : thread_pool) {
     thread.join();
   }
-  ssd_io_byte = std::get<0>(gbp::SSD_io_bytes()) - ssd_io_byte;
-  std::cout << "SSD IO = " << ssd_io_byte << "B" << std::endl;
+  ssd_io_byte = std::get<0>(gbp::SSD_io_bytes("nvme0n1")) - ssd_io_byte;
+  GBPLOG << "SSD IO = " << ssd_io_byte << "B";
+  GBPLOG << " " << get_counter_global(10);
 
   return 0;
 }

@@ -24,7 +24,7 @@ class RoundRobinPartitioner {
   RoundRobinPartitioner(partition_id_type num_partitions)
       : num_partitions_(num_partitions),
         log2_num_partitions_(std::log2(num_partitions)) {
-    assert(num_partitions == 1 << log2_num_partitions_);
+    assert(num_partitions == (uint32_t) 1 << log2_num_partitions_);
   }
 
   FORCE_INLINE std::tuple<partition_id_type, fpage_id_type> operator()(

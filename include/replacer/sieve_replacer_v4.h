@@ -32,7 +32,6 @@ class SieveReplacer_v4 : public Replacer<mpage_id_type> {
     assert(!list_.inList(value));
 #endif
 
-
     list_.getValue(value) = 0;
     return list_.insertToFront(value);
   }
@@ -44,11 +43,14 @@ class SieveReplacer_v4 : public Replacer<mpage_id_type> {
 
     // list_.getValue(value).store(1);
     auto pte = page_table_->FromPageId(value);
-    as_atomic(pte->AsPacked()).fetch_or(1<<28);
+    as_atomic(pte->AsPacked()).fetch_or(1 << 28);
+
+    // #if EVICTION_SYNC_ENABLE
+    //     std::lock_guard<std::mutex> lck(latch_);
+    // #endif
+    //     list_.moveAhead(value);
 
     return true;
-
-    // return ret;
   }
 
   bool Victim(mpage_id_type& mpage_id) override {
@@ -67,18 +69,18 @@ class SieveReplacer_v4 : public Replacer<mpage_id_type> {
     size_t count = list_.capacity_ * 2;
     while (true) {
       if (count == 0) {
+        // std::this_thread::yield();
         assert(false);
-        return false;
+        count = list_.capacity_ * 2;
+        // return false;
       }
-      const uint64_t mask_visited =  ~(1LL << 28);
+      const uint64_t mask_visited = ~(1LL << 28);
       while (true) {
-
         pte = page_table_->FromPageId(to_evict);
         uint64_t old_pte = as_atomic(pte->AsPacked()).fetch_and(mask_visited);
-        if (!PTE::FromPacked(old_pte).visited){
+        if (!PTE::FromPacked(old_pte).visited) {
           break;
         }
-
         to_evict = Hop(to_evict);
       }
 
@@ -112,11 +114,10 @@ class SieveReplacer_v4 : public Replacer<mpage_id_type> {
     return true;
   }
 
-  FORCE_INLINE size_t Hop(size_t current){
-
+  FORCE_INLINE size_t Hop(size_t current) {
     return list_.getPrevNodeIndex(current) == list_.head_
-                     ? list_.GetTail()
-                     : list_.getPrevNodeIndex(current);
+               ? list_.GetTail()
+               : list_.getPrevNodeIndex(current);
   }
 
   bool Replace(mpage_id_type& mpage_id) override {

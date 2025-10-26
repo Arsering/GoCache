@@ -114,8 +114,7 @@ class PageTableInner {
     }
 #else
     // 需要获得文件页的相关信息，因为该内存页可能被用于存储其他文件页
-    FORCE_INLINE bool IncRefCount(fpage_id_type fpage_id,
-                                  GBPfile_handle_type fd) {
+    bool IncRefCount(fpage_id_type fpage_id, GBPfile_handle_type fd) {
       std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
       uint64_t old_packed = atomic_packed.load(std::memory_order_relaxed),
                new_packed, ref_count;
@@ -129,12 +128,6 @@ class PageTableInner {
         }
 
 #if ASSERT_ENABLE
-        if (!(new_unpacked.ref_count <
-              (std::numeric_limits<uint16_t>::max() >> 2) - 1)) {
-          GBPLOG << "ref_count: " << new_unpacked.ref_count << " " << fd << " "
-                 << fpage_id << " "
-                 << ((std::numeric_limits<uint16_t>::max() >> 2) - 1);
-        }
         assert(new_unpacked.ref_count <
                (std::numeric_limits<uint16_t>::max() >> 2) - 1);
         assert(fd < (std::numeric_limits<uint16_t>::max() >> 2) - 1);
@@ -144,13 +137,10 @@ class PageTableInner {
             new_unpacked.fd_cur != fd) {
           return false;
         }
-        ref_count = new_unpacked.ref_count++;
+        new_unpacked.ref_count++;
       } while (!atomic_packed.compare_exchange_weak(old_packed, new_packed,
                                                     std::memory_order_release,
                                                     std::memory_order_relaxed));
-      // if (fpage_id == 18025) {
-      //   gbp::GBPLOG << "cp " << ref_count;
-      // }
       return true;
     }
 
@@ -250,6 +240,11 @@ class PageTableInner {
     // 时不可能被用于存储其他文件页
     FORCE_INLINE void DecRefCount() {
 #if ASSERT_ENABLE
+      if (ref_count <= 0) {
+        GBPLOG << "dec ref count error " << fd_cur << " " << fpage_id_cur << " "
+               << get_thread_id();
+        GBPLOG << get_stack_trace();
+      }
       assert(ref_count > 0);
 #endif
       as_atomic(AsPacked()).fetch_sub(1);
@@ -261,7 +256,7 @@ class PageTableInner {
       return true;
     }
 
-    bool Lock() {
+    bool Lock(size_t ref_count_ideal = 0) {
       std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
       uint64_t old_packed = atomic_packed.load(std::memory_order_acquire),
                new_packed;
@@ -269,16 +264,14 @@ class PageTableInner {
         new_packed = old_packed;
         auto& new_header = PTE::FromPacked(new_packed);
 
-        if ((new_header.ref_count != 0 && new_header.initialized) ||
+        if ((new_header.ref_count != ref_count_ideal &&
+             new_header.initialized) ||
             new_header.busy)
           return false;
         new_header.busy = true;
       } while (!atomic_packed.compare_exchange_weak(old_packed, new_packed,
                                                     std::memory_order_release,
                                                     std::memory_order_relaxed));
-      // GBPLOG << "after lock " << PTE::FromPacked(old_packed).fd_cur << " "
-      //        << PTE::FromPacked(new_packed).fpage_id_cur << " "
-      //        << get_thread_id();
       return true;
     }
 
@@ -363,6 +356,8 @@ class PageTableInner {
 
   PTE* FromPageId(mpage_id_type page_id) const {
 #if ASSERT_ENABLE
+    if (page_id >= num_pages_)
+      GBPLOG << page_id;
     assert(page_id < num_pages_);
 #endif
     return pool_ + page_id;
@@ -553,7 +548,7 @@ class PageMapping {
 
     Mapping* new_mapping = (Mapping*) new PackedMappingCacheLine[ceil(
         new_size, NUM_PER_CACHELINE)];
-    for (int i = 0; i < new_size; i++) {
+    for (fpage_id_type i = 0; i < new_size; i++) {
       if (i < size_)
         new_mapping[i] = mappings_[i];
       else
@@ -745,6 +740,11 @@ class PageTable {
 
     if (!success)
       return false;
+    auto pte = FromPageId(mpage_id);
+    while (true) {
+      if (pte->Lock(1))
+        break;
+    }
     return true;
   }
 

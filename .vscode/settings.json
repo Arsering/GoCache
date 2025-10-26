@@ -79,6 +79,18 @@
         "source_location": "cpp",
         "strstream": "cpp",
         "cfenv": "cpp",
-        "span": "cpp"
+        "span": "cpp",
+        "csignal": "cpp",
+        "numbers": "cpp",
+        "semaphore": "cpp",
+        "csetjmp": "cpp",
+        "cuchar": "cpp",
+        "valarray": "cpp",
+        "barrier": "cpp",
+        "scoped_allocator": "cpp",
+        "*.inc": "cpp",
+        "coroutine": "cpp",
+        "latch": "cpp",
+        "syncstream": "cpp"
     }
 }

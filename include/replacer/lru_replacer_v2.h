@@ -121,8 +121,7 @@ class LRUReplacer_v2 : public Replacer<mpage_id_type> {
     std::lock_guard<std::mutex> lck(latch_);
 #endif
 
-    list_.removeFromIndex(value);
-    return true;
+    return list_.removeFromIndex(value);
   }
 
   size_t Size() const override {

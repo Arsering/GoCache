@@ -50,12 +50,33 @@ class ListArray {
 
   // 插到队首
   FORCE_INLINE bool insertToFront(index_type nodeIndex) {
-    if (nodeIndex >= capacity_){
+    if (nodeIndex >= capacity_) {
       return false;
     }
 
     removeNode(nodeIndex);
     addNodeToFront(nodeIndex);
+
+    return true;
+  }
+  // 插到队首
+  FORCE_INLINE bool moveAhead(index_type nodeIndex) {
+    if (nodeIndex >= capacity_) {
+      return false;
+    }
+    if (nodes_[nodeIndex].next == tail_)
+      return false;
+
+    index_type next = nodes_[nodeIndex].next;
+    nodes_[nodeIndex].next = nodes_[next].next;
+
+    nodes_[next].prev = nodes_[nodeIndex].prev;
+
+    nodes_[nodes_[next].next].prev = nodeIndex;
+    nodes_[next].next = nodeIndex;
+
+    nodes_[nodes_[nodeIndex].prev].next = next;
+    nodes_[nodeIndex].prev = next;
 
     return true;
   }
@@ -72,8 +93,7 @@ class ListArray {
     if (nodeIndex >= capacity_)
       return false;
 
-    removeNode(nodeIndex);
-    return true;
+    return removeNode(nodeIndex);
   }
 
   // 删除指定位置
@@ -102,18 +122,16 @@ class ListArray {
 
   // 获取指定节点的前一个节点的索引
   FORCE_INLINE index_type getPrevNodeIndex(index_type nodeIndex) const {
-    if (nodeIndex == INVALID_INDEX || nodeIndex >= capacity_)
-      return INVALID_INDEX;
-    else {
-      return nodes_[nodeIndex].prev;
+    if (nodeIndex == INVALID_INDEX || nodeIndex >= capacity_) {
+      assert(false);
     }
+    return nodes_[nodeIndex].prev;
   }
   FORCE_INLINE index_type getNextNodeIndex(index_type nodeIndex) const {
     if (nodeIndex == INVALID_INDEX || nodeIndex >= capacity_)
       return INVALID_INDEX;
-    else {
-      return nodes_[nodeIndex].next;
-    }
+
+    return nodes_[nodeIndex].next;
   }
 
   size_t GetMemoryUsage() const { return sizeof(ListNode) * (capacity_ + 2); }
@@ -126,7 +144,10 @@ class ListArray {
   }
 
   index_type GetHead() const { return nodes_[head_].next; }
-  index_type GetTail() const { return nodes_[tail_].prev; }
+  index_type GetTail() const {
+    assert(nodes_[tail_].prev != INVALID_INDEX);
+    return nodes_[tail_].prev;
+  }
   bool Clean() {
     delete[] nodes_;
 

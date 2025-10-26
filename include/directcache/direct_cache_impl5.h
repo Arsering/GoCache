@@ -112,6 +112,7 @@ class DirectCacheImpl5 {
   }
   static DirectCacheImpl5& GetDirectCache();
   static bool CleanAllCache();
+  static bool CreateSnapshot();
 
  private:
   std::vector<Node> cache_;

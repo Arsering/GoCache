@@ -16,7 +16,7 @@ class DirectCacheImpl3 {
     PTE* pte_cur;
   };
   // #define DirectCache_HASH_FUNC(fd, fpage_id, capacity_) \
-//   (((fd << sizeof(fpage_id_type)) + fpage_id) % capacity_)
+  //   (((fd << sizeof(fpage_id_type)) + fpage_id) % capacity_)
 
   DirectCacheImpl3(size_t capacity = DIRECT_CACHE_SIZE) : capacity_(capacity) {}
 
@@ -110,6 +110,7 @@ class DirectCacheImpl3 {
 
   static DirectCacheImpl3& GetDirectCache();
   static bool CleanAllCache();
+  static bool CreateSnapshot();
 
  private:
   std::array<Node, DIRECT_CACHE_SIZE> cache_;

@@ -84,7 +84,7 @@ size_t GetMemoryUsage();
 uint64_t readTLBShootdownCount();
 uint64_t readIObytesOne();
 std::tuple<size_t, size_t> SSD_io_bytes(
-    const std::string& device_name = "md0");
+    const std::string& device_name = "nvme0n1");
 size_t GetMemoryUsageMMAP(std::string& mmap_monitored_dir);
 std::tuple<size_t, size_t> GetCPUTime();
 std::vector<std::tuple<void**, int, size_t>>& GetMAS();
@@ -340,5 +340,80 @@ class MemoryLifeTimeLogger {
 std::atomic<size_t>& counter_per_memorypage(uintptr_t target_addr,
                                             uintptr_t start_addr = 0,
                                             size_t page_count = 0);
+struct CacheInfo {
+  mutable std::mutex latch_;
+  std::list<std::pair<uint64_t, uint64_t>> list;
+  // std::unordered_map<
+  //     uint64_t, typename std::list<std::pair<uint64_t, uint64_t>>::iterator>
+  //     map;
+  std::unordered_map<uint64_t, size_t> map;
+  const size_t time_threshold = 3000000;  // one second
+  size_t count_insert = 0;
+  size_t count_check = 0;
+
+  CacheInfo() = default;
+  ~CacheInfo() {
+    GBPLOG << "CacheInfo count_insert: " << count_insert;
+    GBPLOG << "CacheInfo count_check: " << count_check;
+  }
+
+  void Insert(GBPfile_handle_type fd, fpage_id_type fpage_id) {
+    std::lock_guard<std::mutex> lck(latch_);
+
+    uint64_t key = CompKey(fd, fpage_id);
+    // auto loc = map.find(key);
+    // if (loc != map.end()) {
+    //   list.erase(loc->second);
+    //   map.erase(loc);
+    // }
+
+    map[key] = get_time_in_ms();
+  }
+
+  static uint64_t get_time_in_ms() {
+    struct timeval tv;
+    gettimeofday(&tv, nullptr);  // 获取当前时间
+
+    // 计算总微秒数：秒数*1000000 + 微秒数
+    return tv.tv_sec * 1000000LL + tv.tv_usec;
+  }
+  static uint64_t get_time_in_ns() {
+    struct timespec ts;
+    // 使用 CLOCK_MONOTONIC 时钟（单调递增，不受系统时间调整影响，适合计时）
+    clock_gettime(CLOCK_MONOTONIC, &ts);  // 获取当前时间（纳秒级）
+
+    // 计算总纳秒数：秒数 * 1e9（1秒=10亿纳秒） + 纳秒数
+    return (uint64_t) ts.tv_sec * 1000000000LL + ts.tv_nsec;
+  }
+
+  bool CheckExists(GBPfile_handle_type fd, fpage_id_type fpage_id) {
+    std::lock_guard<std::mutex> lck(latch_);
+
+    // KeepSize();
+    auto key = CompKey(fd, fpage_id);
+    auto loc = map.find(key);
+    if (loc != map.end() && get_time_in_ms() - loc->second < time_threshold) {
+      // gbp::get_thread_logfile() << key << std::endl;
+      return true;
+    }
+    return false;
+  }
+  FORCE_INLINE uint64_t CompKey(GBPfile_handle_type fd,
+                                fpage_id_type fpage_id) {
+    return (static_cast<uint64_t>(fd) << 32) | fpage_id;
+  }
+  void KeepSize() {
+    auto cur_time = get_time_in_ms();
+    while (cur_time - list.back().second > time_threshold) {
+      map.erase(list.back().first);
+      list.pop_back();
+    }
+  }
+
+  static CacheInfo& GetCacheInfo() {
+    static CacheInfo cache_info;
+    return cache_info;
+  }
+};
 
 }  // namespace gbp

@@ -40,6 +40,15 @@ class DirectCacheImpl1 {
     }
     return true;
   }
+  void CreateSnapshot() {
+    for (auto& page : cache_) {
+      if (page.pte_cur != nullptr) {
+        auto key = (static_cast<uint64_t>(page.pte_cur->fd_cur) << 32) |
+                   page.pte_cur->fpage_id_cur;
+        gbp::get_thread_logfile() << key << std::endl;
+      }
+    }
+  }
 
   FORCE_INLINE bool Insert(GBPfile_handle_type fd, fpage_id_type fpage_id,
                            PTE* pte) {
@@ -108,6 +117,7 @@ class DirectCacheImpl1 {
   }
   static DirectCacheImpl1& GetDirectCache();
   static bool CleanAllCache();
+  static void CreateSnapshotGlobal();
 
  private:
   std::vector<Node> cache_;
