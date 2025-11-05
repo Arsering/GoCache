@@ -7,13 +7,14 @@
 #pragma once
 
 // #define GRAPHSCOPE
-#define USING_DIRECT_CACHE false
+#define USING_DIRECT_CACHE true
 #define ASSERT_ENABLE false
 #define EVICTION_SYNC_ENABLE true
 #define LAZY_SSD_IO_NEW false
 #define PROFILE_ENABLE false
 // #define USING_EDGE_ITER
 #define ENABLE_OPTIMISTIC_LOCK true
+#define DEBUG_BITMAP false
 
 #ifdef GRAPHSCOPE
 #include <glog/logging.h>
@@ -60,10 +61,10 @@ using GBPfile_handle_type = uint32_t;
 using OSfile_handle_type = uint32_t;
 using partition_id_type = uint32_t;
 
-constexpr size_t DIRECT_CACHE_SIZE = 256 * 4;
+constexpr size_t DIRECT_CACHE_SIZE = 256 * 22;
 
 constexpr bool WAL_ENABLE = false;
-constexpr bool PERSISTENT = true;
+constexpr bool PERSISTENT = false;
 constexpr bool DEBUG = false;
 
 constexpr bool EVICTION_BATCH_ENABLE = false;

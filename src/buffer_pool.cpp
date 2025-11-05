@@ -1,5 +1,4 @@
 #include "../include/buffer_pool.h"
-#include <flex/graphscope_bufferpool/include/logger.h>
 #include <flat_hash_map/flat_hash_map.hpp>
 #include "../include/logger.h"
 
@@ -302,7 +301,7 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
   // if (gbp::warmup_mark() == 1)
   //   gbp::get_thread_logfile()
   //       << fd << " " << fpage_id << " " << GetSystemTime() << std::endl;
-  get_counter_global(15)++;
+  // get_counter_global(15)++;
   auto ret = Pin(fpage_id, fd);
   // if (gbp::warmup_mark() == 1) {
   //   as_atomic(disk_manager_->counts_[fd].first)++;
@@ -318,7 +317,7 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
     // gbp::get_thread_logfile() << "hit" << std::endl;
     return ret;
   }
-  get_counter_global(16)++;
+  // get_counter_global(16)++;
 
   // auto key = (static_cast<uint64_t>(fd) << 32) | fpage_id;
   // gbp::get_thread_logfile() << key << std::endl;
@@ -400,15 +399,7 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
       break;
     }
     case BP_async_request_type::Phase::Evicting: {  // 2
-#ifdef DEBUG_BITMAP
-      size_t fd_old = ret.first->fd;
-      size_t fpage_id_old =
-          partitioner_->GetFPageIdGlobal(pool_ID_, ret.first->fpage_id);
 
-      assert(disk_manager_->GetUsedMark(fd_old, fpage_id_old) == true);
-      disk_manager_->SetUsedMark(fd_old, fpage_id_old, false);
-      assert(disk_manager_->GetUsedMark(fd_old, fpage_id_old) == false);
-#endif
       // auto key = (static_cast<uint64_t>(ret.first->fd_cur) << 32) |
       //            ret.first->fpage_id_cur;
       // gbp::get_thread_logfile() << key << std::endl;
@@ -438,6 +429,11 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
       break;
     }
     case BP_async_request_type::Phase::Loading: {  // 4
+#if DEBUG_BITMAP
+      if (gbp::warmup_mark() == 1)
+        disk_manager_->SetUsedBitset(fd, fpage_id);
+#endif
+
       thread_local static PTE tmp;
       tmp.Clean();
 #if LAZY_SSD_IO_NEW
@@ -446,7 +442,7 @@ pair_min<PTE*, char*> BufferPool::FetchPageSync(fpage_id_type fpage_id,
 #else
       assert(ReadWriteSync(fpage_id * PAGE_SIZE_FILE, PAGE_SIZE_MEMORY,
                            ret.second, PAGE_SIZE_MEMORY, fd, true));
-      gbp::get_counter_local(20)++;
+      // gbp::get_counter_local(20)++;
       // if (gbp::warmup_mark() == 1) {
       //   as_atomic(disk_manager_->counts_[fd].second)++;
       // }

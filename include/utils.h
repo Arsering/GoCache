@@ -2,6 +2,7 @@
 
 #include <execinfo.h>
 #include <atomic>
+#include <bit>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/posix_time/posix_time_io.hpp>
 #include <boost/fiber/context.hpp>
@@ -10,7 +11,6 @@
 #include <boost/lockfree/queue.hpp>
 #include <boost/regex.hpp>
 #include <cstring>
-
 #include "config.h"
 
 namespace gbp {
@@ -18,10 +18,11 @@ namespace gbp {
 #define DirectCache_HASH_FUNC(fd, fpage_id, capacity_) \
   (((fd << sizeof(fpage_id_type)) + fpage_id) % capacity_)
 
-// #define DirectCache_HASH_FUNC(fd, fpage_id, capacity)                         \
-//   ((((uint64_t) (fd) ^ ((uint64_t) (fpage_id) * 0x9e3779b9)) * 0x85ebca6b ^   \
-//     (((uint64_t) (fd) ^ ((uint64_t) (fpage_id) * 0x9e3779b9)) * 0x85ebca6b >> \
-//      16)) %                                                                   \
+// #define DirectCache_HASH_FUNC(fd, fpage_id, capacity) \
+//   ((((uint64_t) (fd) ^ ((uint64_t) (fpage_id) * 0x9e3779b9)) * 0x85ebca6b ^ \
+//     (((uint64_t) (fd) ^ ((uint64_t) (fpage_id) * 0x9e3779b9)) * 0x85ebca6b >>
+//     \
+//      16)) % \
 //    capacity)
 
 #define CEIL(val, mod_val) \
@@ -243,23 +244,45 @@ class bitset_dynamic {
  public:
   bitset_dynamic() : size_(0) {}
   bitset_dynamic(size_t size) : size_(size) {
-    bits_ = (char*) calloc(ceil(size_, 8), 1);
+    bits_ = nullptr;
+    resize(size);
   }
-  bool resize(size_t new_size) {
-    if (new_size <= size_)
+
+  size_t count() {
+    size_t count = 0;
+    if (size_ == 0)
+      return 0;
+
+    for (auto id = 0; id < ceil(size_, 8); id++) {
+      auto target = bits_[id];
+      count += count_non_zero_bits(target);
+    }
+    return count;
+  }
+  int count_non_zero_bits(char b) {
+    int count = 0;
+    while (b != 0) {
+      b &= b - 1;  // 清除最右侧的1
+      count++;     // 每清除一个1，计数+1
+    }
+    return count;
+  }
+  bool resize(const size_t new_size) {
+    if (new_size == 0 || (new_size <= size_ && bits_ != nullptr))
       return true;
 
     char* bits_new = (char*) calloc(ceil(new_size, 8), 1);
-    ::memcpy(bits_new, bits_, ceil(size_, 8));
-
-    free(bits_);
+    if (bits_ != nullptr) {
+      ::memcpy(bits_new, bits_, ceil(size_, 8));
+      free(bits_);
+    }
     bits_ = bits_new;
     size_ = new_size;
     return true;
   }
+
   bool get(size_t idx) {
     assert(idx < size_);
-
     return (bits_[idx / 8] & ((uint8_t) 1 << (idx % 8))) >> (idx % 8);
   }
 
@@ -292,9 +315,10 @@ class bitset_dynamic {
   }
 
  private:
-  size_t size_;
+  size_t size_ = 0;
   char* bits_;
 };
+
 struct EmptyType {};
 
 class AsyncMesg {

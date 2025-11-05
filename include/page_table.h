@@ -227,7 +227,6 @@ class PageTableInner {
     // 无需获得文件页的相关信息，因为该内存页的 ref_count >0
     // 时不可能被用于存储其他文件页
     FORCE_INLINE void DecRefCount(bool is_write, bool write_to_ssd = false) {
-      assert(false);
       std::atomic<uint64_t>& atomic_packed = as_atomic(AsPacked());
       if (is_write)
         atomic_packed.fetch_or(1 << 30);

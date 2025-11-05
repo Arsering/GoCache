@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <boost/algorithm/string.hpp>
 #include <cassert>
@@ -50,6 +51,13 @@ class DiskManager {
       GBPLOG << file_id << " | " << file_names_[file_id] << " | "
              << file_size_inBytes_[file_id] << " | " << counts_[file_id].first
              << " | " << counts_[file_id].second;
+#if DEBUG_BITMAP
+    size_t working_set_size = 0;
+    for (auto& log : used_) {
+      working_set_size += log.count();
+    }
+    GBPLOG << "working set size (page num): " << working_set_size;
+#endif
   }
 
   FORCE_INLINE OSfile_handle_type
@@ -71,7 +79,7 @@ class DiskManager {
     assert(::ftruncate(GetFileDescriptor(fd), new_size_inByte) == 0);
     file_size_inBytes_[fd] = new_size_inByte;
 
-#ifdef DEBUG_BITMAP
+#if DEBUG_BITMAP
     used_[fd].resize(ceil(new_size_inByte, PAGE_SIZE_MEMORY));
 #endif
     return 0;
@@ -92,14 +100,19 @@ class DiskManager {
     debug::get_bitmaps().emplace_back(
         ceil(file_sizes_[file_sizes_.size() - 1], PAGE_SIZE_MEMORY));
 #endif
-#ifdef DEBUG_BITMAP
-    used_.emplace_back(
+#if DEBUG_BITMAP
+    used_[fd_oss_.size() - 1].resize(
         ceil(file_size_inBytes_[fd_oss_.size() - 1], PAGE_SIZE_MEMORY));
 #endif
 
     counts_.emplace_back(0, 0);
     return fd_oss_.size() - 1;
   }
+#if DEBUG_BITMAP
+  void SetUsedBitset(GBPfile_handle_type fd, fpage_id_type file_page_id) {
+    used_[fd].set_atomic(file_page_id, true);
+  }
+#endif
 
   FORCE_INLINE void CloseFile(GBPfile_handle_type fd) {
     auto fd_os = GetFileDescriptor(fd);
@@ -130,24 +143,15 @@ class DiskManager {
     return file_names_[fd];
   }
 
-#ifdef DEBUG_BITMAP
-  bool GetUsedMark(GBPfile_handle_type fd, fpage_id_type fpage_id) {
-    return used_[fd].get_atomic(fpage_id);
-  }
-
-  void SetUsedMark(GBPfile_handle_type fd, fpage_id_type fpage_id, bool used) {
-    used_[fd].set_atomic(fpage_id, used);
-  }
-#endif
-
   std::vector<std::pair<OSfile_handle_type, bool>> fd_oss_;
   std::vector<std::string> file_names_;
   std::vector<size_t> file_size_inBytes_;
 
   std::vector<std::pair<size_t, size_t>> counts_;
   std::thread thread_;
-#ifdef DEBUG_BITMAP
-  std::vector<bitset_dynamic> used_;
+
+#if DEBUG_BITMAP
+  std::array<bitset_dynamic, 300> used_;
 #endif
 };
 
@@ -504,7 +508,6 @@ class RWSysCall : public IOBackend {
            disk_manager_
                ->file_size_inBytes_[fd]);  // check if read beyond file length
 #endif
-    get_counter_global(10)++;
 
     auto ret = ::pread(disk_manager_->fd_oss_[fd].first, data, size, offset);
 

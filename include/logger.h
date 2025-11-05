@@ -11,6 +11,8 @@
 #include <regex>
 
 #include <assert.h>
+#include <mntent.h>  // 用于解析挂载点（getmntent等）
+#include <sys/sysmacros.h>
 #include <algorithm>
 #include <cstddef>
 #include <filesystem>
@@ -83,8 +85,6 @@ std::ofstream& get_thread_logfile();
 size_t GetMemoryUsage();
 uint64_t readTLBShootdownCount();
 uint64_t readIObytesOne();
-std::tuple<size_t, size_t> SSD_io_bytes(
-    const std::string& device_name = "nvme0n1");
 size_t GetMemoryUsageMMAP(std::string& mmap_monitored_dir);
 std::tuple<size_t, size_t> GetCPUTime();
 std::vector<std::tuple<void**, int, size_t>>& GetMAS();
@@ -271,18 +271,24 @@ class PerformanceLogServer {
 
     log_file_.close();
   }
-  void Start(const std::string& file_path, const std::string& device_name) {
-    device_name_ = device_name;
+
+  void Start(const std::string& db_path, const std::string& log_path) {
+    device_name_ = GetDevicePathFromFile(db_path);
+    assert(device_name_.empty() == false);
+    GBPLOG << "PerformanceLogServer monitor device: " << device_name_;
+
     if (!log_file_.is_open())
-      log_file_.open(file_path, std::ios::out);
+      log_file_.open(log_path, std::ios::out);
     if (!server_.joinable())
       server_ = std::thread([this]() { Logging(); });
     // GBPLOG << "PerformanceLogServer started";
   }
+
   void SetStartPoint() {
     std::tie(SSD_read_bytes_sp_, SSD_write_bytes_sp_) =
         SSD_io_bytes(device_name_);
   }
+
   void Logging();
 
   static PerformanceLogServer& GetPerformanceLogger() {
@@ -296,6 +302,105 @@ class PerformanceLogServer {
 
   std::atomic<size_t>& GetClientWriteThroughputByte() {
     return client_write_throughput_Byte_;
+  }
+
+  std::string GetDevicePathFromFile(const std::string& file_path) {
+    // 步骤1：获取文件的绝对路径（避免相对路径问题）
+    char absolute_path[PATH_MAX];
+    if (realpath(file_path.c_str(), absolute_path) == nullptr) {
+      std::cerr << "错误：无法获取绝对路径，路径=" << file_path << std::endl;
+      assert(false && "realpath() failed: 无法解析绝对路径");
+    }
+    std::string abs_path(absolute_path);
+
+    // 步骤2：查找文件所在的挂载点及对应的分区设备
+    // 打开/etc/mtab获取挂载信息（记录了挂载点与设备的对应关系）
+    FILE* mtab = setmntent("/etc/mtab", "r");
+    if (mtab == nullptr) {
+      std::cerr << "错误：无法打开/etc/mtab" << std::endl;
+      assert(false && "setmntent() failed: 无法打开挂载信息文件");
+    }
+
+    struct mntent* entry;
+    std::string partition_device;  // 分区设备（如/dev/nvme3n1p1）
+    size_t longest_match_len = 0;  // 用于匹配最长的挂载点路径
+
+    while ((entry = getmntent(mtab)) != nullptr) {
+      // entry->mnt_dir：挂载点（如/mnt/nvme3n1）
+      // entry->mnt_fsname：对应的分区设备（如/dev/nvme3n1p1）
+      std::string mount_point(entry->mnt_dir);
+      std::string device(entry->mnt_fsname);
+
+      // 找到文件所在的挂载点（绝对路径以挂载点为前缀，且是最长匹配）
+      if (abs_path.substr(0, mount_point.size()) == mount_point) {
+        if (mount_point.size() > longest_match_len) {
+          longest_match_len = mount_point.size();
+          partition_device = device;
+        }
+      }
+    }
+    endmntent(mtab);  // 关闭文件
+
+    if (partition_device.empty()) {
+      std::cerr << "错误：未找到文件所在的挂载点，路径=" << abs_path
+                << std::endl;
+      assert(false && "未找到对应的挂载点");
+    }
+
+    // 步骤3：从分区设备名中提取磁盘名（如/dev/nvme3n1p1 → nvme3n1）
+    // 1. 去掉/dev/前缀
+    if (partition_device.substr(0, 5) == "/dev/") {
+      partition_device = partition_device.substr(5);  // 如"nvme3n1p1"
+    }
+
+    // 2. 去掉分区后缀（仅处理以'p'开头的分区，如p1/p2）
+    size_t p_pos = partition_device.find('p');
+    if (p_pos != std::string::npos) {
+      // 检查'p'后面是否全是数字（确认是分区标识）
+      bool is_partition = true;
+      for (size_t i = p_pos + 1; i < partition_device.size(); ++i) {
+        if (!isdigit(partition_device[i])) {
+          is_partition = false;
+          break;
+        }
+      }
+      if (is_partition) {
+        return partition_device.substr(0, p_pos);  // 截取p之前的部分
+      }
+    }
+
+    // 无分区后缀，直接返回设备名（如nvme3n1、sda）
+    return partition_device;
+  }
+  std::tuple<size_t, size_t> SSD_io_bytes() {
+    return SSD_io_bytes(device_name_);
+  }
+
+  static std::tuple<size_t, size_t> SSD_io_bytes(
+      const std::string& device_name) {
+    assert(!device_name.empty());
+    std::ifstream stat("/proc/diskstats");
+    assert(!!stat);
+
+    uint64_t read = 0, write = 0;
+    bool find_device_line = false;
+    for (std::string line; std::getline(stat, line);) {
+      if (line.find(device_name) != std::string::npos) {
+        find_device_line = true;
+        std::istringstream iss(line);
+        std::vector<std::string> strs((std::istream_iterator<std::string>(iss)),
+                                      std::istream_iterator<std::string>());
+
+        if (strs.size() >= 10) {
+          read += std::stoull(strs[5]) * 512;
+          write += std::stoull(strs[9]) * 512;
+        }
+      }
+    }
+    if (!find_device_line) {
+      assert(false);
+    }
+    return {read, write};
   }
 
  private:
@@ -414,6 +519,16 @@ struct CacheInfo {
     static CacheInfo cache_info;
     return cache_info;
   }
+};
+class DebugStruct {
+ public:
+  DebugStruct() {}
+  std::vector<bitset_dynamic>& GetUsedBitsets() { return used_; }
+
+  static DebugStruct& GetDebugStruct();
+
+ private:
+  std::vector<bitset_dynamic> used_;
 };
 
 }  // namespace gbp

@@ -150,9 +150,6 @@ class MemoryPool {
 
     return ((char*) ptr - pool_) >> LOG_PAGE_SIZE_MEMORY;
   }
-#ifdef DEBUG_BITMAP
-  FORCE_INLINE boost::dynamic_bitset<>& GetUsedMark() { return used_; }
-#endif
   mpage_id_type GetSize() const { return num_pages_; }
   FORCE_INLINE char* GetPool() const { return pool_; }
 
@@ -168,9 +165,6 @@ class MemoryPool {
   }
 
   mpage_id_type num_pages_;
-#ifdef DEBUG_BITMAP
-  boost::dynamic_bitset<> used_;
-#endif
   char* pool_ = nullptr;
   PTE* page_states_;
   bool need_free_ = false;

@@ -58,4 +58,5 @@ void set_cpu_affinity() {
     return;
   }
 }
+
 }  // namespace gbp

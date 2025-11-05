@@ -4,7 +4,7 @@ set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 # set(CMAKE_C_FLAGS "-fxray-instrument")
 
 set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -fPIC -rdynamic -pthread -Wextra ")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++20 -fPIC -rdynamic -pthread -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-g3 -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "-O2")
 set(CMAKE_LIBRARY_PATH "/usr/local/lib;/usr/lib/x86_64-linux-gnu;/usr/lib64")
@@ -58,7 +58,7 @@ add_subdirectory(tests)
 # 包含静态库路径
 link_directories(${LIBRARY_OUTPUT_PATH})
 # 链接静态库
-link_libraries(bufferpool)
+link_libraries(GoCache)
 link_libraries(tests)
 
 add_executable(${PROJECT_NAME} ${ALL_SRCS})	# 指定生成目标，注意这里要用${ALL_SRCS}!!!

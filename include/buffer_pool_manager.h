@@ -134,12 +134,12 @@ class BufferPoolManager {
 
   const BufferBlock GetBlock(size_t file_offset, size_t block_size,
                              GBPfile_handle_type fd = 0) const {
-    BufferBlock ret;
+    // BufferBlock ret;
     // auto time = CacheInfo::get_time_in_ns();
 #if USING_DIRECT_CACHE
-    ret = GetBlockWithDirectCacheSync(file_offset, block_size, fd);
+    return GetBlockWithDirectCacheSync(file_offset, block_size, fd);
 #else
-    ret = GetBlockSync(file_offset, block_size, fd);
+    return GetBlockSync(file_offset, block_size, fd);
 #endif
 
     // size_t fpage_offset = file_offset % PAGE_SIZE_FILE;
@@ -158,7 +158,7 @@ class BufferPoolManager {
     // }
     // time = CacheInfo::get_time_in_ns() - time;
     // gbp::get_thread_logfile() << time << std::endl;
-    return ret;
+    // return ret;
   }
   const BufferBlock GetBlockWithDirectCacheSync(
       size_t file_offset, size_t block_size, GBPfile_handle_type fd = 0) const;

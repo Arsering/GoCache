@@ -154,7 +154,7 @@ void PerformanceLogServer::Logging() {
   last_Client_Read_throughput = client_read_throughput_Byte_.load();
   last_Client_Write_throughput = client_write_throughput_Byte_.load();
   std::tie(last_user_cpu_time, last_sys_cpu_time) = GetCPUTime();
-  GBPLOG << "Device Name = " << device_name_;
+
   size = ::snprintf(buf, 4096,
                     "%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s%-25s\n",
                     "Client_Read_Throughput", "Client_Write_Throughput",
@@ -314,47 +314,6 @@ uint64_t readIObytesOne() {
 //   return {read, write};
 // }
 
-std::tuple<size_t, size_t> SSD_io_bytes(const std::string& device_name) {
-  std::ifstream stat("/proc/diskstats");
-  assert(!!stat);
-  // std::cout << "device_name: " << device_name << std::endl;
-
-  uint64_t read = 0, write = 0;
-  // for (std::string line = " "; std::getline(stat, line);) {
-  //   if (line.find(device_name) != std::string::npos) {
-  //     std::vector<std::string> strs;
-  //     boost::split(strs, line, boost::is_any_of("\t "),
-  //                  boost::token_compress_on);
-  //     read += std::stoull(strs[6]) * 512;
-  //     write += std::stoull(strs[10]) * 512;
-  //   }
-  // }
-  bool find_device_line = false;
-  for (std::string line; std::getline(stat, line);) {
-    if (line.find(device_name) != std::string::npos) {
-      find_device_line = true;
-      // std::cout << "find device line: " << line << std::endl;
-      std::istringstream iss(line);
-      std::vector<std::string> strs((std::istream_iterator<std::string>(iss)),
-                                    std::istream_iterator<std::string>());
-      // std::cout << "str num is : " << strs.size() << std::endl;
-      // for (size_t i = 0; i < strs.size(); ++i) {
-      //   std::cout << "str[" << i << "]: " << strs[i] << std::endl;
-      // }
-      if (strs.size() >= 10) {
-        read += std::stoull(strs[5]) * 512;
-        write += std::stoull(strs[9]) * 512;
-        // std::cout << "read is : " << read << ", write is : " << write <<
-        // std::endl;
-      }
-    }
-  }
-  // if (!find_device_line) {
-  //   std::cerr << "no find device line" << device_name << std::endl;
-  // }
-  return {read, write};
-}
-
 size_t GetMemoryUsageMMAP(std::string& mmap_monitored_dir) {
   // std::cout << "GetMemoryUsageMMAP" << mmap_monitored_dir << std::endl;
   std::ifstream smaps_file("/proc/self/smaps");
@@ -480,4 +439,10 @@ std::atomic<size_t>& counter_per_memorypage(uintptr_t target_addr,
   assert(page_id < counters.size());
   return as_atomic(counters[page_id]);
 }
+
+DebugStruct& DebugStruct::GetDebugStruct() {
+  static DebugStruct debug_struct;
+  return debug_struct;
+}
+
 }  // namespace gbp

@@ -9,7 +9,7 @@ BufferPoolManager::~BufferPoolManager() {
   if (!initialized_)
     return;
 
-  // #ifdef DEBUG_BITMAP
+  // #if DEBUG_BITMAP
   //   size_t page_used_num = 0;
   //   for (auto pool : pools_)
   //     page_used_num += pool->memory_pool_.GetUsedMark().count();
